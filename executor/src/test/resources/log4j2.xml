@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration monitorInterval="30" status="WARN" >
+    <Properties>
+        <Property name="threadFormat">
+            [%-15t]
+        </Property>
+        <Property name="loggerFormat">
+            %-15logger{1}
+        </Property>
+        <Property name="filters">
+            sun,
+            java,
+            javax,
+            jdk,
+            groovy,
+            org.apache,
+            org.junit,
+            org.springframework,
+            springfox,
+            com.sun,
+            com.google,
+            org.postgresql,
+            org.mybatis,
+            org.codehaus
+        </Property>
+        <Property name="pattern_omit_stack">
+            %d{yy-MM-dd HH:mm:ss.SSS} ${threadFormat} %-5level ${loggerFormat} - %msg%xEx{filters(${filters})}%n
+        </Property>
+        <Property name="basic_pattern" value="%d{yy-MM-dd HH:mm:ss.SSS} ${threadFormat} %-5level ${loggerFormat} - %msg %xEx{full, filters(org.junit)} %n"/>
+    </Properties>
+    <Appenders>
+
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${pattern_omit_stack}"/>
+        </Console>
+        
+    </Appenders>
+    <Loggers>
+
+        <Root level="debug">
+            <AppenderRef ref="Console"/>
+        </Root>
+
+    </Loggers>
+</Configuration>

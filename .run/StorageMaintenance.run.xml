@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="MVStoreMaintenance" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="midorum.melbone.settings.internal.storage.vendor.MVStoreMaintenance" />
+    <module name="settings" />
+    <option name="VM_PARAMETERS" value="-Dstorage.path=.. -Dsrc.storage.name=test -Dsrc.storage.password=test -Ddst.storage.name=test_dst -Ddst.storage.password=test_dst" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="midorum.melbone.settings.internal.storage.vendor.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

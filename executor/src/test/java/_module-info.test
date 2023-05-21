@@ -1,0 +1,9 @@
+open module midorum.melbone.executor.test {
+    requires midorum.melbone.model;
+    requires midorum.melbone.settings;
+    requires dma.util;
+    requires org.slf4j;
+
+    exports midorum.melbone.executor;
+    exports midorum.melbone.executor.internal;
+}
