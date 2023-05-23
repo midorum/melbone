@@ -15,25 +15,29 @@ import java.util.function.BiFunction;
  */
 public enum SettingExtractor {
 
+    //SettingsManagerAction#noAction
     EXTRACTOR_UNSUPPORTED((windowHolder, point) -> {
         throw new UnsupportedOperationException("There is no extractor for this key");
     }),
+    //SettingsManagerAction#touchWindow
     WINDOW_TITLE_EXTRACTOR((windowHolder, point) ->
             windowHolder.getWindow().getText().orElseThrow(() -> new CriticalErrorException("Window hasn't title"))),
     WINDOW_CLASS_NAME_EXTRACTOR((windowHolder, point) ->
             windowHolder.getWindow().getClassName().orElseThrow(() -> new CriticalErrorException("Window hasn't class name"))),
     WINDOW_PROCESS_NAME_EXTRACTOR((windowHolder, point) ->
             windowHolder.getWindow().getProcess().name().orElseThrow(() -> new CriticalErrorException("Window process hasn't name"))),
+    WINDOW_DIMENSIONS_EXTRACTOR((windowHolder, point) ->
+            windowHolder.getWindow().getWindowRectangle()),
+    //SettingsManagerAction#touchWindowElement
     WINDOW_RELATIVE_POINT_EXTRACTOR((windowHolder, point) -> {
         final RelativeCoordinates relativeCoordinates = Win32System.getInstance().getRelativeCoordinates(windowHolder.getWindow().getWindowRectangle());//FIXME
         return new PointFloat(relativeCoordinates.windowRelativeX(point.x()), relativeCoordinates.windowRelativeY(point.y()));
     }),
+    //SettingsManagerAction#touchScreenElement
     SCREEN_POINT_EXTRACTOR((windowHolder, point) -> {
         final PointInt absoluteScreenPoint = Win32System.getInstance().getAbsoluteScreenPoint(point);//FIXME
         return new PointLong(absoluteScreenPoint.x(), absoluteScreenPoint.y());
     }),
-    WINDOW_DIMENSIONS_EXTRACTOR((windowHolder, point) ->
-            windowHolder.getWindow().getWindowRectangle()),
     FLOAT_EXTRACTOR((windowHolder, point) -> {
         throw new UnsupportedOperationException();//TODO
     });

@@ -355,8 +355,8 @@ class SettingsPaneTest extends MockedContext {
         }
 
         public SettingsPaneInteraction verifyMouseKeyHookNotSet() {
-            verify(mouseKeyHookManager, never()).setHook(anyInt(), any(), any());
-            verify(mouseKeyHookManager, never()).setHook(anyInt(), any(), any(), any());
+            verify(mouseHookHelper, never()).setGlobalHookForKey(anyInt(), any(), any());
+            verify(mouseHookHelper, never()).setGlobalHookForKey(anyInt(), any(), any(), any());
             return this;
         }
 

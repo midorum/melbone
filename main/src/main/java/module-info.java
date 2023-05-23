@@ -3,7 +3,6 @@ module midorum.melbone.main {
     requires java.sql;
     requires rxjava;
     requires com.h2database;
-    requires com.sun.jna.platform;
     requires midorum.melbone.model;
     requires midorum.melbone.settings;
     requires midorum.melbone.executor;

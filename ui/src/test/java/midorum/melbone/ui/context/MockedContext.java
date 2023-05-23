@@ -1,36 +1,36 @@
 package midorum.melbone.ui.context;
 
-import com.midorum.win32api.facade.*;
 import com.midorum.win32api.facade.Rectangle;
+import com.midorum.win32api.facade.*;
 import com.midorum.win32api.hook.GlobalMouseKeyHook;
+import com.midorum.win32api.hook.MouseHookHelper;
 import com.midorum.win32api.struct.PointInt;
 import com.midorum.win32api.util.RelativeCoordinates;
 import dma.function.ConsumerThrowing;
 import dma.function.VoidAction;
 import midorum.melbone.executor.ExecutorFactory;
+import midorum.melbone.model.dto.Account;
 import midorum.melbone.model.experimental.task.TaskStorage;
+import midorum.melbone.model.persistence.AccountStorage;
 import midorum.melbone.model.processing.AccountsProcessingRequest;
+import midorum.melbone.model.processing.IExecutor;
 import midorum.melbone.model.settings.PropertiesProvider;
 import midorum.melbone.model.settings.account.AccountBinding;
-import midorum.melbone.model.settings.stamp.Stamp;
 import midorum.melbone.model.settings.key.StampKey;
-import midorum.melbone.settings.managment.StampBuilder;
-import midorum.melbone.ui.internal.Context;
-import midorum.melbone.ui.context.experimental.MockedTaskStorage;
-import midorum.melbone.ui.internal.util.DataLoader;
-import midorum.melbone.ui.internal.util.IdentifyDialog;
-import midorum.melbone.ui.internal.model.OnCloseNotificator;
-import midorum.melbone.ui.internal.model.FrameVisibilityOperations;
-import midorum.melbone.ui.internal.settings.SettingsManagerForm;
-import midorum.melbone.ui.internal.util.MouseKeyHookManager;
-import midorum.melbone.ui.internal.util.StandardDialogsProvider;
-import midorum.melbone.model.dto.Account;
-import midorum.melbone.model.persistence.AccountStorage;
-import midorum.melbone.model.processing.IExecutor;
 import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
+import midorum.melbone.model.settings.stamp.Stamp;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
 import midorum.melbone.model.window.baseapp.RestoredBaseAppWindow;
+import midorum.melbone.settings.managment.StampBuilder;
+import midorum.melbone.ui.context.experimental.MockedTaskStorage;
+import midorum.melbone.ui.internal.Context;
+import midorum.melbone.ui.internal.model.FrameVisibilityOperations;
+import midorum.melbone.ui.internal.model.OnCloseNotificator;
+import midorum.melbone.ui.internal.settings.SettingsManagerForm;
+import midorum.melbone.ui.internal.util.DataLoader;
+import midorum.melbone.ui.internal.util.IdentifyDialog;
+import midorum.melbone.ui.internal.util.StandardDialogsProvider;
 import midorum.melbone.window.WindowFactory;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -65,7 +65,7 @@ public class MockedContext {
     protected final TaskStorage taskStorage = new MockedTaskStorage();
     protected final WindowFactory windowFactory = mock(WindowFactory.class);
     protected final ApplicationSettings applicationSettings = mock(ApplicationSettings.class);
-    protected final MouseKeyHookManager mouseKeyHookManager = mock(MouseKeyHookManager.class);
+    protected final MouseHookHelper mouseHookHelper = mock(MouseHookHelper.class);
     protected final StandardDialogsProvider standardDialogsProvider = mock(StandardDialogsProvider.class);
     protected final DataLoader dataLoader = mock(DataLoader.class);
     protected final PropertiesProvider propertiesProvider = mock(PropertiesProvider.class);
@@ -82,7 +82,7 @@ public class MockedContext {
                 .accountStorage(accountStorage)
                 .taskStorage(taskStorage)
                 .windowFactory(windowFactory)
-                .mouseKeyHookManager(mouseKeyHookManager)
+                .mouseHookHelper(mouseHookHelper)
                 .standardDialogsProvider(standardDialogsProvider)
                 .dataLoader(dataLoader)
                 .propertiesProvider(propertiesProvider)
@@ -102,7 +102,7 @@ public class MockedContext {
                 .accountStorage(accountStorage)
                 .taskStorage(taskStorage)
                 .windowFactory(windowFactory)
-                .mouseKeyHookManager(mouseKeyHookManager)
+                .mouseHookHelper(mouseHookHelper)
                 .standardDialogsProvider(standardDialogsProvider)
                 .dataLoader(dataLoader)
                 .propertiesProvider(propertiesProvider)
@@ -550,8 +550,8 @@ public class MockedContext {
                     onHookReleaseActionConsumer.accept(invocation.getArgument(3));
                 return null;
             };
-            doAnswer(answer).when(mouseKeyHookManager).setHook(anyInt(), any(), any());
-            doAnswer(answer).when(mouseKeyHookManager).setHook(anyInt(), any(), any(), any());
+            doAnswer(answer).when(mouseHookHelper).setGlobalHookForKey(anyInt(), any(), any());
+            doAnswer(answer).when(mouseHookHelper).setGlobalHookForKey(anyInt(), any(), any(), any());
         }
 
         public Interaction thenCatchWithSuccessAndDoAfter(final VoidAction afterCatchAction) {

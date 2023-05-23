@@ -197,7 +197,7 @@ public class SettingsPane extends JPanel {
 
     private void captureWindow(final SettingKey key) {
         ownerFrame.iconify();
-        context.mouseKeyHookManager().setHook(IWinUser.WM_LBUTTONDOWN,
+        context.mouseHookHelper().setGlobalHookForKey(IWinUser.WM_LBUTTONDOWN,
                 (mouseEvent) -> {
                     context.targetWindowOperations().getPointInWindow(mouseEvent.point()).ifPresentOrElse(windowPoint -> {
                                 textField.setText(stringifyValue(key.internal().extractor().apply(new WindowHolder(windowPoint.window()), windowPoint.point())));
@@ -216,7 +216,7 @@ public class SettingsPane extends JPanel {
     private void captureScreen(final SettingKey key) {
         ownerFrame.iconify();
         context.targetWindowOperations().minimizeAllWindows();
-        context.mouseKeyHookManager().setHook(IWinUser.WM_LBUTTONDOWN,
+        context.mouseHookHelper().setGlobalHookForKey(IWinUser.WM_LBUTTONDOWN,
                 (mouseEvent) -> {
                     context.targetWindowOperations().getPointInWindow(mouseEvent.point()).ifPresentOrElse(windowPoint -> {
                                 textField.setText(stringifyValue(key.internal().extractor().apply(WindowHolder.EMPTY, windowPoint.point())));

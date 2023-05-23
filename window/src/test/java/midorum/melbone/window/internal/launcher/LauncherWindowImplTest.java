@@ -4,6 +4,7 @@ import com.midorum.win32api.facade.*;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
 import com.midorum.win32api.win32.Win32VirtualKey;
+import com.sun.jna.platform.win32.Win32VK;
 import midorum.melbone.model.dto.Account;
 import midorum.melbone.model.settings.stamp.Stamp;
 import midorum.melbone.settings.StampKeys;

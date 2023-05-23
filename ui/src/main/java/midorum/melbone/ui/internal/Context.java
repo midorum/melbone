@@ -3,6 +3,8 @@ package midorum.melbone.ui.internal;
 import com.midorum.win32api.facade.IScreenShotMaker;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.WindowPoint;
+import com.midorum.win32api.hook.KeyHookHelper;
+import com.midorum.win32api.hook.MouseHookHelper;
 import com.midorum.win32api.struct.PointInt;
 import dma.validation.Validator;
 import midorum.melbone.executor.ExecutorFactory;
@@ -10,8 +12,6 @@ import midorum.melbone.model.experimental.task.TaskStorage;
 import midorum.melbone.model.settings.PropertiesProvider;
 import midorum.melbone.ui.internal.model.TargetWindowOperations;
 import midorum.melbone.ui.internal.util.DataLoader;
-import midorum.melbone.ui.internal.util.GlobalKeyHookManager;
-import midorum.melbone.ui.internal.util.MouseKeyHookManager;
 import midorum.melbone.ui.internal.util.StandardDialogsProvider;
 import midorum.melbone.model.persistence.AccountStorage;
 import midorum.melbone.model.persistence.SettingStorage;
@@ -33,8 +33,8 @@ public class Context {
     private final AccountStorage accountStorage;
     private final TaskStorage taskStorage;
     private final WindowFactory windowFactory;
-    private final GlobalKeyHookManager globalKeyHookManager;
-    private final MouseKeyHookManager mouseKeyHookManager;
+    private final KeyHookHelper keyHookHelper;
+    private final MouseHookHelper mouseHookHelper;
     private final StandardDialogsProvider standardDialogsProvider;
     private final TargetWindowOperations targetWindowOperations;
     private final DataLoader dataLoader;
@@ -47,8 +47,8 @@ public class Context {
                     final AccountStorage accountStorage,
                     final TaskStorage taskStorage,
                     final WindowFactory windowFactory,
-                    final GlobalKeyHookManager globalKeyHookManager,
-                    final MouseKeyHookManager mouseKeyHookManager,
+                    final KeyHookHelper keyHookHelper,
+                    final MouseHookHelper mouseHookHelper,
                     final StandardDialogsProvider standardDialogsProvider,
                     final DataLoader dataLoader,
                     final PropertiesProvider propertiesProvider) {
@@ -58,8 +58,8 @@ public class Context {
         this.accountStorage = accountStorage;
         this.taskStorage = taskStorage;
         this.windowFactory = windowFactory;
-        this.globalKeyHookManager = globalKeyHookManager;
-        this.mouseKeyHookManager = mouseKeyHookManager;
+        this.keyHookHelper = keyHookHelper;
+        this.mouseHookHelper = mouseHookHelper;
         this.standardDialogsProvider = standardDialogsProvider;
         this.dataLoader = dataLoader;
         this.propertiesProvider = propertiesProvider;
@@ -87,12 +87,12 @@ public class Context {
         return accountStorage;
     }
 
-    public GlobalKeyHookManager globalKeyHookManager() {
-        return globalKeyHookManager;
+    public KeyHookHelper keyHookHelper() {
+        return keyHookHelper;
     }
 
-    public MouseKeyHookManager mouseKeyHookManager() {
-        return mouseKeyHookManager;
+    public MouseHookHelper mouseHookHelper() {
+        return mouseHookHelper;
     }
 
     public StandardDialogsProvider standardDialogsProvider() {
@@ -180,8 +180,8 @@ public class Context {
         private TaskStorage taskStorage;
         private WindowFactory windowFactory;
         private StandardDialogsProvider standardDialogsProvider;
-        private GlobalKeyHookManager globalKeyHookManager;
-        private MouseKeyHookManager mouseKeyHookManager;
+        private KeyHookHelper keyHookHelper;
+        private MouseHookHelper mouseHookHelper;
         private DataLoader dataLoader;
         private PropertiesProvider propertiesProvider;
 
@@ -220,13 +220,13 @@ public class Context {
             return this;
         }
 
-        public Builder globalKeyHookManager(final GlobalKeyHookManager globalKeyHookManager) {
-            this.globalKeyHookManager = globalKeyHookManager;
+        public Builder keyHookHelper(final KeyHookHelper keyHookHelper) {
+            this.keyHookHelper = keyHookHelper;
             return this;
         }
 
-        public Builder mouseKeyHookManager(final MouseKeyHookManager mouseKeyHookManager) {
-            this.mouseKeyHookManager = mouseKeyHookManager;
+        public Builder mouseHookHelper(final MouseHookHelper mouseHookHelper) {
+            this.mouseHookHelper = mouseHookHelper;
             return this;
         }
 
@@ -248,8 +248,8 @@ public class Context {
                     Validator.checkNotNull(accountStorage).orThrowForSymbol("accountStorage"),
                     Validator.checkNotNull(taskStorage).orThrowForSymbol("taskStorage"),
                     Validator.checkNotNull(windowFactory).orThrowForSymbol("windowFactory"),
-                    Validator.checkNotNull(globalKeyHookManager).orDefault(GlobalKeyHookManager.getInstance()),
-                    Validator.checkNotNull(mouseKeyHookManager).orDefault(MouseKeyHookManager.getInstance()),
+                    Validator.checkNotNull(keyHookHelper).orDefault(KeyHookHelper.getInstance()),
+                    Validator.checkNotNull(mouseHookHelper).orDefault(MouseHookHelper.getInstance()),
                     Validator.checkNotNull(standardDialogsProvider).orDefault(StandardDialogsProvider.getInstance()),
                     Validator.checkNotNull(dataLoader).orDefault(DataLoader.getInstance()),
                     Validator.checkNotNull(propertiesProvider).orThrowForSymbol("propertiesProvider"));

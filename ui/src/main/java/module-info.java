@@ -7,7 +7,6 @@ module midorum.melbone.ui {
     requires org.apache.logging.log4j;
     requires java.desktop;
     requires midorum.melbone.settings;
-    requires com.sun.jna.platform;
 
     exports midorum.melbone.ui;
 }

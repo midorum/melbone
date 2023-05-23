@@ -193,7 +193,7 @@ public class StampsPane extends JPanel {
     }
 
     private void captureWindowRegion(final StampKey key) {
-        context.mouseKeyHookManager().setHook(IWinUser.WM_LBUTTONDOWN,
+        context.mouseHookHelper().setGlobalHookForKey(IWinUser.WM_LBUTTONDOWN,
                 mouseEvent -> {
                     context.targetWindowOperations().getWindowByPoint(mouseEvent.point()).ifPresentOrElse(window -> {
                         window.bringForeground();
