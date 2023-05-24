@@ -199,7 +199,7 @@ public class SettingsPane extends JPanel {
         ownerFrame.iconify();
         context.mouseHookHelper().setGlobalHookForKey(IWinUser.WM_LBUTTONDOWN,
                 (mouseEvent) -> {
-                    context.targetWindowOperations().getPointInWindow(mouseEvent.point()).ifPresentOrElse(windowPoint -> {
+                    context.targetWindowOperations().getWindowByPoint(mouseEvent.point()).ifPresentOrElse(windowPoint -> {
                                 textField.setText(stringifyValue(key.internal().extractor().apply(new WindowHolder(windowPoint.window()), windowPoint.point())));
                                 noticePane.showInfo("Captured. Please check and save value.");
                             },
@@ -218,7 +218,7 @@ public class SettingsPane extends JPanel {
         context.targetWindowOperations().minimizeAllWindows();
         context.mouseHookHelper().setGlobalHookForKey(IWinUser.WM_LBUTTONDOWN,
                 (mouseEvent) -> {
-                    context.targetWindowOperations().getPointInWindow(mouseEvent.point()).ifPresentOrElse(windowPoint -> {
+                    context.targetWindowOperations().getWindowByPoint(mouseEvent.point()).ifPresentOrElse(windowPoint -> {
                                 textField.setText(stringifyValue(key.internal().extractor().apply(WindowHolder.EMPTY, windowPoint.point())));
                                 noticePane.showInfo("Captured. Please check and save value.");
                             },

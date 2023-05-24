@@ -325,17 +325,12 @@ public class MockedContext {
             return new ExecutorInteraction(this);
         }
 
-        public Interaction whenTryGetWindowByPointThenReturn(final IWindow capturedWindow) {
-            when(windowFactory.getWindowByPoint(any(PointInt.class))).thenAnswer(invocation -> Optional.ofNullable(capturedWindow));
-            return this;
+        public WindowByPointInteraction whenTryGetWindowByPoint(final PointInt pointWhereUserClicked) {
+            return new WindowByPointInteraction(pointWhereUserClicked, this);
         }
 
-        public GetPointInWindow whenTryGetPointInWindow(final PointInt pointWhereUserClicked) {
-            return new GetPointInWindow(pointWhereUserClicked, this);
-        }
-
-        public GetPointInWindow whenTryGetAnyPointInWindow() {
-            return new GetPointInWindow(this);
+        public WindowByPointInteraction whenTryGetWindowByAnyPoint() {
+            return new WindowByPointInteraction(this);
         }
 
         public Interaction whenTryTakeRectangleShotThenReturnStandardImage() {
@@ -660,22 +655,22 @@ public class MockedContext {
         }
     }
 
-    public class GetPointInWindow {
+    public class WindowByPointInteraction {
 
         final PointInt pointWhereUserClicked;
         private final Interaction interactionInstance;
 
-        public GetPointInWindow(final PointInt pointWhereUserClicked, final Interaction interactionInstance) {
+        public WindowByPointInteraction(final PointInt pointWhereUserClicked, final Interaction interactionInstance) {
             this.pointWhereUserClicked = pointWhereUserClicked;
             this.interactionInstance = interactionInstance;
         }
 
-        public GetPointInWindow(final Interaction interactionInstance) {
+        public WindowByPointInteraction(final Interaction interactionInstance) {
             this(new PointInt(-1, -1), interactionInstance);
         }
 
         public Interaction thenReturn(final WindowPoint windowPoint) {
-            when(windowFactory.getPointInWindow(pointWhereUserClicked)).thenReturn(Optional.ofNullable(windowPoint));
+            when(windowFactory.getWindowByPoint(pointWhereUserClicked)).thenReturn(Optional.ofNullable(windowPoint));
             return this.interactionInstance;
         }
 
@@ -684,6 +679,12 @@ public class MockedContext {
             final Rectangle clientRectangle = foundNativeWindow.getClientRectangle();
             final PointInt somePointInFoundWindow = new PointInt(clientRectangle.width() / 2, clientRectangle.height() / 2);
             return thenReturn(new WindowPoint(foundNativeWindow, somePointInFoundWindow));
+        }
+
+        public Interaction thenReturnPointForWindow(final IWindow capturedWindow) {
+            final Rectangle clientRectangle = capturedWindow.getClientRectangle();
+            final PointInt somePointInFoundWindow = new PointInt(clientRectangle.width() / 2, clientRectangle.height() / 2);
+            return thenReturn(new WindowPoint(capturedWindow, somePointInFoundWindow));
         }
 
     }

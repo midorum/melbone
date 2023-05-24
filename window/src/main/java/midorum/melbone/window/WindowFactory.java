@@ -61,8 +61,8 @@ public class WindowFactory {
         return baseAppWindowFactory.findUnboundWindowAndBindWithAccount(characterName);
     }
 
-    public Optional<WindowPoint> getPointInWindow(final PointInt point) {
-        return commonWindowService.getWin32System().getPointInWindow(Validator.checkNotNull(point).orThrowForSymbol("point"));
+    public Optional<WindowPoint> getWindowByPoint(final PointInt screenPoint) {
+        return commonWindowService.getWin32System().getWindowByPoint(Validator.checkNotNull(screenPoint).orThrowForSymbol("point"));
     }
 
     public void minimizeAllWindows() {
@@ -71,10 +71,6 @@ public class WindowFactory {
 
     public IScreenShotMaker getScreenShotMaker() {
         return commonWindowService.getWin32System().getScreenShotMaker();
-    }
-
-    public Optional<IWindow> getWindowByPoint(PointInt screenPoint) {
-        return commonWindowService.getWin32System().getWindowByPoint(screenPoint);
     }
 
     public Rectangle screenResolution() {

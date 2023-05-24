@@ -78,7 +78,7 @@ class MainFormVisualDev extends MockedContext {
                 .generateAccountsInUse(accountsInUseCount)
                 .createUnboundWindows(unboundWindowsCount)
                 .whenTryCatchMouseKeyEvent(IWinUser.WM_LBUTTONDOWN).thenCatchWithSuccess()
-                .whenTryGetWindowByPointThenReturn(createNativeWindowMock())
+                .whenTryGetWindowByAnyPoint().thenReturnAnyWindowPoint() //mocking settings pane
                 .whenTryTakeRectangleShotThenReturnStandardImage();
 
         new MainForm("formWhenExistsUnboundWindow", context).display();
@@ -105,9 +105,8 @@ class MainFormVisualDev extends MockedContext {
         new Interaction()
                 .setAccountsLimit(accountsLimit)
                 .generateAccountsInUse(accountsInUseCount)
-                .whenTryGetAnyPointInWindow().thenReturnAnyWindowPoint() //mocking settings pane
+                .whenTryGetWindowByAnyPoint().thenReturnAnyWindowPoint() //mocking settings pane
                 .whenTryCatchMouseKeyEvent(IWinUser.WM_LBUTTONDOWN).thenCatchWithSuccess()  //mocking settings pane and stamp pane
-                .whenTryGetWindowByPointThenReturn(createNativeWindowMock()) //mocking stamp pane
                 .whenTryTakeRectangleShotThenReturnStandardImage(); //mocking stamp pane
 
         new MainForm("experimental mode", context).display();

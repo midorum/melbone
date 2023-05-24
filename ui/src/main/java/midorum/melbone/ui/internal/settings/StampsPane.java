@@ -195,7 +195,8 @@ public class StampsPane extends JPanel {
     private void captureWindowRegion(final StampKey key) {
         context.mouseHookHelper().setGlobalHookForKey(IWinUser.WM_LBUTTONDOWN,
                 mouseEvent -> {
-                    context.targetWindowOperations().getWindowByPoint(mouseEvent.point()).ifPresentOrElse(window -> {
+                    context.targetWindowOperations().getWindowByPoint(mouseEvent.point()).ifPresentOrElse(windowPoint -> {
+                        final IWindow window = windowPoint.window();
                         window.bringForeground();
                         window.moveWindow(0, 0); //FIXME убрать, когда научимся брать метрики без позиционирования окна
                         context.standardDialogsProvider().captureRectangle(maybeRectangle -> maybeRectangle.ifPresentOrElse(rectangle -> {

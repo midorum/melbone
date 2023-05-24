@@ -1,7 +1,6 @@
 package midorum.melbone.ui.internal;
 
 import com.midorum.win32api.facade.IScreenShotMaker;
-import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.WindowPoint;
 import com.midorum.win32api.hook.KeyHookHelper;
 import com.midorum.win32api.hook.MouseHookHelper;
@@ -9,15 +8,15 @@ import com.midorum.win32api.struct.PointInt;
 import dma.validation.Validator;
 import midorum.melbone.executor.ExecutorFactory;
 import midorum.melbone.model.experimental.task.TaskStorage;
-import midorum.melbone.model.settings.PropertiesProvider;
-import midorum.melbone.ui.internal.model.TargetWindowOperations;
-import midorum.melbone.ui.internal.util.DataLoader;
-import midorum.melbone.ui.internal.util.StandardDialogsProvider;
 import midorum.melbone.model.persistence.AccountStorage;
 import midorum.melbone.model.persistence.SettingStorage;
 import midorum.melbone.model.processing.IExecutor;
+import midorum.melbone.model.settings.PropertiesProvider;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
+import midorum.melbone.ui.internal.model.TargetWindowOperations;
+import midorum.melbone.ui.internal.util.DataLoader;
+import midorum.melbone.ui.internal.util.StandardDialogsProvider;
 import midorum.melbone.window.WindowFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -152,12 +151,7 @@ public class Context {
             }
 
             @Override
-            public Optional<WindowPoint> getPointInWindow(final PointInt point) {
-                return windowFactory.getPointInWindow(point);
-            }
-
-            @Override
-            public Optional<IWindow> getWindowByPoint(final PointInt point) {
+            public Optional<WindowPoint> getWindowByPoint(final PointInt point) {
                 return windowFactory.getWindowByPoint(point);
             }
         };

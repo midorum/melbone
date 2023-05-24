@@ -277,7 +277,7 @@ class SettingsPaneTest extends MockedContext {
             final PointInt samePointInFoundWindow = new PointInt(2, 3);
             final IWindow foundNativeWindow = createNativeWindowMock(capturedWindowTitle);
             final WindowPoint windowPoint = new WindowPoint(foundNativeWindow, samePointInFoundWindow);
-            interaction.whenTryGetPointInWindow(pointWhereUserClicked).thenReturn(windowPoint);
+            interaction.whenTryGetWindowByPoint(pointWhereUserClicked).thenReturn(windowPoint);
             interaction.whenTryAskOkCancelConfirmationThenChooseOk();
             interaction.whenTryCatchMouseKeyEvent(createMouseEvent(IWinUser.WM_LBUTTONDOWN, pointWhereUserClicked)).thenCatchWithSuccess();
             getCaptureButton().doClick();
@@ -291,7 +291,7 @@ class SettingsPaneTest extends MockedContext {
                 final PointInt samePointInFoundWindow = new PointInt(2, 3);
                 final IWindow foundNativeWindow = createNativeWindowMock(windowRectangle);
                 final WindowPoint windowPoint = new WindowPoint(foundNativeWindow, samePointInFoundWindow);
-                interaction.whenTryGetPointInWindow(pointWhereUserClicked).thenReturn(windowPoint);
+                interaction.whenTryGetWindowByPoint(pointWhereUserClicked).thenReturn(windowPoint);
                 when(relativeCoordinates.windowRelativeX(samePointInFoundWindow.x())).thenReturn(capturedPoint.x());
                 when(relativeCoordinates.windowRelativeY(samePointInFoundWindow.y())).thenReturn(capturedPoint.y());
                 interaction.whenTryAskOkCancelConfirmationThenChooseOk();
@@ -308,7 +308,7 @@ class SettingsPaneTest extends MockedContext {
                 final PointInt absoluteScreenPoint = new PointInt((int) capturedPoint.x(), (int) capturedPoint.y());
                 final IWindow someNativeWindow = createNativeWindowMock();
                 final WindowPoint windowPoint = new WindowPoint(someNativeWindow, samePointInFoundWindow);
-                when(windowFactory.getPointInWindow(pointWhereUserClicked)).thenReturn(Optional.of(windowPoint));
+                when(windowFactory.getWindowByPoint(pointWhereUserClicked)).thenReturn(Optional.of(windowPoint));
                 when(win32System.getAbsoluteScreenPoint(samePointInFoundWindow)).thenReturn(absoluteScreenPoint);
                 interaction.whenTryAskOkCancelConfirmationThenChooseOk();
                 interaction.whenTryCatchMouseKeyEvent(createMouseEvent(IWinUser.WM_LBUTTONDOWN, pointWhereUserClicked)).thenCatchWithSuccess();
