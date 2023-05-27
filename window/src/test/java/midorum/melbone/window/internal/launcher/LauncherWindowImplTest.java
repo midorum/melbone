@@ -4,6 +4,7 @@ import com.midorum.win32api.facade.*;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
 import com.midorum.win32api.win32.Win32VirtualKey;
+import com.sun.jna.platform.win32.Win32VK;
 import midorum.melbone.model.dto.Account;
 import midorum.melbone.model.settings.stamp.Stamp;
 import midorum.melbone.settings.StampKeys;
@@ -99,8 +100,7 @@ class LauncherWindowImplTest {
         when(mouse.move(any(PointInt.class))).thenReturn(mouse);
         when(mouse.move(any(PointFloat.class))).thenReturn(mouse);
         when(window.getKeyboard()).thenReturn(keyboard);
-        when(keyboard.typeControlled(anyChar())).thenReturn(keyboard);
-        when(keyboard.pressAndRelease(any(Win32VirtualKey.class))).thenReturn(keyboard);
+        when(keyboard.enterHotKey(any(HotKey.class))).thenReturn(keyboard);
         when(window.getProcess()).thenReturn(process);
         //launcher normal metrics
         when(window.isVisible()).thenReturn(true);

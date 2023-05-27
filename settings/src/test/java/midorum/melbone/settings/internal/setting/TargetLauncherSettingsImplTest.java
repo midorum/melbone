@@ -2,24 +2,21 @@ package midorum.melbone.settings.internal.setting;
 
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Rectangle;
-import com.midorum.win32api.facade.Win32System;
+import com.midorum.win32api.facade.WindowPoint;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
-import com.midorum.win32api.struct.PointLong;
 import midorum.melbone.model.exception.CriticalErrorException;
-import midorum.melbone.model.settings.key.WindowHolder;
 import midorum.melbone.model.settings.setting.TargetLauncherSettings;
 import midorum.melbone.settings.SettingKeys;
 import midorum.melbone.settings.internal.management.SettingsFactoryInternal;
 import midorum.melbone.settings.managment.SettingPropertyNaming;
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class TargetLauncherSettingsImplTest {
 
@@ -37,7 +34,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues("string", "")
                 .invalidValues()
                 .wrongTypeValues()
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(-1, -1)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -52,7 +49,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues("string", "")
                 .invalidValues()
                 .wrongTypeValues()
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(-1, -1)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test());
     }
 
@@ -64,7 +61,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new Rectangle(0, 0, 0, 0), new Rectangle(0, 0, 100, 50))
                 .invalidValues(new Rectangle(-1, -1, -1, -1), new Rectangle(0, 0, -1, -1))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(-1, -1)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -76,7 +73,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues("string", "")
                 .invalidValues()
                 .wrongTypeValues()
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(-1, -1)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -88,7 +85,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new Rectangle(0, 0, 0, 0), new Rectangle(0, 0, 100, 50))
                 .invalidValues(new Rectangle(-1, -1, -1, -1), new Rectangle(0, 0, -1, -1))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(-1, -1)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -100,7 +97,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues("string", "")
                 .invalidValues()
                 .wrongTypeValues()
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(-1, -1)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -112,7 +109,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new Rectangle(0, 0, 0, 0), new Rectangle(0, 0, 100, 50))
                 .invalidValues(new Rectangle(-1, -1, -1, -1), new Rectangle(0, 0, -1, -1))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(-1, -1)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -124,27 +121,20 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
     @Test
-    void desktopShortcutLocationAbsolutePoint() {
-        final Win32System win32System = mock(Win32System.class);
-        when(win32System.getAbsoluteScreenPoint(any(PointInt.class))).thenAnswer(invocation -> {
-            assertEquals(1, invocation.getArguments().length);
-            return invocation.getArgument(0, PointInt.class); //simply pass through
-        });
-        try (MockedStatic<Win32System> mockedStatic = mockStatic(Win32System.class)) {
-            mockedStatic.when(Win32System::getInstance).thenReturn(win32System);
-            new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.desktopShortcutLocationAbsolutePoint)
-                    .settingGetter(targetLauncherSettings::desktopShortcutLocationAbsolutePoint)
-                    .normalValues(new PointLong(0L, 0L), new PointLong(1000L, 2000L))
-                    .invalidValues(new PointFloat(-1L, -1L))
-                    .wrongTypeValues("string")
-                    .extractors(new SettingTester.ExtractorParameter(WindowHolder.EMPTY, new PointInt(1024, 768)))
-                    .test();
-        }
+    void desktopShortcutLocationPoint() {
+        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 4, 4));
+        new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.desktopShortcutLocationPoint)
+                .settingGetter(targetLauncherSettings::desktopShortcutLocationPoint)
+                .normalValues(new PointInt(0, 0), new PointInt(100, 50))
+                .invalidValues(new PointInt(-1, 0), new PointInt(0, -1))
+                .wrongTypeValues("string")
+                .extractFrom(new PointInt(100, 50))
+                .test();
     }
 
     @Test
@@ -155,7 +145,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.53f, .35f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(3, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -167,7 +157,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(3, 4)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -179,7 +169,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(4, 4)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -191,7 +181,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(5, 4)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -203,7 +193,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(5, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -215,7 +205,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(5, 6)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -227,7 +217,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(7, 6)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -239,7 +229,7 @@ class TargetLauncherSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(8, 6)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 

@@ -20,7 +20,7 @@
     </modules>
 
     <properties>
-        <revision>2.0.1</revision>
+        <revision>2.0.1-storing-keyboard-shortcuts.0.2.0</revision>
         <app.build.properties.filename>app-build.properties</app.build.properties.filename>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>16</maven.compiler.source>
@@ -33,9 +33,8 @@
         <maven.jacoco.version>0.8.9</maven.jacoco.version>
         <rxjava.version>1.3.8</rxjava.version>
         <dma-util.version>0.3.10</dma-util.version>
-        <midorum.Win32API.version>3.0.10</midorum.Win32API.version>
+        <midorum.Win32API.version>3.2.0</midorum.Win32API.version>
         <h2database.version>2.1.210</h2database.version>
-        <jna.version>5.9.0</jna.version>
         <log4j.version>2.20.0</log4j.version>
         <!--        <junit.platform.version>1.9.2</junit.platform.version>-->
         <junit.version>5.9.2</junit.version>

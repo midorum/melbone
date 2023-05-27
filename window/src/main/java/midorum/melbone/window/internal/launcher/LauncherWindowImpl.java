@@ -1,9 +1,6 @@
 package midorum.melbone.window.internal.launcher;
 
-import com.midorum.win32api.facade.IKeyboard;
-import com.midorum.win32api.facade.IMouse;
-import com.midorum.win32api.facade.IWindow;
-import com.midorum.win32api.facade.Rectangle;
+import com.midorum.win32api.facade.*;
 import com.midorum.win32api.win32.MsLcid;
 import com.midorum.win32api.win32.Win32VirtualKey;
 import dma.flow.Waiting;
@@ -130,14 +127,16 @@ public class LauncherWindowImpl implements LauncherWindow {
 
         //input login
         mouse.move(settings.targetLauncher().loginInputPoint()).leftClick();
-        keyboard.typeControlled('A')
-                .pressAndRelease(Win32VirtualKey.VK_DELETE)
+        final HotKey hotKeyCtrlA = new HotKey.Builder().withControl().code(Win32VirtualKey.VK_A).build();
+        final HotKey hotKeyDelete = new HotKey.Builder().code(Win32VirtualKey.VK_DELETE).build();
+        keyboard.enterHotKey(hotKeyCtrlA)
+                .enterHotKey(hotKeyDelete)
                 .type(account.login());
         log.info("entered login for {}", account.login());
         //input password
         mouse.move(settings.targetLauncher().passwordInputPoint()).leftClick();
-        keyboard.typeControlled('A')
-                .pressAndRelease(Win32VirtualKey.VK_DELETE)
+        keyboard.enterHotKey(hotKeyCtrlA)
+                .enterHotKey(hotKeyDelete)
                 .type(account.password());
         log.info("entered password for {}", account.login());
         //press login button

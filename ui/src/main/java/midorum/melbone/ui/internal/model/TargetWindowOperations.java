@@ -1,6 +1,5 @@
 package midorum.melbone.ui.internal.model;
 
-import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.WindowPoint;
 import com.midorum.win32api.struct.PointInt;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
@@ -22,7 +21,5 @@ public interface TargetWindowOperations {
 
     void minimizeAllWindows();
 
-    Optional<WindowPoint> getPointInWindow(PointInt point);
-
-    Optional<IWindow> getWindowByPoint(PointInt point);
+    Optional<WindowPoint> getWindowByPoint(PointInt point);
 }

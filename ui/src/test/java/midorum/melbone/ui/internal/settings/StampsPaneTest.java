@@ -189,7 +189,7 @@ class StampsPaneTest extends MockedContext {
         /* actions */
 
         public StampsPaneInteraction makeFakeStampToCapture(final StampKey stampKey, final IWindow capturedNativeWindow, final Rectangle capturedRectangle) {
-            interaction.whenTryGetWindowByPointThenReturn(capturedNativeWindow)
+            interaction.whenTryGetWindowByAnyPoint().thenReturnPointForWindow(capturedNativeWindow)
                     .whenTryCaptureScreenRectangleThenReturn(capturedRectangle)
                     .whenTryTakeRectangleShotThenReturnStandardImage();
             this.stampShouldBeDisplayed = StampsPaneTest.super.createFakeStamp(stampKey, capturedNativeWindow, capturedRectangle);

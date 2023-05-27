@@ -1,12 +1,9 @@
 package midorum.melbone.window.internal.baseapp;
 
-import com.midorum.win32api.facade.IKeyboard;
-import com.midorum.win32api.facade.IMouse;
-import com.midorum.win32api.facade.IProcess;
-import com.midorum.win32api.facade.IWindow;
+import com.midorum.win32api.facade.*;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
-import com.midorum.win32api.win32.Win32VirtualKey;
+import midorum.melbone.model.dto.KeyShortcut;
 import midorum.melbone.model.settings.account.AccountBinding;
 import midorum.melbone.model.settings.stamp.Stamp;
 import midorum.melbone.settings.StampKeys;
@@ -89,6 +86,9 @@ class BaseAppWindowImplTest {
     private final Stamp serverLineSelectedStamp = mock(Stamp.class);
     private final Stamp startButtonStamp = mock(Stamp.class);
     private final Stamp dailyTrackerPopupCaptionStamp = mock(Stamp.class);
+    //hot keys
+    final KeyShortcut stopAnimationHotkey = mock(KeyShortcut.class);
+    final KeyShortcut openMenuHotkey = mock(KeyShortcut.class);
 
     @BeforeAll
     public static void beforeAll() {
@@ -149,6 +149,9 @@ class BaseAppWindowImplTest {
         when(targetBaseAppSettings.checkServerLineRenderingDelay()).thenReturn(DELAY_FOR_TEST);
         when(targetBaseAppSettings.dailyTrackerPopupRenderingTimeout()).thenReturn(TIMEOUT_FOR_TEST);
         when(targetBaseAppSettings.checkDailyTrackerPopupRenderingDelay()).thenReturn(DELAY_FOR_TEST);
+        //settings: hot keys
+        when(targetBaseAppSettings.stopAnimationHotkey()).thenReturn(stopAnimationHotkey);
+        when(targetBaseAppSettings.openMenuHotkey()).thenReturn(openMenuHotkey);
         //window
         when(window.getSystemId()).thenReturn("0xdf67");
         when(window.getWindowMouse(SPEED_FACTOR)).thenReturn(mouse);
@@ -157,7 +160,7 @@ class BaseAppWindowImplTest {
         when(mouse.move(anyFloat(), anyFloat())).thenReturn(mouse);
         when(mouse.leftClick()).thenReturn(mouse);
         when(window.getKeyboard()).thenReturn(keyboard);
-        when(keyboard.pressAndRelease(any(Win32VirtualKey.class))).thenReturn(keyboard);
+        when(keyboard.enterHotKey(any(HotKey.class))).thenReturn(keyboard);
         when(window.getProcess()).thenReturn(process);
         //stamps
         when(stamps.targetBaseApp()).thenReturn(targetBaseAppStamps);

@@ -40,11 +40,11 @@ public class NoticePane extends JPanel {
 
     public void showSuccess(String text) {
         noticeLabel.setText(text);
-        noticeLabel.setForeground(Color.blue);
+        noticeLabel.setForeground(Color.green);
     }
 
     public void showInfo(String text) {
         noticeLabel.setText(text);
-        noticeLabel.setForeground(Color.gray);
+        noticeLabel.setForeground(Color.blue);
     }
 }
