@@ -1,5 +1,6 @@
 package midorum.melbone.window.internal.baseapp;
 
+import com.midorum.win32api.facade.HotKey;
 import com.midorum.win32api.facade.IKeyboard;
 import com.midorum.win32api.facade.IMouse;
 import com.midorum.win32api.facade.IWindow;
@@ -164,8 +165,8 @@ public class BaseAppWindowImpl implements BaseAppWindow {
                 .timeout(settings.targetBaseAppSettings().baseWindowRenderingTimeout(), TimeUnit.MILLISECONDS)
                 .withDelay(settings.targetBaseAppSettings().checkBaseWindowRenderingDelay(), TimeUnit.MILLISECONDS)
                 .doOnEveryFailedIteration(i -> log.debug("{}: base window has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitForBoolean(this::waitForMenuRendering);
-        if (result) window.getKeyboard().pressAndRelease(Win32VirtualKey.VK_ESCAPE); //close menu
+                .waitForBoolean(this::waitForMenuRendering);// open menu
+        if (result) window.getKeyboard().enterHotKey(settings.targetBaseAppSettings().openMenuHotkey().toHotKey());// close menu
         return result;
     }
 
@@ -277,12 +278,13 @@ public class BaseAppWindowImpl implements BaseAppWindow {
         log.info("waiting for menu rendering");
         final IKeyboard keyboard = window.getKeyboard();
         final Stamp checkingStamp = stamps.targetBaseApp().menuExitOption();
+        final HotKey openMenuHotKey = settings.targetBaseAppSettings().openMenuHotkey().toHotKey();
         final boolean result = new Waiting()
                 .timeout(settings.targetBaseAppSettings().menuRenderingTimeout(), TimeUnit.MILLISECONDS)
                 .withDelay(settings.targetBaseAppSettings().checkMenuRenderingDelay(), TimeUnit.MILLISECONDS)
                 .doOnEveryFailedIteration(i -> {
                     log.debug("{}: menu has not rendered yet - try to open again", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
-                    keyboard.pressAndRelease(Win32VirtualKey.VK_ESCAPE);
+                    keyboard.enterHotKey(openMenuHotKey);
                 })
                 .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp)).isPresent();
         if (result)
@@ -294,6 +296,7 @@ public class BaseAppWindowImpl implements BaseAppWindow {
 
     private Stamp waitServerPageRendering() throws InterruptedException {
         final IKeyboard keyboard = window.getKeyboard();
+        final HotKey stopAnimationHotKey = settings.targetBaseAppSettings().stopAnimationHotkey().toHotKey();
         log.info("waiting for server page rendering");
         // сначала ищем базовый масштаб, а затем дефолтный, чтобы не менять масштаб если не нужно
         final Stamp[] checkingStamps = {stamps.targetBaseApp().optionsButtonBaseScale(),
@@ -303,7 +306,7 @@ public class BaseAppWindowImpl implements BaseAppWindow {
                 .withDelay(settings.targetBaseAppSettings().checkServerPageRenderingDelay(), TimeUnit.MILLISECONDS)
                 .doOnEveryFailedIteration(i -> {
                     log.debug("{}: server page has not rendered yet - try to stop animation", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
-                    keyboard.pressAndRelease(Win32VirtualKey.VK_ESCAPE);
+                    keyboard.enterHotKey(stopAnimationHotKey);
                 })
                 .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamps))
                 .orElseThrow(() -> getBrokenWindowException("server page has not rendered - maybe window broken", checkingStamps));
@@ -413,7 +416,8 @@ public class BaseAppWindowImpl implements BaseAppWindow {
                     openPopupAction.accept();
                 })
                 .waitForBoolean(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp).isPresent());
-        if (!rendered) log.warn("daily tracker popup has not rendered (marker={})", commonWindowService.logFailedStamps(this.window, checkingStamp));
+        if (!rendered)
+            log.warn("daily tracker popup has not rendered (marker={})", commonWindowService.logFailedStamps(this.window, checkingStamp));
         else log.info("daily tracker popup has rendered");
         return rendered;
     }
@@ -421,7 +425,8 @@ public class BaseAppWindowImpl implements BaseAppWindow {
     private boolean closeDailyTrackerPopupAndCheckRendering(final IMouse mouse) throws InterruptedException {
         log.info("closing daily tracker popup");
         final Stamp checkingStamp = stamps.targetBaseApp().dailyTrackerPopupCaption();
-        final Waiting.EmptyConsumer closePopupAction = () -> mouse.move(settings.targetBaseAppSettings().closeDailyTrackerPopupButtonPoint()).leftClick();;
+        final Waiting.EmptyConsumer closePopupAction = () -> mouse.move(settings.targetBaseAppSettings().closeDailyTrackerPopupButtonPoint()).leftClick();
+        ;
         final boolean notRendered = new Waiting()
                 .timeout(settings.targetBaseAppSettings().dailyTrackerPopupRenderingTimeout(), TimeUnit.MILLISECONDS)
                 .withDelay(settings.targetBaseAppSettings().checkDailyTrackerPopupRenderingDelay(), TimeUnit.MILLISECONDS)
@@ -432,7 +437,8 @@ public class BaseAppWindowImpl implements BaseAppWindow {
                 })
                 .waitForBoolean(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp).isEmpty());
         if (notRendered) log.info("daily tracker popup closed");
-        else  log.warn("daily tracker popup has not closed (marker={})", commonWindowService.logFailedStamps(this.window, checkingStamp));
+        else
+            log.warn("daily tracker popup has not closed (marker={})", commonWindowService.logFailedStamps(this.window, checkingStamp));
         return notRendered;
     }
 

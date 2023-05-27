@@ -1,14 +1,11 @@
 package midorum.melbone.settings.internal.defining;
 
-import com.midorum.win32api.struct.PointInt;
 import dma.validation.Validator;
-import midorum.melbone.model.settings.key.SettingsManagerAction;
 import midorum.melbone.model.persistence.StorageKey;
 import midorum.melbone.model.settings.key.SettingData;
-import midorum.melbone.model.settings.key.WindowHolder;
+import midorum.melbone.model.settings.key.SettingObtainWay;
 
 import java.util.Optional;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -19,8 +16,7 @@ public class SettingDataImpl implements SettingData {
     private final StorageKey storageKey;
     private final Predicate<Object> validator;
     private final Function<String, Object> parser;
-    private final SettingsManagerAction settingsManagerAction;
-    private final BiFunction<WindowHolder, PointInt, Object> extractor;
+    private final SettingObtainWay obtainWay;
     private final Object defaultValue;
     private final boolean isEnabled;
 
@@ -28,8 +24,8 @@ public class SettingDataImpl implements SettingData {
                             final String description,
                             final StorageKey storageKey,
                             final Predicate<Object> validator,
-                            final Function<String, Object> parser, final SettingsManagerAction settingsManagerAction,
-                            final BiFunction<WindowHolder, PointInt, Object> extractor,
+                            final Function<String, Object> parser,
+                            final SettingObtainWay obtainWay,
                             final Object defaultValue,
                             final boolean isEnabled) {
         this.type = type;
@@ -37,8 +33,7 @@ public class SettingDataImpl implements SettingData {
         this.storageKey = storageKey;
         this.validator = validator;
         this.parser = parser;
-        this.settingsManagerAction = settingsManagerAction;
-        this.extractor = extractor;
+        this.obtainWay = obtainWay;
         this.defaultValue = defaultValue;
         this.isEnabled = isEnabled;
     }
@@ -74,13 +69,8 @@ public class SettingDataImpl implements SettingData {
     }
 
     @Override
-    public BiFunction<WindowHolder, PointInt, Object> extractor() {
-        return extractor;
-    }
-
-    @Override
-    public SettingsManagerAction settingsManagerAction() {
-        return settingsManagerAction;
+    public SettingObtainWay obtainWay() {
+        return obtainWay;
     }
 
     @Override
@@ -100,8 +90,7 @@ public class SettingDataImpl implements SettingData {
         private StorageKey storageKey;
         private Predicate<Object> validator;
         private Function<String, Object> parser;
-        private BiFunction<WindowHolder, PointInt, Object> extractor;
-        private SettingsManagerAction settingsManagerAction;
+        private SettingObtainWay obtainWay;
         private Object defaultValue;
         private boolean isEnabled = true;
 
@@ -130,13 +119,8 @@ public class SettingDataImpl implements SettingData {
             return this;
         }
 
-        public Builder extractor(final BiFunction<WindowHolder, PointInt, Object> extractor) {
-            this.extractor = extractor;
-            return this;
-        }
-
-        public Builder settingsManagerAction(final SettingsManagerAction settingsManagerAction) {
-            this.settingsManagerAction = settingsManagerAction;
+        public Builder obtainWay(final SettingObtainWay obtainWay) {
+            this.obtainWay = obtainWay;
             return this;
         }
 
@@ -167,8 +151,7 @@ public class SettingDataImpl implements SettingData {
                     Validator.checkNotNull(storageKey).orThrowForSymbol("storageKey"),
                     checkedValidator,
                     Validator.checkNotNull(parser).orDefault(SettingParser.forType(checkedType).parser()),
-                    Validator.checkNotNull(settingsManagerAction).orDefault(SettingsManagerAction.noAction),
-                    Validator.checkNotNull(extractor).orDefault(SettingExtractor.EXTRACTOR_UNSUPPORTED.extractor()),
+                    Validator.checkNotNull(obtainWay).orDefault(SettingObtainWays.insertManually),
                     defaultValue,
                     isEnabled
             );

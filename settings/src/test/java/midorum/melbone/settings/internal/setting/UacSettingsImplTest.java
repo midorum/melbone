@@ -2,8 +2,8 @@ package midorum.melbone.settings.internal.setting;
 
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Rectangle;
-import com.midorum.win32api.struct.PointInt;
-import midorum.melbone.model.settings.key.WindowHolder;
+import com.midorum.win32api.facade.WindowPoint;
+import com.midorum.win32api.struct.PointFloat;
 import midorum.melbone.model.settings.setting.UacSettings;
 import midorum.melbone.settings.SettingKeys;
 import midorum.melbone.settings.internal.management.SettingsFactoryInternal;
@@ -31,7 +31,7 @@ class UacSettingsImplTest {
                 .normalValues("string", "")
                 .invalidValues()
                 .wrongTypeValues()
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(-1, -1)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -43,7 +43,7 @@ class UacSettingsImplTest {
                 .normalValues(new Rectangle(0, 0, 0, 0), new Rectangle(0, 0, 100, 50))
                 .invalidValues(new Rectangle(-1, -1, -1, -1), new Rectangle(0, 0, -1, -1))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(-1, -1)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 }

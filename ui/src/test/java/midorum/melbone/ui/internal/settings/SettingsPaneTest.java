@@ -5,8 +5,10 @@ import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.WindowPoint;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
-import com.midorum.win32api.struct.PointLong;
 import com.midorum.win32api.win32.IWinUser;
+import com.midorum.win32api.win32.Win32VirtualKey;
+import midorum.melbone.model.dto.KeyShortcut;
+import midorum.melbone.model.settings.key.SettingData;
 import midorum.melbone.model.settings.key.SettingKey;
 import midorum.melbone.model.settings.key.SettingsManagerAction;
 import midorum.melbone.settings.SettingKeys;
@@ -17,13 +19,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import javax.swing.*;
+
 import java.util.Optional;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 class SettingsPaneTest extends MockedContext {
 
@@ -51,7 +55,7 @@ class SettingsPaneTest extends MockedContext {
     void displayAndChangeDefaultSettingValueWithNoManagementAction() {
         final SettingKey settingKey = SettingKeys.Application.maxAccountsSimultaneously;
         final int newValue = 10;
-        assertThat(settingKey.internal().settingsManagerAction(), equalTo(SettingsManagerAction.noAction));
+        assertThat(settingKey.internal().obtainWay().action(), equalTo(SettingsManagerAction.noAction));
         final SettingsPaneInteraction interaction = new SettingsPaneInteraction();
         interaction.scenario("Select setting in combo box")
                 .selectSettingInComboBox(settingKey)
@@ -87,7 +91,7 @@ class SettingsPaneTest extends MockedContext {
         final SettingKey settingKey = SettingKeys.TargetLauncher.windowTitle;
         final String newValue = "some text";
         final String capturedWindowTitle = "captured window title";
-        assertThat(settingKey.internal().settingsManagerAction(), equalTo(SettingsManagerAction.touchWindow));
+        assertThat(settingKey.internal().obtainWay().action(), equalTo(SettingsManagerAction.touchWindow));
         final SettingsPaneInteraction interaction = new SettingsPaneInteraction();
         interaction.scenario("Select setting in combo box")
                 .selectSettingInComboBox(settingKey)
@@ -123,7 +127,7 @@ class SettingsPaneTest extends MockedContext {
         final String newValue = "[x=0.1, y=0.2]";
         final PointFloat newValueToCheck = new PointFloat(0.1f, 0.2f);
         final PointFloat capturedPoint = new PointFloat(0.5f, 0.7f);
-        assertThat(settingKey.internal().settingsManagerAction(), equalTo(SettingsManagerAction.touchWindowElement));
+        assertThat(settingKey.internal().obtainWay().action(), equalTo(SettingsManagerAction.touchWindowElement));
         final SettingsPaneInteraction interaction = new SettingsPaneInteraction();
         interaction.scenario("Select setting in combo box")
                 .selectSettingInComboBox(settingKey)
@@ -155,11 +159,11 @@ class SettingsPaneTest extends MockedContext {
     @Test
     @DisplayName("Display and change setting value with touch screen element action")
     void displayAndChangeDefaultSettingValueWithTouchScreenElementAction() {
-        final SettingKey settingKey = SettingKeys.TargetLauncher.desktopShortcutLocationAbsolutePoint;
+        final SettingKey settingKey = SettingKeys.TargetLauncher.desktopShortcutLocationPoint;
         final String newValue = "[x=1, y=2]";
-        final PointLong newValueToCheck = new PointLong(1L, 2L);
-        final PointLong capturedPoint = new PointLong(1000L, 555L);
-        assertThat(settingKey.internal().settingsManagerAction(), equalTo(SettingsManagerAction.touchScreenElement));
+        final PointInt newValueToCheck = new PointInt(1, 2);
+        final PointInt capturedPoint = new PointInt(3, 4);
+        assertThat(settingKey.internal().obtainWay().action(), equalTo(SettingsManagerAction.touchScreenElement));
         final SettingsPaneInteraction interaction = new SettingsPaneInteraction();
         interaction.scenario("Select setting in combo box")
                 .selectSettingInComboBox(settingKey)
@@ -186,6 +190,42 @@ class SettingsPaneTest extends MockedContext {
                 .clickSaveButton()
                 .verifySettingValueInStorage(settingKey, capturedPoint)
                 .printStateBriefly();
+    }
+
+    @Test
+    @DisplayName("Display and change setting value with press hotkey action")
+    void displayAndChangeDefaultSettingValueWithPressHotkeyAction() {
+        final SettingKey settingKey = SettingKeys.TargetBaseApp.openMenuHotkey;
+        final String newValue = "Alt+Ctrl+Shift+S";
+        final KeyShortcut newValueToCheck = new KeyShortcut.Builder().code(Win32VirtualKey.VK_S.code).withAlt().withControl().withShift().build();
+//        final PointInt capturedPoint = new PointInt(3, 4);
+        assertThat(settingKey.internal().obtainWay().action(), equalTo(SettingsManagerAction.pressHotkey));
+        final SettingsPaneInteraction interaction = new SettingsPaneInteraction();
+        interaction.scenario("Select setting in combo box")
+                .selectSettingInComboBox(settingKey)
+                .verifyDescriptionSettingLabelIs(settingKey)
+                .verifySettingDefaultValueLabelIsEmpty()
+                .verifySettingValueFieldIsEmpty()
+                .printStateBriefly();
+        interaction.scenario("Store new value for setting")
+                .typeSettingValue(newValue)
+                .clickSaveButton()
+                .verifySettingValueInStorage(settingKey, newValueToCheck);
+        interaction.scenario("Verifying stored setting value on form")
+                .selectSettingInComboBox(settingKey)
+                .verifyDescriptionSettingLabelIs(settingKey)
+                .verifySettingDefaultValueLabelContains(settingKey)
+                .verifySettingValueField(newValueToCheck.toPrettyString())
+                .printStateBriefly();
+//        interaction.scenario("Restore default value for setting")
+//                .clickSetDefaultValueButton()
+//                .verifySettingValueInStorage(settingKey, newValueToCheck);
+//        interaction.scenario("Capturing value")
+//                .clickCaptureButtonWithConfirm(capturedPoint)
+//                .verifySettingValueField(capturedPoint.toString())
+//                .clickSaveButton()
+//                .verifySettingValueInStorage(settingKey, capturedPoint)
+//                .printStateBriefly();
     }
 
     private class SettingsPaneInteraction {
@@ -274,7 +314,7 @@ class SettingsPaneTest extends MockedContext {
 
         public SettingsPaneInteraction clickCaptureButtonWithConfirm(final String capturedWindowTitle) {
             final PointInt pointWhereUserClicked = new PointInt(-1, -1);
-            final PointInt samePointInFoundWindow = new PointInt(2, 3);
+            final PointFloat samePointInFoundWindow = new PointFloat(0.5f, 0.5f);
             final IWindow foundNativeWindow = createNativeWindowMock(capturedWindowTitle);
             final WindowPoint windowPoint = new WindowPoint(foundNativeWindow, samePointInFoundWindow);
             interaction.whenTryGetWindowByPoint(pointWhereUserClicked).thenReturn(windowPoint);
@@ -285,35 +325,21 @@ class SettingsPaneTest extends MockedContext {
         }
 
         public SettingsPaneInteraction clickCaptureButtonWithConfirm(final PointFloat capturedPoint) {
-            doWithMockedWin32System(() -> {
-                final PointInt pointWhereUserClicked = new PointInt(-1, -1);
-                final Rectangle windowRectangle = new Rectangle(0, 0, 200, 100);
-                final PointInt samePointInFoundWindow = new PointInt(2, 3);
-                final IWindow foundNativeWindow = createNativeWindowMock(windowRectangle);
-                final WindowPoint windowPoint = new WindowPoint(foundNativeWindow, samePointInFoundWindow);
-                interaction.whenTryGetWindowByPoint(pointWhereUserClicked).thenReturn(windowPoint);
-                when(relativeCoordinates.windowRelativeX(samePointInFoundWindow.x())).thenReturn(capturedPoint.x());
-                when(relativeCoordinates.windowRelativeY(samePointInFoundWindow.y())).thenReturn(capturedPoint.y());
-                interaction.whenTryAskOkCancelConfirmationThenChooseOk();
-                interaction.whenTryCatchMouseKeyEvent(createMouseEvent(IWinUser.WM_LBUTTONDOWN, pointWhereUserClicked)).thenCatchWithSuccess();
-                getCaptureButton().doClick();
-            });
+            final PointInt pointWhereUserClicked = new PointInt(-1, -1);
+            final Rectangle windowRectangle = new Rectangle(0, 0, 200, 100);
+            final IWindow foundNativeWindow = createNativeWindowMock(windowRectangle);
+            final WindowPoint windowPoint = new WindowPoint(foundNativeWindow, capturedPoint);
+            interaction.whenTryGetWindowByPoint(pointWhereUserClicked).thenReturn(windowPoint);
+            interaction.whenTryAskOkCancelConfirmationThenChooseOk();
+            interaction.whenTryCatchMouseKeyEvent(createMouseEvent(IWinUser.WM_LBUTTONDOWN, pointWhereUserClicked)).thenCatchWithSuccess();
+            getCaptureButton().doClick();
             return this;
         }
 
-        public SettingsPaneInteraction clickCaptureButtonWithConfirm(final PointLong capturedPoint) {
-            doWithMockedWin32System(() -> {
-                final PointInt pointWhereUserClicked = new PointInt(-1, -1);
-                final PointInt samePointInFoundWindow = new PointInt(2, 3);
-                final PointInt absoluteScreenPoint = new PointInt((int) capturedPoint.x(), (int) capturedPoint.y());
-                final IWindow someNativeWindow = createNativeWindowMock();
-                final WindowPoint windowPoint = new WindowPoint(someNativeWindow, samePointInFoundWindow);
-                when(windowFactory.getWindowByPoint(pointWhereUserClicked)).thenReturn(Optional.of(windowPoint));
-                when(win32System.getAbsoluteScreenPoint(samePointInFoundWindow)).thenReturn(absoluteScreenPoint);
-                interaction.whenTryAskOkCancelConfirmationThenChooseOk();
-                interaction.whenTryCatchMouseKeyEvent(createMouseEvent(IWinUser.WM_LBUTTONDOWN, pointWhereUserClicked)).thenCatchWithSuccess();
-                getCaptureButton().doClick();
-            });
+        public SettingsPaneInteraction clickCaptureButtonWithConfirm(final PointInt capturedPoint) {
+            interaction.whenTryAskOkCancelConfirmationThenChooseOk();
+            interaction.whenTryCatchMouseKeyEvent(createMouseEvent(IWinUser.WM_LBUTTONDOWN, capturedPoint)).thenCatchWithSuccess();
+            getCaptureButton().doClick();
             return this;
         }
 
@@ -366,7 +392,12 @@ class SettingsPaneTest extends MockedContext {
         }
 
         public SettingsPaneInteraction verifySettingDefaultValueLabelContains(final SettingKey settingKey) {
-            assertThat(getSettingDefaultValueLabel().getText(), equalTo(settingKey.internal().defaultValue().map(Object::toString).orElse("[empty]")));
+            final SettingData internal = settingKey.internal();
+            final Optional<Object> defaultValue = internal.defaultValue();
+            final Optional<String> maybe = internal.type().isAssignableFrom(KeyShortcut.class)
+                    ? defaultValue.map(o -> ((KeyShortcut) o).toPrettyString())
+                    : defaultValue.map(Object::toString);
+            assertThat(getSettingDefaultValueLabel().getText(), equalTo(maybe.orElse("[empty]")));
             return this;
         }
 

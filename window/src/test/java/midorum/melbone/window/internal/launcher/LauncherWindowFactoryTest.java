@@ -29,16 +29,12 @@ import static org.mockito.Mockito.*;
 class LauncherWindowFactoryTest {
 
     private static final float SPEED_FACTOR = 0.1F;
-    private static final int ATTEMPTS_TO_FIND_WINDOW = 2;
-    private static final int SEARCH_WINDOW_DELAY = 1;
-    private static final int SEARCH_WINDOW_LATENCY = 1;
     private static final String LAUNCHER_WINDOW_TITLE = "LauncherTitle";
     private static final int LAUNCHER_WINDOW_WIDTH = 150;
     private static final int LAUNCHER_WINDOW_HEIGHT = 100;
     private static final int DESKTOP_ICON_LOCATION_X = 35;
     private static final int DESKTOP_ICON_LOCATION_Y = 25;
     private static final PointInt DESKTOP_ICON_LOCATION_POINT_INT = new PointInt(DESKTOP_ICON_LOCATION_X, DESKTOP_ICON_LOCATION_Y);
-    private static final PointLong DESKTOP_ICON_LOCATION_POINT_LONG = new PointLong(DESKTOP_ICON_LOCATION_X, DESKTOP_ICON_LOCATION_Y);
     private static final String INITIALIZATION_ERROR_DIALOG_TITLE = "LauncherTitle";
     private static final int INITIALIZATION_ERROR_DIALOG_WIDTH = 75;
     private static final int INITIALIZATION_ERROR_DIALOG_HEIGHT = 55;
@@ -70,14 +66,13 @@ class LauncherWindowFactoryTest {
         when(win32System.getScreenMouse(SPEED_FACTOR)).thenReturn(mouse);
         when(mouse.move(any(PointInt.class))).thenReturn(mouse);
         when(mouse.move(any(PointFloat.class))).thenReturn(mouse);
+        when(mouse.move((PointInt) null)).thenThrow(new IllegalStateException("Passed null to mouse move method"));
+        when(mouse.move((PointFloat) null)).thenThrow(new IllegalStateException("Passed null to mouse move method"));
         when(mouse.leftClick()).thenReturn(mouse);
         when(commonWindowService.getStampValidator()).thenReturn(stampValidator);
         when(applicationSettings.speedFactor()).thenReturn(SPEED_FACTOR);
         // search launcher
-        when(targetLauncherSettings.attemptsToFindWindow()).thenReturn(ATTEMPTS_TO_FIND_WINDOW);
-        when(targetLauncherSettings.searchWindowDelay()).thenReturn(SEARCH_WINDOW_DELAY);
-        when(targetLauncherSettings.searchWindowLatency()).thenReturn(SEARCH_WINDOW_LATENCY);
-        when(targetLauncherSettings.desktopShortcutLocationAbsolutePoint()).thenReturn(DESKTOP_ICON_LOCATION_POINT_LONG);
+        when(targetLauncherSettings.desktopShortcutLocationPoint()).thenReturn(DESKTOP_ICON_LOCATION_POINT_INT);
         // launcher window
         when(settings.targetLauncher().windowTitle()).thenReturn(LAUNCHER_WINDOW_TITLE);
         when(targetLauncherSettings.windowDimensions()).thenReturn(new Rectangle(0, 0, LAUNCHER_WINDOW_WIDTH, LAUNCHER_WINDOW_HEIGHT));
@@ -123,7 +118,7 @@ class LauncherWindowFactoryTest {
         final LauncherWindowFactory instance = new LauncherWindowFactory(commonWindowService, settings, uacWindowFactory, stamps);
         final Optional<LauncherWindow> maybeLauncher = instance.findWindowOrTryStartLauncher();
         assertTrue(maybeLauncher.isPresent());
-        verify(targetLauncherSettings, atLeast(1)).desktopShortcutLocationAbsolutePoint();
+        verify(targetLauncherSettings, atLeast(1)).desktopShortcutLocationPoint();
         verify(mouse, atLeast(1)).move(DESKTOP_ICON_LOCATION_POINT_INT);
         verify(mouse, atLeast(1)).leftClick();
     }

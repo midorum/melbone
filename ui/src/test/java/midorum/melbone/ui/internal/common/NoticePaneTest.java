@@ -24,7 +24,7 @@ class NoticePaneTest extends MockedContext {
         final String testInfo = "test";
         noticePane.showInfo(testInfo);
         assertEquals(testInfo, getLabelText(noticeLabel), "Shown info should be " + testInfo);
-        assertEquals(Color.gray, noticeLabel.get().getForeground(), "Shown info color should be " + Color.gray);
+        assertEquals(Color.blue, noticeLabel.get().getForeground(), "Shown info color should be " + Color.blue);
 
         noticePane.clearNotice();
         assertTrue(textIsNullOrBlank(noticeLabel), "Cleared notice label should be blank");

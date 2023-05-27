@@ -1,14 +1,19 @@
 package midorum.melbone.model.dto;
 
+import com.midorum.win32api.facade.HotKey;
+import com.midorum.win32api.hook.GlobalKeyHook;
 import com.midorum.win32api.win32.Win32VirtualKey;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Objects;
 
 public class KeyShortcut implements Serializable {
 
     @Serial
-    private static final long serialVersionUID=1L;
+    private static final long serialVersionUID = 1L;
 
     private final int code;
     private final boolean shift;
@@ -48,6 +53,19 @@ public class KeyShortcut implements Serializable {
                 '}';
     }
 
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        final KeyShortcut that = (KeyShortcut) o;
+        return code == that.code && shift == that.shift && alt == that.alt && control == that.control;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(code, shift, alt, control);
+    }
+
     public String toPrettyString() {
         return this.stringifyAltModifier() + this.stringifyControlModifier() + this.stringifyShiftModifier() + this.stringifySignificantKey();
     }
@@ -66,6 +84,26 @@ public class KeyShortcut implements Serializable {
 
     private String stringifySignificantKey() {
         return Win32VirtualKey.fromValue(this.code).name().substring(3);
+    }
+
+    public static KeyShortcut fromKeyEvent(final GlobalKeyHook.KeyEvent keyEvent) {
+        return new KeyShortcut(keyEvent.vkCode(), keyEvent.shift(), keyEvent.alt(), keyEvent.control());
+    }
+
+    public static KeyShortcut valueOf(final String s) {
+        final String[] split = Objects.requireNonNull(s).split("\\+");
+        final Builder builder = new Builder();
+        for (String part : split) {
+            if ("Alt".equals(part)) builder.withAlt();
+            else if ("Ctrl".equals(part)) builder.withControl();
+            else if ("Shift".equals(part)) builder.withShift();
+            else builder.code(Win32VirtualKey.valueOf("VK_" + part.toUpperCase(Locale.ROOT)).code);
+        }
+        return builder.build();
+    }
+
+    public HotKey toHotKey() {
+        return new HotKey.Builder().setShift(shift).setControl(control).setAlt(alt).code(code).build();
     }
 
     public static class Builder {

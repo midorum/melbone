@@ -4,6 +4,7 @@ import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.*;
 import com.midorum.win32api.hook.GlobalMouseKeyHook;
 import com.midorum.win32api.hook.MouseHookHelper;
+import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
 import com.midorum.win32api.util.RelativeCoordinates;
 import dma.function.ConsumerThrowing;
@@ -70,7 +71,6 @@ public class MockedContext {
     protected final DataLoader dataLoader = mock(DataLoader.class);
     protected final PropertiesProvider propertiesProvider = mock(PropertiesProvider.class);
     protected final Win32System win32System = mock(Win32System.class);
-    protected final RelativeCoordinates relativeCoordinates = mock(RelativeCoordinates.class);
     protected final IScreenShotMaker screenShotMaker = mock(IScreenShotMaker.class);
     protected final Logger logger = LogManager.getLogger();
 
@@ -89,7 +89,6 @@ public class MockedContext {
                 .build();
         when(executorFactory.getExecutor()).thenReturn(executor);
         when(settings.application()).thenReturn(applicationSettings);
-        when(win32System.getRelativeCoordinates(any(Rectangle.class))).thenReturn(relativeCoordinates);
         when(windowFactory.getScreenShotMaker()).thenReturn(screenShotMaker);
         mockDataLoaderInvocation();
     }
@@ -109,7 +108,6 @@ public class MockedContext {
                 .build();
         when(executorFactory.getExecutor()).thenReturn(executor);
         when(settings.application()).thenReturn(applicationSettings);
-        when(win32System.getRelativeCoordinates(any(Rectangle.class))).thenReturn(relativeCoordinates);
         when(windowFactory.getScreenShotMaker()).thenReturn(screenShotMaker);
         mockDataLoaderInvocation();
     }
@@ -677,13 +675,13 @@ public class MockedContext {
         public Interaction thenReturnAnyWindowPoint() {
             final IWindow foundNativeWindow = createNativeWindowMock();
             final Rectangle clientRectangle = foundNativeWindow.getClientRectangle();
-            final PointInt somePointInFoundWindow = new PointInt(clientRectangle.width() / 2, clientRectangle.height() / 2);
+            final PointFloat somePointInFoundWindow = new PointFloat(clientRectangle.width() * 0.5f, clientRectangle.height() * 0.5f);
             return thenReturn(new WindowPoint(foundNativeWindow, somePointInFoundWindow));
         }
 
         public Interaction thenReturnPointForWindow(final IWindow capturedWindow) {
             final Rectangle clientRectangle = capturedWindow.getClientRectangle();
-            final PointInt somePointInFoundWindow = new PointInt(clientRectangle.width() / 2, clientRectangle.height() / 2);
+            final PointFloat somePointInFoundWindow = new PointFloat(clientRectangle.width() * 0.5f, clientRectangle.height() * 0.5f);
             return thenReturn(new WindowPoint(capturedWindow, somePointInFoundWindow));
         }
 

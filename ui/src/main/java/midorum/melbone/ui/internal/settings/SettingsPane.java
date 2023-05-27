@@ -1,14 +1,17 @@
 package midorum.melbone.ui.internal.settings;
 
+import com.midorum.win32api.hook.GlobalKeyHook;
+import com.midorum.win32api.hook.KeyHookHelper;
 import com.midorum.win32api.win32.IWinUser;
+import com.midorum.win32api.win32.Win32VirtualKey;
 import dma.validation.Validator;
+import midorum.melbone.model.dto.KeyShortcut;
+import midorum.melbone.model.settings.key.SettingKey;
+import midorum.melbone.model.settings.key.SettingsManagerAction;
+import midorum.melbone.settings.SettingKeys;
 import midorum.melbone.ui.internal.Context;
 import midorum.melbone.ui.internal.common.NoticePane;
 import midorum.melbone.ui.internal.model.FrameStateOperations;
-import midorum.melbone.model.settings.key.SettingKey;
-import midorum.melbone.model.settings.key.SettingsManagerAction;
-import midorum.melbone.model.settings.key.WindowHolder;
-import midorum.melbone.settings.SettingKeys;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -112,17 +115,22 @@ public class SettingsPane extends JPanel {
         final JButton button = new JButton("Capture");
         button.setName("capture button");
         button.addActionListener(e -> getSelectedSettingsKey().ifPresent(key -> {
-            final SettingsManagerAction settingsManagerAction = key.internal().settingsManagerAction();
-            if (settingsManagerAction.equals(SettingsManagerAction.noAction)) {
-                noticePane.showError("There is no action defined for this key. Please insert value manually.");
+            final SettingsManagerAction action = key.internal().obtainWay().action();
+            if (action.equals(SettingsManagerAction.noAction)) {
+                noticePane.showError(action.description());
                 return;
             }
-            if (!context.standardDialogsProvider().askOkCancelConfirm(this, settingsManagerAction.description(), "Capturing object"))
+            if (action.equals(SettingsManagerAction.pressHotkey)) {
+                captureHotkey(key);
                 return;
-            switch (settingsManagerAction) {
-                case touchWindow, touchWindowElement -> captureWindow(key);
+            }
+            if (!context.standardDialogsProvider().askOkCancelConfirm(this, action.description(), "Capturing object"))
+                return;
+            switch (action) {
+                case touchWindow -> captureWindow(key);
+                case touchWindowElement -> captureWindowElement(key);
                 case touchScreenElement -> captureScreen(key);
-                default -> throw new UnsupportedOperationException("Unsupported action: " + settingsManagerAction);
+                default -> throw new UnsupportedOperationException("Unsupported action: " + action);
             }
         }));
         return button;
@@ -172,7 +180,7 @@ public class SettingsPane extends JPanel {
 
     private void displaySettingKeyInfo(SettingKey key) {
         descriptionLabel.setText(key.internal().description());
-        defaultValueLabel.setText(stringifyValue(key.internal().defaultValue()));
+        defaultValueLabel.setText(key.internal().defaultValue().map(this::stringifyValue).orElse("[empty]"));
         textField.setText(loadKeyFromStorage(key).orElse(null));
     }
 
@@ -183,16 +191,28 @@ public class SettingsPane extends JPanel {
         if (value instanceof final Optional<?> o) {
             return o.isPresent() ? Objects.toString(o.get()) : "[empty]";
         }
+        if (value instanceof final KeyShortcut o) {
+            return o.toPrettyString();
+        }
         return Objects.toString(value);
     }
 
     private Optional<String> loadKeyFromStorage(SettingKey key) {
-        return Validator.checkNotNull(context.settingStorage().read(key))
-                .andMap(this::stringifyValue)
-                .andCheckNotNull()
-                .peekIfValid(s -> noticePane.showInfo("Loaded from storage"))
-                .peekIfNotValid(s -> noticePane.showInfo("Using default value"))
-                .asOptional();
+        final Optional<String> maybeValue = context.settingStorage().read(key).map(this::stringifyValue);
+        maybeValue.ifPresentOrElse(s -> noticePane.showInfo("Loaded from storage"),
+                () -> noticePane.showInfo("Using default value"));
+        return maybeValue;
+    }
+
+    private void captureHotkey(final SettingKey key) {
+        final GlobalKeyHook.KeyEvent eventToBreakCapturing = new KeyHookHelper.KeyEventBuilder().virtualKey(Win32VirtualKey.VK_ESCAPE).withControl().build();
+        noticePane.showInfo(key.internal().obtainWay().action().description() + " Press " + eventToBreakCapturing.toPrettyString() + " to cancel capturing.");
+        context.keyHookHelper().capture(eventToBreakCapturing, KeyHookHelper.KeyEventComparator.byAltControlShiftCode,
+                keyEvent -> {
+                    textField.setText(KeyShortcut.fromKeyEvent(keyEvent).toPrettyString());
+                    noticePane.showInfo("Captured. Please check and save value.");
+                },
+                keyEvent -> noticePane.showInfo("Hotkey was not captured."));
     }
 
     private void captureWindow(final SettingKey key) {
@@ -200,7 +220,25 @@ public class SettingsPane extends JPanel {
         context.mouseHookHelper().setGlobalHookForKey(IWinUser.WM_LBUTTONDOWN,
                 (mouseEvent) -> {
                     context.targetWindowOperations().getWindowByPoint(mouseEvent.point()).ifPresentOrElse(windowPoint -> {
-                                textField.setText(stringifyValue(key.internal().extractor().apply(new WindowHolder(windowPoint.window()), windowPoint.point())));
+                                textField.setText(stringifyValue(key.internal().obtainWay().extractor().apply(windowPoint)));
+                                noticePane.showInfo("Captured. Please check and save value.");
+                            },
+                            () -> noticePane.showError("No foreground window was found"));
+                    return true;
+                },
+                throwable -> {
+                    noticePane.showError(throwable);
+                    return true;
+                },
+                ownerFrame::restore);
+    }
+
+    private void captureWindowElement(final SettingKey key) {
+        ownerFrame.iconify();
+        context.mouseHookHelper().setGlobalHookForKey(IWinUser.WM_LBUTTONDOWN,
+                (mouseEvent) -> {
+                    context.targetWindowOperations().getWindowByPoint(mouseEvent.point()).ifPresentOrElse(windowPoint -> {
+                                textField.setText(stringifyValue(key.internal().obtainWay().extractor().apply(windowPoint)));
                                 noticePane.showInfo("Captured. Please check and save value.");
                             },
                             () -> noticePane.showError("No foreground window was found"));
@@ -218,11 +256,8 @@ public class SettingsPane extends JPanel {
         context.targetWindowOperations().minimizeAllWindows();
         context.mouseHookHelper().setGlobalHookForKey(IWinUser.WM_LBUTTONDOWN,
                 (mouseEvent) -> {
-                    context.targetWindowOperations().getWindowByPoint(mouseEvent.point()).ifPresentOrElse(windowPoint -> {
-                                textField.setText(stringifyValue(key.internal().extractor().apply(WindowHolder.EMPTY, windowPoint.point())));
-                                noticePane.showInfo("Captured. Please check and save value.");
-                            },
-                            () -> noticePane.showError("No foreground window was found"));
+                    textField.setText(stringifyValue(key.internal().obtainWay().extractor().apply(mouseEvent.point())));
+                    noticePane.showInfo("Captured. Please check and save value.");
                     return true;
                 },
                 throwable -> {

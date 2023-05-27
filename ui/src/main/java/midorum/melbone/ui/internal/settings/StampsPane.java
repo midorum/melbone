@@ -140,15 +140,17 @@ public class StampsPane extends JPanel {
         final JButton button = new JButton("Capture");
         button.setName("capture stamp button");
         button.addActionListener(e -> getSelectedStampKey().ifPresentOrElse(key -> {
-            if (key.internal().settingsManagerAction().equals(SettingsManagerAction.noAction)) {
-                noticePane.showError("There is no action defined for this key. Please insert value manually.");
+            final SettingsManagerAction action = key.internal().obtainWay().action();
+            if (action.equals(SettingsManagerAction.noAction)) {
+                noticePane.showError(action.description());
                 return;
             }
-            if (!context.standardDialogsProvider().askOkCancelConfirm(this, key.internal().settingsManagerAction().description(), "Capturing object"))
+            if (!context.standardDialogsProvider().askOkCancelConfirm(this, action.description(), "Capturing object"))
                 return;
-            switch (key.internal().settingsManagerAction()) {
-                case captureWindowElement -> captureWindowRegion(key);
-                default -> throw new UnsupportedOperationException();
+            if (action == SettingsManagerAction.captureWindowElement) {
+                captureWindowRegion(key);
+            } else {
+                throw new UnsupportedOperationException();
             }
         }, () -> noticePane.showError("You should select stamp to capture")));
         return button;

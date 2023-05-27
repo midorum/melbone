@@ -1,6 +1,7 @@
 package midorum.melbone.settings.internal.obtaining.setting;
 
 import com.midorum.win32api.struct.PointFloat;
+import midorum.melbone.model.dto.KeyShortcut;
 import midorum.melbone.model.settings.setting.TargetBaseAppSettings;
 import midorum.melbone.settings.SettingKeys;
 import midorum.melbone.settings.internal.storage.KeyValueStorage;
@@ -247,11 +248,6 @@ public class TargetBaseAppSettingsImpl extends SettingValueExtractor implements 
     }
 
     @Override
-    public long beforeMinimizingDelay() {
-        return (long) getValue(SettingKeys.TargetBaseApp.beforeMinimizingDelay);
-    }
-
-    @Override
     public long afterLaunchAccountDelay() {
         return (long) getValue(SettingKeys.TargetBaseApp.afterLaunchAccountDelay);
     }
@@ -259,5 +255,20 @@ public class TargetBaseAppSettingsImpl extends SettingValueExtractor implements 
     @Override
     public String processName() {
         return (String) getValue(SettingKeys.TargetBaseApp.processName);
+    }
+
+    @Override
+    public KeyShortcut stopAnimationHotkey() {
+        return (KeyShortcut) getValue(SettingKeys.TargetBaseApp.stopAnimationHotkey);
+    }
+
+    @Override
+    public KeyShortcut cancelCurrentOperationHotkey() {
+        return (KeyShortcut) getValue(SettingKeys.TargetBaseApp.cancelCurrentOperationHotkey);
+    }
+
+    @Override
+    public KeyShortcut openMenuHotkey() {
+        return (KeyShortcut) getValue(SettingKeys.TargetBaseApp.openMenuHotkey);
     }
 }
