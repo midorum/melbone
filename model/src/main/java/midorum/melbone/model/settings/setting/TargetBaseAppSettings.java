@@ -109,4 +109,9 @@ public interface TargetBaseAppSettings {
 
     KeyShortcut openMenuHotkey();
 
+    KeyShortcut openAccountInfoHotkey();
+
+    int accountInfoPopupRenderingTimeout();
+
+    int accountInfoPopupRenderingDelay();
 }

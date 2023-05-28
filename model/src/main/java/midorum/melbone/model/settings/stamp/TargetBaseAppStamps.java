@@ -21,4 +21,6 @@ public interface TargetBaseAppStamps {
     Stamp startButton();
 
     Stamp dailyTrackerPopupCaption();
+
+    Stamp accountInfoPopupCaption();
 }

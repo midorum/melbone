@@ -60,4 +60,9 @@ public class TargetBaseAppStampsImpl extends StampValueExtractor implements Targ
     public Stamp dailyTrackerPopupCaption() {
         return getStamp(StampKeys.TargetBaseApp.dailyTrackerPopupCaption);
     }
+
+    @Override
+    public Stamp accountInfoPopupCaption() {
+        return getStamp(StampKeys.TargetBaseApp.accountInfoPopupCaption);
+    }
 }

@@ -390,6 +390,9 @@ public interface SettingKeys {
                 SettingObtainWays.pressHotkey),
         openMenuHotkey(KeyShortcut.class,
                 "Hot key to open menu popup",
+                SettingObtainWays.pressHotkey),
+        openAccountInfoHotkey(KeyShortcut.class,
+                "Hot key to open account info popup",
                 SettingObtainWays.pressHotkey);
 
         private final SettingData settingData;
