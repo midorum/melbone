@@ -69,7 +69,10 @@ public interface SettingKeys {
         randomRoutineDelayMax(Long.class,
                 "0 - for disable, >0 - maximal random delay on every routine iteration in minutes",
                 5L,
-                LONG_POSITIVE_PREDICATE.predicate());
+                LONG_POSITIVE_PREDICATE.predicate()),
+        checkHealthBeforeLaunch(Boolean.class,
+                "Check existing base windows health before launch new one. Use when have often disconnect problems. Disable to speed up launch.",
+                false);
 
         private final SettingData settingData;
 

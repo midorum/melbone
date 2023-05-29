@@ -19,6 +19,10 @@ import org.mockito.Mockito;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
+
 class LaunchAccountActionTest {
 
     public static final String TEST_ACCOUNT_FOR_CLOSE = "test_account_for_close";
@@ -42,12 +46,12 @@ class LaunchAccountActionTest {
 
     @BeforeEach
     void beforeEach() {
-        Mockito.when(settings.application()).thenReturn(applicationSettings);
-        Mockito.when(settings.targetCountControl()).thenReturn(targetCountControlSettings);
-        Mockito.when(settings.targetBaseAppSettings()).thenReturn(targetBaseAppSettings);
-        Mockito.when(targetBaseAppSettings.windowAppearingLatency()).thenReturn(100);
-        Mockito.when(targetBaseAppSettings.windowAppearingDelay()).thenReturn(100);
-        Mockito.when(targetBaseAppSettings.windowAppearingTimeout()).thenReturn(1_000);
+        when(settings.application()).thenReturn(applicationSettings);
+        when(settings.targetCountControl()).thenReturn(targetCountControlSettings);
+        when(settings.targetBaseAppSettings()).thenReturn(targetBaseAppSettings);
+        when(targetBaseAppSettings.windowAppearingLatency()).thenReturn(100);
+        when(targetBaseAppSettings.windowAppearingDelay()).thenReturn(100);
+        when(targetBaseAppSettings.windowAppearingTimeout()).thenReturn(1_000);
     }
 
     @AfterEach
@@ -57,8 +61,9 @@ class LaunchAccountActionTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    void allAccountsAlreadyLaunched() throws InterruptedException {
-        System.out.println("allAccountsAlreadyLaunched");
+    void allAccountsAlreadyLaunched_checkHealthIsOn() throws InterruptedException {
+        System.out.println("allAccountsAlreadyLaunched_checkHealthIsOn");
+        when(applicationSettings.checkHealthBeforeLaunch()).thenReturn(true);
         final Account[] testAccountsToLaunch = getTestAccountsToLaunch();
         final List<BaseAppWindow> testWindowsForCheck = mockTestBaseAppWindows(getTestBoundWindowsForCheck(TEST_ACCOUNT_TO_LAUNCH_1, TEST_ACCOUNT_TO_LAUNCH_2));
         final LaunchAccountAction instance = new LaunchAccountAction(testAccountsToLaunch, windowFactory, settings);
@@ -73,6 +78,25 @@ class LaunchAccountActionTest {
         Mockito.verify(windowFactory, Mockito.never()).findOrTryStartLauncherWindow();
     }
 
+    @SuppressWarnings("unchecked")
+    @Test
+    void allAccountsAlreadyLaunched_checkHealthIsOff() throws InterruptedException {
+        System.out.println("allAccountsAlreadyLaunched_checkHealthIsOn");
+        when(applicationSettings.checkHealthBeforeLaunch()).thenReturn(false);
+        final Account[] testAccountsToLaunch = getTestAccountsToLaunch();
+        final List<BaseAppWindow> testWindowsForCheck = mockTestBaseAppWindows(getTestBoundWindowsForCheck(TEST_ACCOUNT_TO_LAUNCH_1, TEST_ACCOUNT_TO_LAUNCH_2));
+        final LaunchAccountAction instance = new LaunchAccountAction(testAccountsToLaunch, windowFactory, settings);
+        instance.perform();
+        testWindowsForCheck.forEach(baseAppWindow -> {
+            try {
+                Mockito.verify(baseAppWindow, Mockito.never()).doInGameWindow(Mockito.any(ConsumerThrowing.class));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        Mockito.verify(windowFactory, Mockito.never()).findOrTryStartLauncherWindow();
+    }
+
     @Test
     @SuppressWarnings("unchecked")
     void closeUnboundWindowsAndLaunchNewAccounts_launcherNotFound() throws InterruptedException {
@@ -80,11 +104,11 @@ class LaunchAccountActionTest {
         final List<BaseAppWindow> testBoundWindowsForCheck = getTestBoundWindowsForCheck(TEST_ACCOUNT_TO_LAUNCH_1);
         final List<BaseAppWindow> testUnboundWindowsForClose = getTestUnboundWindowsForClose(TEST_ACCOUNT_FOR_CLOSE, TEST_ACCOUNT_NOT_BOUND_BEFORE);
         final List<BaseAppWindow> existWindows = mergeLists(testBoundWindowsForCheck, testUnboundWindowsForClose);
-        Mockito.when(windowFactory.getAllBaseAppWindows()).thenReturn(existWindows).thenReturn(testBoundWindowsForCheck);
+        when(windowFactory.getAllBaseAppWindows()).thenReturn(existWindows).thenReturn(testBoundWindowsForCheck);
         mockLauncherWindowForNotFoundCase();
         mockTargetProcessesLimitNotReached();
         final LaunchAccountAction instance = new LaunchAccountAction(getTestAccountsToLaunch(), windowFactory, settings);
-        Assertions.assertThrows(NeedRetryException.class, instance::perform);
+        assertThrows(NeedRetryException.class, instance::perform);
         existWindows.forEach(baseAppWindow -> {
             try {
                 if (baseAppWindow.getCharacterName().isEmpty()) {
@@ -122,7 +146,7 @@ class LaunchAccountActionTest {
         System.out.println("closeUnnecessaryWindowsAndLaunchNewAccounts");
         final Account[] testAccountsToLaunch = getTestAccountsToLaunch();
         final List<BaseAppWindow> testUnboundWindowsForClose = getTestUnboundWindowsForClose(TEST_ACCOUNT_TO_LAUNCH_3, TEST_ACCOUNT_TO_LAUNCH_4);
-        Mockito.when(windowFactory.getAllBaseAppWindows()).thenReturn(testUnboundWindowsForClose).thenReturn(List.of());
+        when(windowFactory.getAllBaseAppWindows()).thenReturn(testUnboundWindowsForClose).thenReturn(List.of());
         mockLauncherWindowForLoginAccounts(testAccountsToLaunch);
         mockTargetProcessesLimitNotReached();
         mockNewUnboundBaseAppWindow();
@@ -175,14 +199,14 @@ class LaunchAccountActionTest {
 
     private BaseAppWindow getBaseAppWindow(final String characterName) throws InterruptedException {
         final BaseAppWindow mock = Mockito.mock(BaseAppWindow.class);
-        Mockito.when(mock.getCharacterName()).thenReturn(Optional.ofNullable(characterName));
+        when(mock.getCharacterName()).thenReturn(Optional.ofNullable(characterName));
         return mock;
     }
 
     @SuppressWarnings("unchecked")
     private BaseAppWindow getBaseAppWindowThatMustBeClosed(final String characterName) throws InterruptedException {
         final BaseAppWindow mock = getBaseAppWindow(characterName);
-        Mockito.doAnswer(invocation -> {
+        doAnswer(invocation -> {
             final Object[] args = invocation.getArguments();
             Assertions.assertEquals(1, args.length);
             final ConsumerThrowing<RestoredBaseAppWindow, InterruptedException> consumer = (ConsumerThrowing<RestoredBaseAppWindow, InterruptedException>) args[0];
@@ -195,15 +219,15 @@ class LaunchAccountActionTest {
     }
 
     private List<BaseAppWindow> mockTestBaseAppWindows(final List<BaseAppWindow> testWindows) {
-        Mockito.when(windowFactory.getAllBaseAppWindows()).thenReturn(testWindows);
+        when(windowFactory.getAllBaseAppWindows()).thenReturn(testWindows);
         return testWindows;
     }
 
     @SuppressWarnings("unchecked")
     private void mockNewUnboundBaseAppWindow() throws InterruptedException {
         final BaseAppWindow mock = getBaseAppWindow(null);
-        Mockito.when(windowFactory.findUnboundBaseAppWindowAndBindWithAccount(Mockito.anyString())).thenReturn(Optional.of(mock));
-        Mockito.doAnswer(invocation -> {
+        when(windowFactory.findUnboundBaseAppWindowAndBindWithAccount(Mockito.anyString())).thenReturn(Optional.of(mock));
+        doAnswer(invocation -> {
             Assertions.assertEquals(1, invocation.getArguments().length);
             final ConsumerThrowing<RestoredBaseAppWindow, InterruptedException> consumer = invocation.getArgument(0);
             final RestoredBaseAppWindow restoredBaseAppWindowMock = Mockito.mock(RestoredBaseAppWindow.class);
@@ -215,7 +239,7 @@ class LaunchAccountActionTest {
     }
 
     private void mockLauncherWindowForNotFoundCase() throws InterruptedException {
-        Mockito.when(windowFactory.findOrTryStartLauncherWindow()).thenReturn(Optional.empty());
+        when(windowFactory.findOrTryStartLauncherWindow()).thenReturn(Optional.empty());
     }
 
     private void mockLauncherWindowForLoginAccounts(final Account[] testAccountsToLaunch) throws InterruptedException {
@@ -229,7 +253,7 @@ class LaunchAccountActionTest {
     @SuppressWarnings("unchecked")
     private LauncherWindow getLauncherMockForLoginAccount(final Account account) throws InterruptedException {
         final LauncherWindow mock = Mockito.mock(LauncherWindow.class);
-        Mockito.doAnswer(invocation -> {
+        doAnswer(invocation -> {
             Assertions.assertEquals(1, invocation.getArguments().length);
             final RestoredLauncherWindow restoredLauncherWindowMock = Mockito.mock(RestoredLauncherWindow.class);
             invocation.<ConsumerThrowing<RestoredLauncherWindow, InterruptedException>>getArgument(0).accept(restoredLauncherWindowMock);
@@ -241,13 +265,13 @@ class LaunchAccountActionTest {
     }
 
     private void mockTargetProcessesLimitNotReached() {
-        Mockito.when(applicationSettings.maxAccountsSimultaneously()).thenReturn(2);
-        Mockito.when(windowFactory.countAllTargetProcesses()).thenReturn(1);
+        when(applicationSettings.maxAccountsSimultaneously()).thenReturn(2);
+        when(windowFactory.countAllTargetProcesses()).thenReturn(1);
     }
 
     private void mockTargetProcessesLimitReached() {
-        Mockito.when(applicationSettings.maxAccountsSimultaneously()).thenReturn(2);
-        Mockito.when(windowFactory.countAllTargetProcesses()).thenReturn(2);
+        when(applicationSettings.maxAccountsSimultaneously()).thenReturn(2);
+        when(windowFactory.countAllTargetProcesses()).thenReturn(2);
     }
 
     private Account buildAccount(final String name) {

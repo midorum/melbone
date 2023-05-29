@@ -40,4 +40,6 @@ public interface ApplicationSettings {
     int stampDeviation();
 
     int actionsCount();
+
+    boolean checkHealthBeforeLaunch();
 }
