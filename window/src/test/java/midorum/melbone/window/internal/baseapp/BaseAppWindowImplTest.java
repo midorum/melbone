@@ -349,6 +349,40 @@ class BaseAppWindowImplTest {
     }
 
     @Test
+    void checkInGameWindowRenderedButFail() throws InterruptedException {
+        System.out.println("checkInGameWindowRenderedButFail");
+        //when
+        when(window.isExists())
+                .thenReturn(true) // restoring window
+                .thenReturn(true) // trying close normally
+                .thenReturn(true) // closing window frame
+                .thenReturn(true) // window hasn't closed yet
+                .thenReturn(false); // window closed
+        windowIsHealthy();
+        windowIsNotDisconnected();
+        startButtonRenderedNormally();
+        cannotOpenAccountInfoPopup();
+        getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::checkInGameWindowRendered);
+        //then
+        verifyWindowCloseButtonClicked();
+        verifyWindowDisappeared();
+        verifyDidNotAttemptsTerminateWindowProcess();
+    }
+
+    @Test
+    void checkInGameWindowRendered() throws InterruptedException {
+        System.out.println("checkInGameWindowRendered");
+        //when
+        windowIsExists();
+        windowIsHealthy();
+        windowIsNotDisconnected();
+        accountInfoOpensNormally();
+        getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::checkInGameWindowRendered);
+        //then
+        verifyAccountInfoHasBeenOpened();
+    }
+
+    @Test
     void inGameWindowNotRenderedProperly() throws InterruptedException {
         System.out.println("inGameWindowNotRenderedProperly");
         //when
@@ -585,6 +619,10 @@ class BaseAppWindowImplTest {
         do {
             inOrderMouse.verify(mouse).move(ACTION_BUTTON_POINT_X + (i * ACTION_BUTTON_POINT_X_OFFSET), ACTION_BUTTON_POINT_Y);
         } while (--i >= 0);
+    }
+
+    private void verifyAccountInfoHasBeenOpened() throws InterruptedException {
+        verify(stampValidator, atLeastOnce()).validateStampWholeData(window, accountInfoPopupCaptionStamp);
     }
 
 }

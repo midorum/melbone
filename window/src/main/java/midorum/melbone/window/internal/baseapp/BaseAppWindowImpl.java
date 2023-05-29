@@ -536,6 +536,12 @@ public class BaseAppWindowImpl implements BaseAppWindow {
 
             log.info("character has been selected");
         }
+
+        @Override
+        public void checkInGameWindowRendered() throws InterruptedException {
+            checkIfNotDisconnected();
+            checkIfInGameWindowRendered();
+        }
     }
 
     private class InGameBaseAppWindowImpl implements InGameBaseAppWindow {

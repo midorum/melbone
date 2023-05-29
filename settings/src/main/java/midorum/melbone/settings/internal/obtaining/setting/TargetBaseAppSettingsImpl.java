@@ -189,7 +189,7 @@ public class TargetBaseAppSettingsImpl extends SettingValueExtractor implements 
 
     @Override
     public int baseWindowRenderingTimeout() {
-        return 180_000;
+        return 300_000;
     }
 
     @Override
