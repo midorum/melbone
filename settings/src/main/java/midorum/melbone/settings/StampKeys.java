@@ -62,7 +62,8 @@ public interface StampKeys {
         serverLineUnselected("Base window - Select server page - Server line; Unselected; Base scale"),
         needRestartPopup("Need restart popup; Base scale"),
         disconnectedPopup("Disconnected popup; Base scale"),
-        dailyTrackerPopupCaption("In-game daily tracker popup caption; Base scale");
+        dailyTrackerPopupCaption("In-game daily tracker popup caption; Base scale"),
+        accountInfoPopupCaption("Account info popup caption; Base scale");
 
         private final SettingData settingData;
 

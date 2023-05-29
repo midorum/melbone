@@ -189,7 +189,7 @@ public class TargetBaseAppSettingsImpl extends SettingValueExtractor implements 
 
     @Override
     public int baseWindowRenderingTimeout() {
-        return 180_000;
+        return 300_000;
     }
 
     @Override
@@ -248,6 +248,16 @@ public class TargetBaseAppSettingsImpl extends SettingValueExtractor implements 
     }
 
     @Override
+    public int accountInfoPopupRenderingTimeout() {
+        return 2_000;
+    }
+
+    @Override
+    public int accountInfoPopupRenderingDelay() {
+        return 500;
+    }
+
+    @Override
     public long afterLaunchAccountDelay() {
         return (long) getValue(SettingKeys.TargetBaseApp.afterLaunchAccountDelay);
     }
@@ -270,5 +280,10 @@ public class TargetBaseAppSettingsImpl extends SettingValueExtractor implements 
     @Override
     public KeyShortcut openMenuHotkey() {
         return (KeyShortcut) getValue(SettingKeys.TargetBaseApp.openMenuHotkey);
+    }
+
+    @Override
+    public KeyShortcut openAccountInfoHotkey() {
+        return (KeyShortcut) getValue(SettingKeys.TargetBaseApp.openAccountInfoHotkey);
     }
 }

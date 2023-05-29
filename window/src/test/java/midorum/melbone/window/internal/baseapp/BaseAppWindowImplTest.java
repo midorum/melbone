@@ -36,6 +36,8 @@ class BaseAppWindowImplTest {
     private static final float SPEED_FACTOR = 1.0f;
     private static final int TIMEOUT_FOR_TEST = 500;
     private static final int DELAY_FOR_TEST = 100;
+    private static final int TIMEOUT_FOR_TEST_1 = 50;
+    private static final int DELAY_FOR_TEST_1 = 10;
     private static final float ACTION_BUTTON_POINT_X = 1f;
     private static final float ACTION_BUTTON_POINT_X_OFFSET = 0.5f;
     private static final float ACTION_BUTTON_POINT_Y = 1.1f;
@@ -77,6 +79,7 @@ class BaseAppWindowImplTest {
     private final PointFloat actionSecondButtonPoint = new PointFloat(ACTION_BUTTON_POINT_X + ACTION_BUTTON_POINT_X_OFFSET, -1f);
     //stamps
     private final Stamp menuExitOptionStamp = mock(Stamp.class);
+    private final Stamp accountInfoPopupCaptionStamp = mock(Stamp.class);
     private final Stamp disconnectedPopupStamp = mock(Stamp.class);
     private final Stamp optionsButtonBaseScaleStamp = mock(Stamp.class);
     private final Stamp optionsButtonDefaultScaleStamp = mock(Stamp.class);
@@ -89,6 +92,7 @@ class BaseAppWindowImplTest {
     //hot keys
     final KeyShortcut stopAnimationHotkey = mock(KeyShortcut.class);
     final KeyShortcut openMenuHotkey = mock(KeyShortcut.class);
+    final KeyShortcut openAccountInfoHotkey = mock(KeyShortcut.class);
 
     @BeforeAll
     public static void beforeAll() {
@@ -149,9 +153,12 @@ class BaseAppWindowImplTest {
         when(targetBaseAppSettings.checkServerLineRenderingDelay()).thenReturn(DELAY_FOR_TEST);
         when(targetBaseAppSettings.dailyTrackerPopupRenderingTimeout()).thenReturn(TIMEOUT_FOR_TEST);
         when(targetBaseAppSettings.checkDailyTrackerPopupRenderingDelay()).thenReturn(DELAY_FOR_TEST);
+        when(targetBaseAppSettings.accountInfoPopupRenderingTimeout()).thenReturn(TIMEOUT_FOR_TEST_1);
+        when(targetBaseAppSettings.accountInfoPopupRenderingDelay()).thenReturn(DELAY_FOR_TEST_1);
         //settings: hot keys
         when(targetBaseAppSettings.stopAnimationHotkey()).thenReturn(stopAnimationHotkey);
         when(targetBaseAppSettings.openMenuHotkey()).thenReturn(openMenuHotkey);
+        when(targetBaseAppSettings.openAccountInfoHotkey()).thenReturn(openAccountInfoHotkey);
         //window
         when(window.getSystemId()).thenReturn("0xdf67");
         when(window.getWindowMouse(SPEED_FACTOR)).thenReturn(mouse);
@@ -166,6 +173,8 @@ class BaseAppWindowImplTest {
         when(stamps.targetBaseApp()).thenReturn(targetBaseAppStamps);
         when(targetBaseAppStamps.menuExitOption()).thenReturn(menuExitOptionStamp);
         when(menuExitOptionStamp.key()).thenReturn(StampKeys.TargetBaseApp.menuExitOption);
+        when(targetBaseAppStamps.accountInfoPopupCaption()).thenReturn(accountInfoPopupCaptionStamp);
+        when(accountInfoPopupCaptionStamp.key()).thenReturn(StampKeys.TargetBaseApp.accountInfoPopupCaption);
         when(targetBaseAppStamps.disconnectedPopup()).thenReturn(disconnectedPopupStamp);
         when(disconnectedPopupStamp.key()).thenReturn(StampKeys.TargetBaseApp.disconnectedPopup);
         when(targetBaseAppStamps.optionsButtonBaseScale()).thenReturn(optionsButtonBaseScaleStamp);
@@ -340,12 +349,67 @@ class BaseAppWindowImplTest {
     }
 
     @Test
+    void checkInGameWindowRenderedButFail() throws InterruptedException {
+        System.out.println("checkInGameWindowRenderedButFail");
+        //when
+        when(window.isExists())
+                .thenReturn(true) // restoring window
+                .thenReturn(true) // trying close normally
+                .thenReturn(true) // closing window frame
+                .thenReturn(true) // window hasn't closed yet
+                .thenReturn(false); // window closed
+        windowIsHealthy();
+        windowIsNotDisconnected();
+        startButtonRenderedNormally();
+        cannotOpenAccountInfoPopup();
+        getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::checkInGameWindowRendered);
+        //then
+        verifyWindowCloseButtonClicked();
+        verifyWindowDisappeared();
+        verifyDidNotAttemptsTerminateWindowProcess();
+    }
+
+    @Test
+    void checkInGameWindowRendered() throws InterruptedException {
+        System.out.println("checkInGameWindowRendered");
+        //when
+        windowIsExists();
+        windowIsHealthy();
+        windowIsNotDisconnected();
+        accountInfoOpensNormally();
+        getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::checkInGameWindowRendered);
+        //then
+        verifyAccountInfoHasBeenOpened();
+    }
+
+    @Test
+    void inGameWindowNotRenderedProperly() throws InterruptedException {
+        System.out.println("inGameWindowNotRenderedProperly");
+        //when
+        when(window.isExists())
+                .thenReturn(true) // restoring window
+                .thenReturn(true) // trying close normally
+                .thenReturn(true) // closing window frame
+                .thenReturn(true) // window hasn't closed yet
+                .thenReturn(false); // window closed
+        windowIsHealthy();
+        windowIsNotDisconnected();
+        cannotOpenAccountInfoPopup();
+        cannotOpenMenu();
+        getBaseAppWindowInstance().doInGameWindow(InGameBaseAppWindow::checkInLoginTracker);
+        //then
+        verifyWindowCloseButtonClicked();
+        verifyWindowDisappeared();
+    }
+
+    @Test
     void checkInLoginTracker() throws InterruptedException {
         System.out.println("checkInLoginTracker");
         //when
         windowIsExists();
         windowIsHealthy();
         windowIsNotDisconnected();
+        accountInfoOpensNormally();
         menuOpensNormally();
         dailyTrackerPopupOpensNormally();
         getBaseAppWindowInstance().doInGameWindow(InGameBaseAppWindow::checkInLoginTracker);
@@ -389,6 +453,7 @@ class BaseAppWindowImplTest {
         windowIsExists();
         windowIsHealthy();
         windowIsNotDisconnected();
+        accountInfoOpensNormally();
         menuOpensNormally();
         setActionsCount(actionsCount);
         getBaseAppWindowInstance().doInGameWindow(InGameBaseAppWindow::checkInAction);
@@ -439,6 +504,17 @@ class BaseAppWindowImplTest {
         when(stampValidator.validateStampWholeData(window, menuExitOptionStamp))
                 .thenReturn(Optional.empty())
                 .thenReturn(Optional.of(menuExitOptionStamp));
+    }
+
+    private void cannotOpenAccountInfoPopup() throws InterruptedException {
+        when(stampValidator.validateStampWholeData(window, accountInfoPopupCaptionStamp))
+                .thenReturn(Optional.empty());
+    }
+
+    private void accountInfoOpensNormally() throws InterruptedException {
+        when(stampValidator.validateStampWholeData(window, accountInfoPopupCaptionStamp))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(accountInfoPopupCaptionStamp));
     }
 
     private void dailyTrackerPopupOpensNormally() throws InterruptedException {
@@ -543,6 +619,10 @@ class BaseAppWindowImplTest {
         do {
             inOrderMouse.verify(mouse).move(ACTION_BUTTON_POINT_X + (i * ACTION_BUTTON_POINT_X_OFFSET), ACTION_BUTTON_POINT_Y);
         } while (--i >= 0);
+    }
+
+    private void verifyAccountInfoHasBeenOpened() throws InterruptedException {
+        verify(stampValidator, atLeastOnce()).validateStampWholeData(window, accountInfoPopupCaptionStamp);
     }
 
 }

@@ -6,6 +6,8 @@ import midorum.melbone.model.persistence.AccountStorage;
 import midorum.melbone.model.persistence.SettingStorage;
 import midorum.melbone.model.settings.PropertiesProvider;
 import midorum.melbone.model.settings.SettingsProvider;
+import midorum.melbone.settings.SettingKeys;
+import midorum.melbone.settings.StampKeys;
 import midorum.melbone.settings.internal.management.experimental.TaskStorageImpl;
 import midorum.melbone.settings.internal.storage.KeyValueStorage;
 import midorum.melbone.settings.internal.storage.StorageHolder;
@@ -13,6 +15,9 @@ import midorum.melbone.settings.internal.storage.VersionableKeyValueStorage;
 import midorum.melbone.settings.managment.SettingPropertyNaming;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 public class SettingsFactoryInternal implements AutoCloseable {
 
@@ -32,6 +37,7 @@ public class SettingsFactoryInternal implements AutoCloseable {
         this.settingStorage = new SettingStorageImpl(keyValueStorage);
         this.accountStorage = new AccountStorageImpl(keyValueStorage);
         this.taskStorage = new TaskStorageImpl();
+        checkAllSettingsState();
     }
 
     public KeyValueStorage getKeyValueStorage() {
@@ -54,7 +60,9 @@ public class SettingsFactoryInternal implements AutoCloseable {
         return settingsProvider;
     }
 
-    public PropertiesProvider propertiesProvider() {return propertiesProvider;}
+    public PropertiesProvider propertiesProvider() {
+        return propertiesProvider;
+    }
 
     private KeyValueStorage openKeyValueStorage(final SettingPropertyNaming settingPropertyNaming, final boolean plainMode) {
         final StorageHolder storageHolder = new StorageHolder(propertiesProvider, settingPropertyNaming, plainMode);
@@ -81,7 +89,16 @@ public class SettingsFactoryInternal implements AutoCloseable {
         keyValueStorage.close();
     }
 
+    private void checkAllSettingsState() {
+        if (!propertiesProvider.isModeSet("check_settings_on_start")) return;
+        Stream.concat(Arrays.stream(SettingKeys.values()), Arrays.stream(StampKeys.values())).forEach(key ->
+                settingStorage.read(key).ifPresentOrElse(o -> logger.info("{} is kept in storage", key),
+                        () -> key.internal().defaultValue().ifPresentOrElse(o -> logger.info("{} used default value", key),
+                                () -> logger.warn("{} not found in storage nor has default value", key))));
+    }
+
     public static class Builder {
+
 
         private SettingPropertyNaming settingPropertyNaming;
         private boolean plainMode = false;
