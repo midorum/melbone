@@ -1,13 +1,11 @@
 package midorum.melbone.settings.internal.setting;
 
-import com.midorum.win32api.struct.PointInt;
 import midorum.melbone.model.settings.key.SettingDataHolder;
-import midorum.melbone.model.settings.key.WindowHolder;
 import midorum.melbone.settings.internal.management.SettingsFactoryInternal;
 import org.junit.jupiter.api.Assertions;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -20,7 +18,7 @@ class SettingTester {
     private Object[] wrongTypeValues;
     private Object[] invalidValues;
     private Supplier<Object> settingGetter;
-    private ExtractorParameter[] extractorParameters;
+    private Object[] valuesToExtract;
 
     public SettingTester(final SettingsFactoryInternal settingsFactory, final SettingDataHolder setting) {
         this.settingsFactory = settingsFactory;
@@ -47,8 +45,8 @@ class SettingTester {
         return this;
     }
 
-    public SettingTester extractors(final ExtractorParameter... extractorParameters) {
-        this.extractorParameters = extractorParameters;
+    public SettingTester extractFrom(final Object... valuesToExtract) {
+        this.valuesToExtract = valuesToExtract;
         return this;
     }
 
@@ -58,7 +56,7 @@ class SettingTester {
         Objects.requireNonNull(wrongTypeValues, "wrongTypeValues cannot be null");
         Objects.requireNonNull(invalidValues, "invalidValues cannot be null");
         Objects.requireNonNull(settingGetter, "settingGetter cannot be null");
-        Objects.requireNonNull(extractorParameters, "extractors cannot be null");
+        Objects.requireNonNull(valuesToExtract, "valuesToExtract cannot be null");
 
         System.out.println("testing setting: " + setting);
 
@@ -77,27 +75,10 @@ class SettingTester {
             assertThrows(IllegalArgumentException.class, () -> settingsFactory.settingStorage().write(setting, value), () -> "failed testing invalid value: " + value);
         }
 
-        for (ExtractorParameter extractorParameter : extractorParameters) {
-            new ExtractorTester(extractorParameter.windowHolder(), extractorParameter.point()).test();
-        }
-    }
-
-    public record ExtractorParameter(WindowHolder windowHolder, PointInt point) {
-    }
-
-    private class ExtractorTester {
-        private final WindowHolder windowHolder;
-        private final PointInt point;
-
-        public ExtractorTester(final WindowHolder windowHolder, final PointInt point) {
-            this.windowHolder = windowHolder;
-            this.point = point;
-        }
-
-        public void test() {
-            final BiFunction<WindowHolder, PointInt, Object> extractor = setting.internal().extractor();
-            assertNotNull(extractor);
-            final Object result = extractor.apply(windowHolder, point);
+        final Function<Object, Object> extractor = setting.internal().obtainWay().extractor();
+        assertNotNull(extractor);
+        for (Object value : valuesToExtract) {
+            final Object result = extractor.apply(value);
             assertNotNull(result, "extractor result cannot be null");
             assertTrue(setting.internal().checkValueType(result), () -> "failed testing extractor result type: " + result + " (must be " + setting.internal().type() + " but is " + result.getClass() + " )");
             assertTrue(setting.internal().validator().test(result), () -> "failed validating extractor result: " + result);

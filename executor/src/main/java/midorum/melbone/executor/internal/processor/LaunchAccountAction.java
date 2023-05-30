@@ -94,6 +94,7 @@ public class LaunchAccountAction implements VoidActionThrowing<InterruptedExcept
                 throw new ControlledInterruptedException(e);
             }
         });
+        if(!settings.application().checkHealthBeforeLaunch()) return;
         windowsMap.get(false).forEach(w -> {
             try {
                 final String characterName = w.getCharacterName().orElse("unbound");
@@ -129,8 +130,7 @@ public class LaunchAccountAction implements VoidActionThrowing<InterruptedExcept
                     openedBaseAppWindow.selectServer();
                     openedBaseAppWindow.chooseCharacter();
                     logger.info("account {} ({}) has been launched successfully", account.name(), account.login());
-                    //before minimizing delay because of window high load
-                    delay.sleep(settings.targetBaseAppSettings().afterLaunchAccountDelay(), TimeUnit.MILLISECONDS);
+                    openedBaseAppWindow.checkInGameWindowRendered();
                 });
     }
 

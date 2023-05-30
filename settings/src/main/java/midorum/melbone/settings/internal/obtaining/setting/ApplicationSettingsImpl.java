@@ -44,4 +44,9 @@ public class ApplicationSettingsImpl extends SettingValueExtractor implements Ap
     public int actionsCount() {
         return (int) getValue(SettingKeys.Application.actionsCount);
     }
+
+    @Override
+    public boolean checkHealthBeforeLaunch() {
+        return (boolean) getValue(SettingKeys.Application.checkHealthBeforeLaunch);
+    }
 }

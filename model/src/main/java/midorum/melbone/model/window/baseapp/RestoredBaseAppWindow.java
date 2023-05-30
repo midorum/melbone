@@ -7,4 +7,6 @@ public interface RestoredBaseAppWindow {
     void selectServer() throws InterruptedException;
 
     void chooseCharacter() throws InterruptedException;
+
+    void checkInGameWindowRendered() throws InterruptedException;
 }

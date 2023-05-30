@@ -161,7 +161,7 @@ class IdentifyDialogTest extends MockedContext {
             getCloseButton().doClick();
             verifyPaneState();
             assertFalse(identifyDialog.isVisible(), "Dialog shouldn't be visible after close");
-            verify(mouseKeyHookManager, times(checkWindowButtonInteractionCount)).setHook(eq(IWinUser.WM_LBUTTONDOWN), any(), any());
+            verify(mouseHookHelper, times(checkWindowButtonInteractionCount)).setGlobalHookForKey(eq(IWinUser.WM_LBUTTONDOWN), any(), any());
         }
 
         /*-- dialog components --*/

@@ -2,9 +2,8 @@ package midorum.melbone.settings.internal.setting;
 
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Rectangle;
+import com.midorum.win32api.facade.WindowPoint;
 import com.midorum.win32api.struct.PointFloat;
-import com.midorum.win32api.struct.PointInt;
-import midorum.melbone.model.settings.key.WindowHolder;
 import midorum.melbone.model.settings.setting.TargetBaseAppSettings;
 import midorum.melbone.settings.SettingKeys;
 import midorum.melbone.settings.internal.management.SettingsFactoryInternal;
@@ -32,7 +31,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues("string", "")
                 .invalidValues()
                 .wrongTypeValues()
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(-1, -1)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -44,7 +43,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues("string", "")
                 .invalidValues()
                 .wrongTypeValues()
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(-1, -1)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -56,7 +55,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -68,7 +67,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -80,7 +79,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -92,7 +91,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -104,7 +103,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -116,7 +115,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -128,7 +127,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -140,7 +139,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -152,7 +151,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -164,7 +163,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -176,7 +175,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -188,7 +187,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -200,7 +199,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -212,7 +211,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -224,7 +223,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -236,7 +235,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -248,7 +247,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -260,7 +259,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -272,7 +271,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -284,7 +283,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -296,7 +295,7 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
@@ -308,18 +307,8 @@ class TargetBaseAppSettingsImplTest {
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
-                .extractors(new SettingTester.ExtractorParameter(new WindowHolder(window), new PointInt(2, 3)))
+                .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
                 .test();
     }
 
-    @Test
-    void beforeMinimizingDelay() {
-        new SettingTester(settingsFactoryInternal, SettingKeys.TargetBaseApp.beforeMinimizingDelay)
-                .settingGetter(targetBaseAppSettings::beforeMinimizingDelay)
-                .normalValues(0L, 1000L, 15000L)
-                .invalidValues(-1L)
-                .wrongTypeValues("string")
-                .extractors()
-                .test();
-    }
 }

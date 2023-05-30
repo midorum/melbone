@@ -2,7 +2,7 @@ package midorum.melbone.settings.internal.obtaining.setting;
 
 import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.struct.PointFloat;
-import com.midorum.win32api.struct.PointLong;
+import com.midorum.win32api.struct.PointInt;
 import midorum.melbone.model.settings.setting.TargetLauncherSettings;
 import midorum.melbone.settings.SettingKeys;
 import midorum.melbone.settings.internal.storage.KeyValueStorage;
@@ -14,8 +14,8 @@ public class TargetLauncherSettingsImpl extends SettingValueExtractor implements
     }
 
     @Override
-    public PointLong desktopShortcutLocationAbsolutePoint() {
-        return (PointLong) getValue(SettingKeys.TargetLauncher.desktopShortcutLocationAbsolutePoint);
+    public PointInt desktopShortcutLocationPoint() {
+        return (PointInt) getValue(SettingKeys.TargetLauncher.desktopShortcutLocationPoint);
     }
 
     @Override
@@ -91,21 +91,6 @@ public class TargetLauncherSettingsImpl extends SettingValueExtractor implements
     @Override
     public PointFloat startButtonPoint() {
         return (PointFloat) getValue(SettingKeys.TargetLauncher.startButtonPoint);
-    }
-
-    @Override
-    public int attemptsToFindWindow() {
-        return 10;
-    }
-
-    @Override
-    public int searchWindowDelay() {
-        return 5;
-    }
-
-    @Override
-    public int searchWindowLatency() {
-        return 5;
     }
 
     @Override

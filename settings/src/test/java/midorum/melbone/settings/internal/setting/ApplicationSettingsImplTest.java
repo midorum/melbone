@@ -19,7 +19,7 @@ class ApplicationSettingsImplTest {
                 .normalValues(0, 1, 5)
                 .invalidValues(-1, 6, 10)
                 .wrongTypeValues("string")
-                .extractors()
+                .extractFrom()
                 .test();
     }
 
@@ -30,7 +30,7 @@ class ApplicationSettingsImplTest {
                 .normalValues(0, 1, 3)
                 .invalidValues(-1)
                 .wrongTypeValues("string")
-                .extractors()
+                .extractFrom()
                 .test();
     }
 
@@ -41,7 +41,7 @@ class ApplicationSettingsImplTest {
                 .normalValues(0.0F, 0.3F, 1.0F, 1.1F)
                 .invalidValues(-0.3F, -1.0F, -1.1F)
                 .wrongTypeValues("string")
-                .extractors()
+                .extractFrom()
                 .test();
     }
 
@@ -52,7 +52,7 @@ class ApplicationSettingsImplTest {
                 .normalValues(0, 1, 5)
                 .invalidValues(-1)
                 .wrongTypeValues("string")
-                .extractors()
+                .extractFrom()
                 .test();
     }
 
@@ -63,7 +63,7 @@ class ApplicationSettingsImplTest {
                 .normalValues(0, 10, 50)
                 .invalidValues(-1)
                 .wrongTypeValues("string")
-                .extractors()
+                .extractFrom()
                 .test();
     }
 
@@ -74,7 +74,7 @@ class ApplicationSettingsImplTest {
                 .normalValues(0L, 5L, 15L)
                 .invalidValues(-1)
                 .wrongTypeValues("string")
-                .extractors()
+                .extractFrom()
                 .test();
     }
 

@@ -1,12 +1,10 @@
 package midorum.melbone.settings;
 
+import midorum.melbone.model.settings.key.*;
 import midorum.melbone.model.settings.stamp.Stamp;
 import midorum.melbone.model.persistence.StorageKey;
-import midorum.melbone.model.settings.key.NoopKey;
-import midorum.melbone.model.settings.key.SettingData;
-import midorum.melbone.model.settings.key.SettingsManagerAction;
-import midorum.melbone.model.settings.key.StampKey;
 import midorum.melbone.settings.internal.defining.SettingDataImpl;
+import midorum.melbone.settings.internal.defining.SettingObtainWays;
 
 import java.util.stream.Stream;
 
@@ -44,7 +42,7 @@ public interface StampKeys {
                     .type(Stamp.class)
                     .description(description)
                     .storageKey(StorageKey.targetLauncherStamp)
-                    .settingsManagerAction(SettingsManagerAction.captureWindowElement)
+                    .obtainWay(SettingObtainWays.captureWindowElementAndGetShot)
                     .build();
         }
 
@@ -64,7 +62,8 @@ public interface StampKeys {
         serverLineUnselected("Base window - Select server page - Server line; Unselected; Base scale"),
         needRestartPopup("Need restart popup; Base scale"),
         disconnectedPopup("Disconnected popup; Base scale"),
-        dailyTrackerPopupCaption("In-game daily tracker popup caption; Base scale");
+        dailyTrackerPopupCaption("In-game daily tracker popup caption; Base scale"),
+        accountInfoPopupCaption("Account info popup caption; Base scale");
 
         private final SettingData settingData;
 
@@ -73,7 +72,7 @@ public interface StampKeys {
                     .type(Stamp.class)
                     .description(description)
                     .storageKey(StorageKey.targetBaseAppStamp)
-                    .settingsManagerAction(SettingsManagerAction.captureWindowElement)
+                    .obtainWay(SettingObtainWays.captureWindowElementAndGetShot)
                     .build();
         }
 

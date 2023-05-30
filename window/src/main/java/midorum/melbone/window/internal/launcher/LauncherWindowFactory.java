@@ -1,6 +1,7 @@
 package midorum.melbone.window.internal.launcher;
 
 import com.midorum.win32api.facade.*;
+import com.midorum.win32api.struct.PointInt;
 import dma.flow.Waiting;
 import dma.util.Delay;
 import dma.util.DurationFormatter;
@@ -154,7 +155,7 @@ public class LauncherWindowFactory {
 
     private void clickLauncherDesktopIcon() throws InterruptedException {
         win32System.getScreenMouse(settings.application().speedFactor())
-                .move(settings.targetLauncher().desktopShortcutLocationAbsolutePoint().toPointInt())
+                .move(settings.targetLauncher().desktopShortcutLocationPoint())
                 .leftClick()
                 .leftClick();
     }

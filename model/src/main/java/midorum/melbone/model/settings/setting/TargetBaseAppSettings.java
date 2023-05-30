@@ -1,6 +1,7 @@
 package midorum.melbone.model.settings.setting;
 
 import com.midorum.win32api.struct.PointFloat;
+import midorum.melbone.model.dto.KeyShortcut;
 
 public interface TargetBaseAppSettings {
 
@@ -98,10 +99,19 @@ public interface TargetBaseAppSettings {
 
     int checkDailyTrackerPopupRenderingDelay();
 
-    @Deprecated
-    long beforeMinimizingDelay();
-
     long afterLaunchAccountDelay();
 
     String processName();
+
+    KeyShortcut stopAnimationHotkey();
+
+    KeyShortcut cancelCurrentOperationHotkey();
+
+    KeyShortcut openMenuHotkey();
+
+    KeyShortcut openAccountInfoHotkey();
+
+    int accountInfoPopupRenderingTimeout();
+
+    int accountInfoPopupRenderingDelay();
 }

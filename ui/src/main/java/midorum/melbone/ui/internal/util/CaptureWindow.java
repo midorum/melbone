@@ -1,6 +1,7 @@
 package midorum.melbone.ui.internal.util;
 
 import com.midorum.win32api.facade.Rectangle;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -37,7 +38,7 @@ class CaptureWindow {
             final Point locationOnScreen = frame.getLocationOnScreen();
             final Dimension size = frame.getSize();
             frame.dispose();
-            this.consumer.accept(Optional.of(new Rectangle(locationOnScreen.x, locationOnScreen.y, size.width, size.height)));
+            this.consumer.accept(Optional.of(new Rectangle(locationOnScreen.x, locationOnScreen.y, locationOnScreen.x + size.width, locationOnScreen.y + size.height)));
         };
 
         final Action closeFrame = () -> {

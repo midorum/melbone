@@ -121,7 +121,7 @@ public class IdentifyDialog extends JDialog {
             try {
                 currentUnboundWindow = WindowHolder.EMPTY;
                 final BaseAppWindow baseAppWindow = targetWindowOperations.getFirstNotBoundWindow().orElseThrow();
-                baseAppWindow.restoreAndDo(restoredBaseAppWindow -> context.mouseKeyHookManager().setHook(
+                baseAppWindow.restoreAndDo(restoredBaseAppWindow -> context.mouseHookHelper().setGlobalHookForKey(
                         IWinUser.WM_LBUTTONDOWN,
                         (mouseEvent) -> {
                             updateComboBoxModel();

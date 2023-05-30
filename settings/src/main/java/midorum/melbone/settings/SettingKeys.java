@@ -4,18 +4,17 @@ import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
 import com.midorum.win32api.struct.PointLong;
+import midorum.melbone.model.dto.KeyShortcut;
 import midorum.melbone.model.persistence.StorageKey;
 import midorum.melbone.model.settings.key.SettingData;
 import midorum.melbone.model.settings.key.SettingKey;
-import midorum.melbone.model.settings.key.SettingsManagerAction;
-import midorum.melbone.model.settings.key.WindowHolder;
+import midorum.melbone.model.settings.key.SettingObtainWay;
 import midorum.melbone.settings.internal.defining.SettingDataImpl;
+import midorum.melbone.settings.internal.defining.SettingObtainWays;
 
-import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import static midorum.melbone.settings.internal.defining.SettingExtractor.*;
 import static midorum.melbone.settings.internal.defining.SettingValidator.*;
 
 public interface SettingKeys {
@@ -29,7 +28,7 @@ public interface SettingKeys {
 
     enum Application implements SettingKey {
         @Deprecated
-        actionPeriod(Integer.class,
+        actionPeriod(Integer.class,//FIXME >>> delete
                 "0 - for disable, >0 - checking delay in minutes",
                 35,
                 INTEGER_POSITIVE_PREDICATE.predicate()),
@@ -50,12 +49,12 @@ public interface SettingKeys {
                 0,
                 INTEGER_POSITIVE_PREDICATE.predicate()),
         @Deprecated
-        stopAnimationDelay(Integer.class,
+        stopAnimationDelay(Integer.class,//FIXME >>> delete
                 "waiting to stop starting animation in seconds",
                 30,
                 INTEGER_POSITIVE_PREDICATE.predicate()),
         @Deprecated
-        adjustWindows(Boolean.class,
+        adjustWindows(Boolean.class,//FIXME >>> delete
                 "when true - try adjust base window if it has wrong dimensions",
                 false),
         stampDeviation(Integer.class,
@@ -63,14 +62,17 @@ public interface SettingKeys {
                 0,
                 INTEGER_POSITIVE_PREDICATE.predicate()),
         @Deprecated
-        scheduledTaskPeriod(Integer.class,
+        scheduledTaskPeriod(Integer.class,//FIXME >>> delete
                 "0 - for disable, >0 - scheduled tasks delay in minutes",
                 5,
                 INTEGER_POSITIVE_PREDICATE.predicate()),
         randomRoutineDelayMax(Long.class,
                 "0 - for disable, >0 - maximal random delay on every routine iteration in minutes",
                 5L,
-                LONG_POSITIVE_PREDICATE.predicate());
+                LONG_POSITIVE_PREDICATE.predicate()),
+        checkHealthBeforeLaunch(Boolean.class,
+                "Check existing base windows health before launch new one. Use when have often disconnect problems. Disable to speed up launch.",
+                false);
 
         private final SettingData settingData;
 
@@ -107,122 +109,104 @@ public interface SettingKeys {
     enum TargetLauncher implements SettingKey {
         windowTitle(String.class,
                 "window title",
-                SettingsManagerAction.touchWindow,
-                WINDOW_TITLE_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetTitle),
         windowClassName(String.class,
                 "window class name",
-                SettingsManagerAction.touchWindow,
-                WINDOW_CLASS_NAME_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetClassName),
         processName(String.class,
                 "process name",
-                SettingsManagerAction.touchWindow,
-                WINDOW_PROCESS_NAME_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetProcessName),
         windowDimensions(Rectangle.class,
                 "window dimensions",
                 WINDOW_DIMENSIONS_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindow,
-                WINDOW_DIMENSIONS_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetDimensions),
         confirmQuitDialogTitle(String.class,
                 "confirm quit dialog title",
-                SettingsManagerAction.touchWindow,
-                WINDOW_TITLE_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetTitle),
         confirmQuitDialogDimensions(Rectangle.class,
                 "confirm quit dialog dimensions",
                 WINDOW_DIMENSIONS_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindow,
-                WINDOW_DIMENSIONS_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetDimensions),
         initializationErrorDialogTitle(String.class,
                 "initialization error dialog title",
-                SettingsManagerAction.touchWindow,
-                WINDOW_TITLE_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetTitle),
         initializationErrorDialogDimensions(Rectangle.class,
                 "initialization error dialog dimensions",
                 WINDOW_DIMENSIONS_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindow,
-                WINDOW_DIMENSIONS_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetDimensions),
         windowCloseButtonPoint(PointFloat.class,
                 "window close button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
-        desktopShortcutLocationAbsolutePoint(PointLong.class,
+                SettingObtainWays.touchWindowAndGetRelativePoint),
+        @Deprecated
+        desktopShortcutLocationAbsolutePoint(PointLong.class,//FIXME >>> delete
                 "desktop icon location",
                 POINT_LONG_POSITIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchScreenElement,
-                SCREEN_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchScreenElementAndGetPoint),
+        desktopShortcutLocationPoint(PointInt.class,
+                "desktop icon location",
+                POINT_INTEGER_POSITIVE_PREDICATE.predicate(),
+                SettingObtainWays.touchScreenElementAndGetPoint),
         closeQuitConfirmPopupButtonPoint(PointFloat.class,
                 "close quit confirm popup button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         closeInitializationErrorDialogButtonPoint(PointFloat.class,
                 "close initialization error dialog button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         startButtonPoint(PointFloat.class,
                 "start button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         accountDropListPoint(PointFloat.class,
                 "account drop list location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         accountLogoutPoint(PointFloat.class,
                 "account drop list location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         loginInputPoint(PointFloat.class,
                 "login input location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         passwordInputPoint(PointFloat.class,
                 "password input location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         loginButtonPoint(PointFloat.class,
                 "login button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         maintenanceInProgressPopupConfirmButtonPoint(PointFloat.class,
                 "\"Maintenance in progress\" popup Confirm button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor());
+                SettingObtainWays.touchWindowAndGetRelativePoint);
 
         private final SettingData settingData;
 
         TargetLauncher(final Class<?> type,
                        final String description,
-                       final SettingsManagerAction settingsManagerAction,
-                       final BiFunction<WindowHolder, PointInt, Object> extractor) {
+                       final SettingObtainWay obtainWay) {
             this.settingData = new SettingDataImpl.Builder()
                     .type(type)
                     .description(description)
                     .storageKey(StorageKey.targetLauncher)
-                    .settingsManagerAction(settingsManagerAction)
-                    .extractor(extractor)
+                    .obtainWay(obtainWay)
                     .build();
         }
 
         TargetLauncher(final Class<?> type,
                        final String description,
                        final Predicate<Object> validator,
-                       final SettingsManagerAction settingsManagerAction,
-                       final BiFunction<WindowHolder, PointInt, Object> extractor) {
+                       final SettingObtainWay obtainWay) {
             this.settingData = new SettingDataImpl.Builder()
                     .type(type)
                     .description(description)
                     .storageKey(StorageKey.targetLauncher)
                     .validator(validator)
-                    .settingsManagerAction(settingsManagerAction)
-                    .extractor(extractor)
+                    .obtainWay(obtainWay)
                     .build();
         }
 
@@ -235,13 +219,11 @@ public interface SettingKeys {
     enum TargetCountControl implements SettingKey {
         windowTitle(String.class,
                 "window title",
-                SettingsManagerAction.touchWindow,
-                WINDOW_TITLE_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetTitle),
         confirmButtonPoint(PointFloat.class,
                 "confirm button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         windowTimeout(Long.class,
                 "window appearing timeout in seconds",
                 10L,
@@ -264,29 +246,25 @@ public interface SettingKeys {
 
         TargetCountControl(final Class<?> type,
                            final String description,
-                           final SettingsManagerAction settingsManagerAction,
-                           final BiFunction<WindowHolder, PointInt, Object> extractor) {
+                           final SettingObtainWay obtainWay) {
             this.settingData = new SettingDataImpl.Builder()
                     .type(type)
                     .description(description)
                     .storageKey(StorageKey.targetCountControl)
-                    .settingsManagerAction(settingsManagerAction)
-                    .extractor(extractor)
+                    .obtainWay(obtainWay)
                     .build();
         }
 
         TargetCountControl(final Class<?> type,
                            final String description,
                            final Predicate<Object> validator,
-                           final SettingsManagerAction settingsManagerAction,
-                           final BiFunction<WindowHolder, PointInt, Object> extractor) {
+                           final SettingObtainWay obtainWay) {
             this.settingData = new SettingDataImpl.Builder()
                     .type(type)
                     .description(description)
                     .storageKey(StorageKey.targetCountControl)
                     .validator(validator)
-                    .settingsManagerAction(settingsManagerAction)
-                    .extractor(extractor)
+                    .obtainWay(obtainWay)
                     .build();
         }
 
@@ -299,16 +277,13 @@ public interface SettingKeys {
     enum TargetBaseApp implements SettingKey {
         windowTitle(String.class,
                 "window title",
-                SettingsManagerAction.touchWindow,
-                WINDOW_TITLE_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetTitle),
         windowClassName(String.class,
                 "window class name",
-                SettingsManagerAction.touchWindow,
-                WINDOW_CLASS_NAME_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetClassName),
         processName(String.class,
                 "process name",
-                SettingsManagerAction.touchWindow,
-                WINDOW_PROCESS_NAME_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetProcessName),
         windowTimeout(Integer.class,
                 "window appearing timeout in seconds",
                 10,
@@ -316,122 +291,112 @@ public interface SettingKeys {
         selectCharacterButtonPoint(PointFloat.class,
                 "select character button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         startButtonPoint(PointFloat.class,
                 "start game button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         windowCloseButtonPoint(PointFloat.class,
                 "window close button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         windowMinimizeButtonPoint(PointFloat.class,
                 "window minimize button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         actionButtonPoint(PointFloat.class,
                 "in-game action button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         actionSecondButtonPoint(PointFloat.class,
                 "in-game action second button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         selectServerButtonPoint(PointFloat.class,
                 "select server button offset for base scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         connectServerButtonPoint(PointFloat.class,
                 "select server button offset for base scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         openOptionsButtonPoint(PointFloat.class,
                 "open options button offset for default scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         screenSettingsTabPoint(PointFloat.class,
                 "open options button offset for default scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         uiScaleChooser80Point(PointFloat.class,
                 "open options button offset for default scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         soundSettingsTabPoint(PointFloat.class,
                 "open options button offset for default scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         overallVolumeZeroLevelPoint(PointFloat.class,
                 "open options button offset for default scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         optionsApplyButtonPoint(PointFloat.class,
                 "open options button offset for default scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         needRestartPopupConfirmButtonPoint(PointFloat.class,
                 "open options button offset for base scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         menuExitOptionPoint(PointFloat.class,
                 "Esc popup Exit option for base scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         dailyTrackerButtonPoint(PointFloat.class,
                 "In-game daly tracker button for base scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         dailyTrackerTabPoint(PointFloat.class,
                 "In-game daly tracker tab in popup for base scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         trackLoginButtonPoint(PointFloat.class,
                 "In-game track login button in popup for base scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         closeDailyTrackerPopupButtonPoint(PointFloat.class,
                 "In-game daily tracker popup close button for base scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         manaIndicatorPoint(PointFloat.class,
                 "In-game mana indicator for base scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         disconnectedPopupCloseButtonPoint(PointFloat.class,
                 "Disconnected popup Close button for base scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindowElement,
-                WINDOW_RELATIVE_POINT_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetRelativePoint),
         @Deprecated
-        beforeMinimizingDelay(Long.class,
+        beforeMinimizingDelay(Long.class,//FIXME >>> delete
                 "Delay before minimizing window frame: 0 - for disable, >0 - delay in milliseconds",
                 5000L,
                 LONG_POSITIVE_PREDICATE.predicate()),
         afterLaunchAccountDelay(Long.class,
                 "Delay before minimizing window frame after account has launched: 0 - for disable, >0 - delay in milliseconds",
                 5000L,
-                LONG_POSITIVE_PREDICATE.predicate());
+                LONG_POSITIVE_PREDICATE.predicate()),
+        stopAnimationHotkey(KeyShortcut.class,
+                "Hot key to stop animation",
+                SettingObtainWays.pressHotkey),
+        cancelCurrentOperationHotkey(KeyShortcut.class,
+                "Hot key to cancel current operation in window",
+                SettingObtainWays.pressHotkey),
+        openMenuHotkey(KeyShortcut.class,
+                "Hot key to open menu popup",
+                SettingObtainWays.pressHotkey),
+        openAccountInfoHotkey(KeyShortcut.class,
+                "Hot key to open account info popup",
+                SettingObtainWays.pressHotkey);
 
         private final SettingData settingData;
 
@@ -450,29 +415,25 @@ public interface SettingKeys {
 
         TargetBaseApp(final Class<?> type,
                       final String description,
-                      final SettingsManagerAction settingsManagerAction,
-                      final BiFunction<WindowHolder, PointInt, Object> extractor) {
+                      final SettingObtainWay obtainWay) {
             this.settingData = new SettingDataImpl.Builder()
                     .type(type)
                     .description(description)
                     .storageKey(StorageKey.targetBaseApp)
-                    .settingsManagerAction(settingsManagerAction)
-                    .extractor(extractor)
+                    .obtainWay(obtainWay)
                     .build();
         }
 
         TargetBaseApp(final Class<?> type,
                       final String description,
                       final Predicate<Object> validator,
-                      final SettingsManagerAction settingsManagerAction,
-                      final BiFunction<WindowHolder, PointInt, Object> extractor) {
+                      final SettingObtainWay obtainWay) {
             this.settingData = new SettingDataImpl.Builder()
                     .type(type)
                     .description(description)
                     .storageKey(StorageKey.targetBaseApp)
                     .validator(validator)
-                    .settingsManagerAction(settingsManagerAction)
-                    .extractor(extractor)
+                    .obtainWay(obtainWay)
                     .build();
         }
 
@@ -486,29 +447,25 @@ public interface SettingKeys {
         windowClassName(String.class,
                 "window class name",
                 "Optional[Credential Dialog Xaml Host]",
-                SettingsManagerAction.touchWindow,
-                WINDOW_CLASS_NAME_EXTRACTOR.extractor()),
+                SettingObtainWays.touchWindowAndGetClassName),
         windowDimensions(Rectangle.class,
                 "window dimensions",
                 new Rectangle(0, 0, 456, 333),
                 WINDOW_DIMENSIONS_PREDICATE.predicate(),
-                SettingsManagerAction.touchWindow,
-                WINDOW_DIMENSIONS_EXTRACTOR.extractor());
+                SettingObtainWays.touchWindowAndGetDimensions);
 
         private final SettingData settingData;
 
         Uac(final Class<?> type,
             final String description,
             final Object defaultValue,
-            final SettingsManagerAction settingsManagerAction,
-            final BiFunction<WindowHolder, PointInt, Object> extractor) {
+            final SettingObtainWay obtainWay) {
             this.settingData = new SettingDataImpl.Builder()
                     .type(type)
                     .description(description)
                     .storageKey(StorageKey.uac)
                     .defaultValue(defaultValue)
-                    .settingsManagerAction(settingsManagerAction)
-                    .extractor(extractor)
+                    .obtainWay(obtainWay)
                     .build();
         }
 
@@ -516,16 +473,14 @@ public interface SettingKeys {
             final String description,
             final Object defaultValue,
             final Predicate<Object> validator,
-            final SettingsManagerAction settingsManagerAction,
-            final BiFunction<WindowHolder, PointInt, Object> extractor) {
+            final SettingObtainWay obtainWay) {
             this.settingData = new SettingDataImpl.Builder()
                     .type(type)
                     .description(description)
                     .storageKey(StorageKey.uac)
                     .defaultValue(defaultValue)
                     .validator(validator)
-                    .settingsManagerAction(settingsManagerAction)
-                    .extractor(extractor)
+                    .obtainWay(obtainWay)
                     .build();
         }
 

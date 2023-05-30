@@ -1,6 +1,7 @@
 package midorum.melbone.ui.internal.main;
 
-import com.sun.jna.platform.win32.Win32VK;
+import com.midorum.win32api.hook.KeyHookHelper;
+import com.midorum.win32api.win32.Win32VirtualKey;
 import midorum.melbone.model.dto.Account;
 import midorum.melbone.model.exception.OptionHasNoValue;
 import midorum.melbone.model.processing.AccountsProcessingRequest;
@@ -9,7 +10,6 @@ import midorum.melbone.ui.internal.common.NoticePane;
 import midorum.melbone.ui.internal.model.*;
 import midorum.melbone.ui.internal.settings.SettingsManagerForm;
 import midorum.melbone.ui.internal.settings.Tab;
-import midorum.melbone.ui.internal.util.GlobalKeyHookManager;
 import midorum.melbone.ui.internal.util.IdentifyDialog;
 
 import javax.swing.*;
@@ -86,9 +86,9 @@ public class MainForm extends JFrame {
     }
 
     private void setCancelTaskHook() {
-        context.globalKeyHookManager().setHook(
-                new GlobalKeyHookManager.KeyEventBuilder().virtualKey(Win32VK.VK_S).withControl().withShift().build(),
-                GlobalKeyHookManager.KeyEventComparator.byAltShiftControlCode,
+        context.keyHookHelper().setGlobalHook(
+                new KeyHookHelper.KeyEventBuilder().virtualKey(Win32VirtualKey.VK_S).withControl().withShift().build(),
+                KeyHookHelper.KeyEventComparator.byAltControlShiftCode,
                 keyEvent -> {
                     taskExecutorOperations.cancelCurrentTask();
                     return false; // keep hook

@@ -1,10 +1,10 @@
 package midorum.melbone.window.internal.baseapp;
 
+import com.midorum.win32api.facade.HotKey;
 import com.midorum.win32api.facade.IKeyboard;
 import com.midorum.win32api.facade.IMouse;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.struct.PointFloat;
-import com.midorum.win32api.win32.Win32VirtualKey;
 import dma.flow.Waiting;
 import dma.function.ConsumerThrowing;
 import dma.util.Delay;
@@ -159,18 +159,16 @@ public class BaseAppWindowImpl implements BaseAppWindow {
     }
 
     private boolean waitBaseWindowRendering() throws InterruptedException {
-        log.info("waiting for base window rendering");
-        final boolean result = new Waiting()
+        log.info("wait for base window rendering");
+        return new Waiting()
                 .timeout(settings.targetBaseAppSettings().baseWindowRenderingTimeout(), TimeUnit.MILLISECONDS)
                 .withDelay(settings.targetBaseAppSettings().checkBaseWindowRenderingDelay(), TimeUnit.MILLISECONDS)
                 .doOnEveryFailedIteration(i -> log.debug("{}: base window has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitForBoolean(this::waitForMenuRendering);
-        if (result) window.getKeyboard().pressAndRelease(Win32VirtualKey.VK_ESCAPE); //close menu
-        return result;
+                .waitForBoolean(this::checkAccountInfoRendering);
     }
 
     private Optional<Stamp> waitDisconnectedPopupRendering() throws InterruptedException {
-        log.debug("waiting for disconnected popup rendering");
+        log.debug("wait for disconnected popup rendering");
         final IMouse mouse = getMouse();
         final Stamp checkingStamp = stamps.targetBaseApp().disconnectedPopup();
         final Optional<Stamp> foundStamp = new Waiting()
@@ -277,12 +275,13 @@ public class BaseAppWindowImpl implements BaseAppWindow {
         log.info("waiting for menu rendering");
         final IKeyboard keyboard = window.getKeyboard();
         final Stamp checkingStamp = stamps.targetBaseApp().menuExitOption();
+        final HotKey openMenuHotKey = settings.targetBaseAppSettings().openMenuHotkey().toHotKey();
         final boolean result = new Waiting()
                 .timeout(settings.targetBaseAppSettings().menuRenderingTimeout(), TimeUnit.MILLISECONDS)
                 .withDelay(settings.targetBaseAppSettings().checkMenuRenderingDelay(), TimeUnit.MILLISECONDS)
                 .doOnEveryFailedIteration(i -> {
                     log.debug("{}: menu has not rendered yet - try to open again", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
-                    keyboard.pressAndRelease(Win32VirtualKey.VK_ESCAPE);
+                    keyboard.enterHotKey(openMenuHotKey);
                 })
                 .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp)).isPresent();
         if (result)
@@ -294,6 +293,7 @@ public class BaseAppWindowImpl implements BaseAppWindow {
 
     private Stamp waitServerPageRendering() throws InterruptedException {
         final IKeyboard keyboard = window.getKeyboard();
+        final HotKey stopAnimationHotKey = settings.targetBaseAppSettings().stopAnimationHotkey().toHotKey();
         log.info("waiting for server page rendering");
         // сначала ищем базовый масштаб, а затем дефолтный, чтобы не менять масштаб если не нужно
         final Stamp[] checkingStamps = {stamps.targetBaseApp().optionsButtonBaseScale(),
@@ -303,7 +303,7 @@ public class BaseAppWindowImpl implements BaseAppWindow {
                 .withDelay(settings.targetBaseAppSettings().checkServerPageRenderingDelay(), TimeUnit.MILLISECONDS)
                 .doOnEveryFailedIteration(i -> {
                     log.debug("{}: server page has not rendered yet - try to stop animation", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
-                    keyboard.pressAndRelease(Win32VirtualKey.VK_ESCAPE);
+                    keyboard.enterHotKey(stopAnimationHotKey);
                 })
                 .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamps))
                 .orElseThrow(() -> getBrokenWindowException("server page has not rendered - maybe window broken", checkingStamps));
@@ -413,7 +413,8 @@ public class BaseAppWindowImpl implements BaseAppWindow {
                     openPopupAction.accept();
                 })
                 .waitForBoolean(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp).isPresent());
-        if (!rendered) log.warn("daily tracker popup has not rendered (marker={})", commonWindowService.logFailedStamps(this.window, checkingStamp));
+        if (!rendered)
+            log.warn("daily tracker popup has not rendered (marker={})", commonWindowService.logFailedStamps(this.window, checkingStamp));
         else log.info("daily tracker popup has rendered");
         return rendered;
     }
@@ -421,7 +422,8 @@ public class BaseAppWindowImpl implements BaseAppWindow {
     private boolean closeDailyTrackerPopupAndCheckRendering(final IMouse mouse) throws InterruptedException {
         log.info("closing daily tracker popup");
         final Stamp checkingStamp = stamps.targetBaseApp().dailyTrackerPopupCaption();
-        final Waiting.EmptyConsumer closePopupAction = () -> mouse.move(settings.targetBaseAppSettings().closeDailyTrackerPopupButtonPoint()).leftClick();;
+        final Waiting.EmptyConsumer closePopupAction = () -> mouse.move(settings.targetBaseAppSettings().closeDailyTrackerPopupButtonPoint()).leftClick();
+        ;
         final boolean notRendered = new Waiting()
                 .timeout(settings.targetBaseAppSettings().dailyTrackerPopupRenderingTimeout(), TimeUnit.MILLISECONDS)
                 .withDelay(settings.targetBaseAppSettings().checkDailyTrackerPopupRenderingDelay(), TimeUnit.MILLISECONDS)
@@ -432,8 +434,36 @@ public class BaseAppWindowImpl implements BaseAppWindow {
                 })
                 .waitForBoolean(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp).isEmpty());
         if (notRendered) log.info("daily tracker popup closed");
-        else  log.warn("daily tracker popup has not closed (marker={})", commonWindowService.logFailedStamps(this.window, checkingStamp));
+        else
+            log.warn("daily tracker popup has not closed (marker={})", commonWindowService.logFailedStamps(this.window, checkingStamp));
         return notRendered;
+    }
+
+    private boolean checkAccountInfoRendering() throws InterruptedException {
+        log.info("check account info rendering");
+        final Optional<Stamp> maybe = openAccountInfoPopup();
+        if (maybe.isPresent()) {
+            window.getKeyboard().enterHotKey(settings.targetBaseAppSettings().openAccountInfoHotkey().toHotKey());
+            return true;
+        }
+        return false;
+    }
+
+    private Optional<Stamp> openAccountInfoPopup() throws InterruptedException {
+        log.info("wait for account info popup rendering");
+        final IKeyboard keyboard = window.getKeyboard();
+        final Stamp checkingStamp = stamps.targetBaseApp().accountInfoPopupCaption();
+        final HotKey hotKey = settings.targetBaseAppSettings().openAccountInfoHotkey().toHotKey();
+        final Optional<Stamp> maybeStamp = new Waiting()
+                .timeout(settings.targetBaseAppSettings().accountInfoPopupRenderingTimeout(), TimeUnit.MILLISECONDS)
+                .withDelay(settings.targetBaseAppSettings().accountInfoPopupRenderingDelay(), TimeUnit.MILLISECONDS)
+                .doOnEveryFailedIteration(i -> {
+                    log.debug("{}: account info popup has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
+                    keyboard.enterHotKey(hotKey);
+                })
+                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp));
+        maybeStamp.ifPresent(stamp -> log.debug("found stamp {}", stamp.key().internal().groupName() + "." + stamp.key().name()));
+        return maybeStamp;
     }
 
     private BrokenWindowException getBrokenWindowException(final String message, Stamp... stamps) {
@@ -505,6 +535,12 @@ public class BaseAppWindowImpl implements BaseAppWindow {
             mouse.move(settings.targetBaseAppSettings().startButtonPoint()).leftClick();
 
             log.info("character has been selected");
+        }
+
+        @Override
+        public void checkInGameWindowRendered() throws InterruptedException {
+            checkIfNotDisconnected();
+            checkIfInGameWindowRendered();
         }
     }
 

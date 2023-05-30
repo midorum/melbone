@@ -3,7 +3,6 @@ package midorum.melbone.model.settings.setting;
 import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
-import com.midorum.win32api.struct.PointLong;
 
 public interface TargetLauncherSettings {
 
@@ -15,22 +14,13 @@ public interface TargetLauncherSettings {
 
     Rectangle confirmQuitDialogDimensions();
 
-    PointLong desktopShortcutLocationAbsolutePoint();
+    PointInt desktopShortcutLocationPoint();
 
     String initializationErrorDialogTitle();
 
     Rectangle initializationErrorDialogDimensions();
 
     PointFloat closeInitializationErrorDialogButtonPoint();
-
-    @Deprecated
-    int attemptsToFindWindow();
-
-    @Deprecated
-    int searchWindowDelay();
-
-    @Deprecated
-    int searchWindowLatency();
 
     int attemptToFindStartButton();
 
