@@ -94,6 +94,7 @@ public class LaunchAccountAction implements VoidActionThrowing<InterruptedExcept
                 throw new ControlledInterruptedException(e);
             }
         });
+        if(!settings.application().checkHealthBeforeLaunch()) return;
         windowsMap.get(false).forEach(w -> {
             try {
                 final String characterName = w.getCharacterName().orElse("unbound");
