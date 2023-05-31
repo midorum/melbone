@@ -22,10 +22,12 @@ public class AccountsPane extends JPanel {
     private final JTextField nameTextField;
     private final JTextField editLoginTextField;
     private final JTextField editPasswordTextField;
+    private final JTextField editCommentaryTextField;
     private final JCheckBox inUseCheckBox;
     private final JTextField addNameTextField;
     private final JTextField addLoginTextField;
     private final JTextField addPasswordTextField;
+    private final JTextField addCommentaryTextField;
     private final JButton addButton;
     private final JButton backButton;
     private final JButton saveNewButton;
@@ -41,7 +43,7 @@ public class AccountsPane extends JPanel {
         this.accountStorage = context.accountStorage();
 
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        setPreferredSize(new Dimension(500, 250));
+        setPreferredSize(new Dimension(500, 300));
         setBorder(new EmptyBorder(10, 10, 10, 10));
 
         this.comboBoxModel = new DefaultComboBoxModel<>();
@@ -49,10 +51,12 @@ public class AccountsPane extends JPanel {
         this.nameTextField = createNameTextField();
         this.editLoginTextField = createEditLoginTextField();
         this.editPasswordTextField = createEditPasswordTextField();
+        this.editCommentaryTextField = createEditCommentaryTextField();
         this.inUseCheckBox = createInUseCheckBox();
         this.addNameTextField = createAddNameTextField();
         this.addLoginTextField = createAddLoginTextField();
         this.addPasswordTextField = createAddPasswordTextField();
+        this.addCommentaryTextField = createAddCommentaryTextField();
         this.cardLayout = new CardLayout();
         this.cardsPane = createCardPane();
         this.noticePane = new NoticePane(context.logger());
@@ -87,6 +91,8 @@ public class AccountsPane extends JPanel {
         accountCreatePane.add(addLoginTextField);
         accountCreatePane.add(new JLabel("Password:"));
         accountCreatePane.add(addPasswordTextField);
+        accountCreatePane.add(new JLabel("Commentary:"));
+        accountCreatePane.add(addCommentaryTextField);
         return accountCreatePane;
     }
 
@@ -102,6 +108,8 @@ public class AccountsPane extends JPanel {
         accountEditPane.add(editLoginTextField);
         accountEditPane.add(new JLabel("Password:"));
         accountEditPane.add(editPasswordTextField);
+        accountEditPane.add(new JLabel("Commentary:"));
+        accountEditPane.add(editCommentaryTextField);
         accountEditPane.add(inUseCheckBox);
         return accountEditPane;
     }
@@ -167,6 +175,18 @@ public class AccountsPane extends JPanel {
         return field;
     }
 
+    private JTextField createEditCommentaryTextField() {
+        final JTextField field = new JTextField();
+        field.setName("edit account commentary field");
+        return field;//TODO make field editable by demand
+    }
+
+    private JTextField createAddCommentaryTextField() {
+        final JTextField field = new JTextField();
+        field.setName("add account commentary field");
+        return field;
+    }
+
     private JCheckBox createInUseCheckBox() {
         JCheckBox checkBox = new JCheckBox("using on this machine");
         checkBox.setName("in use check box");
@@ -209,6 +229,7 @@ public class AccountsPane extends JPanel {
                         .name(nameTextField.getText())
                         .login(editLoginTextField.getText())
                         .password(editPasswordTextField.getText())
+                        .commentary(editCommentaryTextField.getText())
                         .build();
                 if (!accountStorage.isExists(account.name()))
                     throw new IllegalStateException("Account name does not exists");
@@ -231,6 +252,7 @@ public class AccountsPane extends JPanel {
                         .name(addNameTextField.getText())
                         .login(addLoginTextField.getText())
                         .password(addPasswordTextField.getText())
+                        .commentary(addCommentaryTextField.getText())
                         .build();
                 if (accountStorage.isExists(account.name()))
                     throw new IllegalStateException("Account name already exists");
@@ -276,6 +298,7 @@ public class AccountsPane extends JPanel {
         nameTextField.setText(account.name());
         editLoginTextField.setText(account.login());
         editPasswordTextField.setText(account.password());
+        editCommentaryTextField.setText(account.commentary().orElse(null));
         inUseCheckBox.setSelected(accountStorage.isInUse(account.name()));
         noticePane.clearNotice();
     }
@@ -309,6 +332,7 @@ public class AccountsPane extends JPanel {
         addNameTextField.setText(null);
         addLoginTextField.setText(null);
         addPasswordTextField.setText(null);
+        addCommentaryTextField.setText(null);
         noticePane.clearNotice();
     }
 
@@ -318,6 +342,7 @@ public class AccountsPane extends JPanel {
         nameTextField.setText(null);
         editLoginTextField.setText(null);
         editPasswordTextField.setText(null);
+        editCommentaryTextField.setText(null);
         noticePane.clearNotice();
     }
 }

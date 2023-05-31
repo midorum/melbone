@@ -22,7 +22,7 @@ class AccountsPaneTest extends MockedContext {
         final String acc2 = "acc2";
         new AccountPaneInteraction()
                 .accountsLimit(2)
-                .totalAccounts(acc1, acc2)
+                .totalAccounts(createAccount(acc1), createAccountWithCommentary(acc2))
                 .updatePane()
                 .printStateBriefly();
     }
@@ -34,7 +34,7 @@ class AccountsPaneTest extends MockedContext {
         final String acc2 = "acc2";
         new AccountPaneInteraction()
                 .accountsLimit(2)
-                .totalAccounts(acc1, acc2)
+                .totalAccounts(createAccount(acc1), createAccountWithCommentary(acc2))
                 .accountsInUse(acc1)
                 .updatePane()
                 .clickCheckbox(acc1)
@@ -51,7 +51,7 @@ class AccountsPaneTest extends MockedContext {
         final String acc5 = "acc5";
         new AccountPaneInteraction()
                 .accountsLimit(2)
-                .totalAccounts(acc1, acc2, acc3, acc4, acc5)
+                .totalAccounts(createAccount(acc1), createAccountWithCommentary(acc2), createAccountWithCommentary(acc3), createAccount(acc4), createAccountWithCommentary(acc5))
                 .accountsInUse(acc2, acc4, acc5)
                 .bindAccounts(acc4)
                 .updatePane()
@@ -130,6 +130,11 @@ class AccountsPaneTest extends MockedContext {
             return this;
         }
 
+        public AccountPaneInteraction totalAccounts(final Account... accounts) {
+            interaction.setTotalAccounts(accounts);
+            return this;
+        }
+
         public AccountPaneInteraction accountsInUse(final String... accounts) {
             interaction.setAccountsInUse(accounts);
             return this;
@@ -164,7 +169,7 @@ class AccountsPaneTest extends MockedContext {
                 throw new IllegalStateException("Selecting account must be included into accounts in use");
             }
             SwingTestUtil.INSTANCE.getChildrenOfType(accountsPane, JCheckBox.class).stream()
-                    .filter(checkBox -> account.equals(checkBox.getText()))
+                    .filter(checkBox -> account.equals(checkBox.getClientProperty(AccountsPane.ACCOUNT_ID_PROPERTY)))
                     .filter(Component::isEnabled)
                     .findFirst()
                     .ifPresentOrElse(checkBox -> {
@@ -202,14 +207,25 @@ class AccountsPaneTest extends MockedContext {
             final int totalCountShouldBe = accountsInUse.size();
             assertEquals(totalCountShouldBe, checkBoxes.size(), "Should have " + totalCountShouldBe + " checkboxes when there are " + totalCountShouldBe + " accounts in use");
             checkBoxes.forEach(checkBox -> {
+                final String accountId = (String) checkBox.getClientProperty(AccountsPane.ACCOUNT_ID_PROPERTY);
+                assertTrue(accountsInUse.contains(accountId), "Account in-use storage should contain account \"" + accountId + "\" but is hasn't");
+                final Account accountInStorage = accountStorage.get(accountId);
+                assertNotNull(accountInStorage, "Account storage should contain account \"" + accountId + "\" but is hasn't");
                 final String checkBoxText = checkBox.getText();
-                assertTrue(accountsInUse.contains(checkBoxText), "Checkbox text should correspond the account name");
-                if (selectedCheckBoxes.contains(checkBoxText)) {
-                    assertTrue(checkBox.isSelected(), "Checkbox should be selected");
+                assertEquals(getAccountTextForCheckBox(accountInStorage), checkBoxText, "Checkbox text should correspond the account name with comment");
+                if (selectedCheckBoxes.contains(accountId)) {
+                    assertTrue(checkBox.isSelected(), "Checkbox \"" + accountId + "\" should be selected");
                 } else {
-                    assertFalse(checkBox.isSelected(), "Checkbox shouldn't be selected");
+                    assertFalse(checkBox.isSelected(), "Checkbox \"" + accountId + "\" shouldn't be selected");
                 }
             });
+        }
+
+        private String getAccountTextForCheckBox(final Account account) {
+            final Optional<String> maybeCommentary = account.commentary();
+            if (maybeCommentary.isEmpty()) return account.name();
+            final String commentary = maybeCommentary.get();
+            return account.name() + " (" + commentary + ")";
         }
 
         private void verifyCheckboxesDisablingWhenLimitReached(final List<JCheckBox> checkBoxes) {
@@ -218,11 +234,11 @@ class AccountsPaneTest extends MockedContext {
                 checkBoxes.forEach(checkBox -> assertTrue(checkBox.isEnabled(), "Checkbox should be enabled because bound accounts limit (" + accountsLimit + ") do not reached"));
             else
                 checkBoxes.forEach(checkBox -> {
-                    final String checkBoxText = checkBox.getText();
-                    if (selectedCheckBoxes.contains(checkBoxText)) {
-                        assertTrue(checkBox.isEnabled(), "Checkbox should be enabled when checked");
+                    final String accountId = (String) checkBox.getClientProperty(AccountsPane.ACCOUNT_ID_PROPERTY);
+                    if (selectedCheckBoxes.contains(accountId)) {
+                        assertTrue(checkBox.isEnabled(), "Checkbox \"" + accountId + "\" should be enabled when checked");
                     } else {
-                        assertFalse(checkBox.isEnabled(), "Checkbox shouldn't be enabled because bound accounts limit reached");
+                        assertFalse(checkBox.isEnabled(), "Checkbox \"" + accountId + "\" shouldn't be enabled because bound accounts limit reached");
                     }
                 });
         }
@@ -235,8 +251,9 @@ class AccountsPaneTest extends MockedContext {
         private void verifySelectedAccountsReturned() {
             final int shouldBeSelectedAccountsCount = selectedCheckBoxes.size();
             final Account[] obtainedSelectedAccounts = accountsPane.getSelectedAccounts();
-            assertEquals(shouldBeSelectedAccountsCount, obtainedSelectedAccounts.length, "Should return " + shouldBeSelectedAccountsCount + " selected accounts");
-            Arrays.stream(obtainedSelectedAccounts).map(Account::name).forEach(s -> assertTrue(selectedCheckBoxes.contains(s), "Should return correspond account"));
+            assertEquals(shouldBeSelectedAccountsCount, obtainedSelectedAccounts.length, "Accounts pane should return " + shouldBeSelectedAccountsCount + " selected accounts");
+            Arrays.stream(obtainedSelectedAccounts).forEach(account -> assertNotNull(account, "Accounts pane should not return \"null\" account but returns " + Arrays.toString(obtainedSelectedAccounts)));
+            Arrays.stream(obtainedSelectedAccounts).map(Account::name).forEach(s -> assertTrue(selectedCheckBoxes.contains(s), "Accounts pane should return correspond account"));
         }
     }
 }

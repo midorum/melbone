@@ -195,11 +195,29 @@ public class MockedContext {
                 .build();
     }
 
-    public Account createAccount(final String name, final String login, final String password) {
+    public Account createAccountWithCommentary(final String name) {
         return Account.builder()
                 .name(name)
                 .login(name + "_login")
                 .password(name + "_password")
+                .commentary(name + "_commentary")
+                .build();
+    }
+
+    public Account createAccount(final String name, final String login, final String password) {
+        return Account.builder()
+                .name(name)
+                .login(login)
+                .password(password)
+                .build();
+    }
+
+    public Account createAccount(final String name, final String login, final String password, final String commentary) {
+        return Account.builder()
+                .name(name)
+                .login(login)
+                .password(password)
+                .commentary(commentary)
                 .build();
     }
 
@@ -261,6 +279,11 @@ public class MockedContext {
 
         public Interaction setTotalAccounts(final String... accountBinding) {
             Arrays.stream(accountBinding).forEach(s -> accountStorage.store(createAccount(s)));
+            return this;
+        }
+
+        public Interaction setTotalAccounts(final Account... accountBinding) {
+            Arrays.stream(accountBinding).forEach(accountStorage::store);
             return this;
         }
 

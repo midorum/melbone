@@ -17,6 +17,7 @@ import java.util.*;
 
 public class AccountsPane extends JPanel implements AccountsHolder, Updatable {
 
+    public static final String ACCOUNT_ID_PROPERTY = "accountId";
     private final AccountStorage accountStorage;
     private final TargetWindowOperations targetWindowOperations;
     private final ApplicationSettings applicationSettings;
@@ -61,7 +62,7 @@ public class AccountsPane extends JPanel implements AccountsHolder, Updatable {
     public Account[] getSelectedAccounts() {
         return checkBoxes.stream()
                 .filter(JCheckBox::isSelected)
-                .map(AbstractButton::getText)
+                .map(checkBox -> (String) checkBox.getClientProperty(ACCOUNT_ID_PROPERTY))
                 .map(accountStorage::get)
                 .toArray(Account[]::new);
     }
@@ -73,7 +74,7 @@ public class AccountsPane extends JPanel implements AccountsHolder, Updatable {
 
     private void renderForm() {
         dataLoader.loadGuiData(() -> {
-                    final Collection<String> accountsInUse = accountStorage.accountsInUse();
+                    final Collection<Account> accountsInUse = accountStorage.accountsInUse().stream().map(accountStorage::get).toList();
                     logger.info("accounts in use: {}", accountsInUse);
                     final List<BaseAppWindow> allBaseAppWindows = targetWindowOperations.getAllWindows();
                     final List<String> boundAccounts = allBaseAppWindows.stream().map(BaseAppWindow::getCharacterName).filter(Optional::isPresent).map(Optional::get).toList();
@@ -88,20 +89,25 @@ public class AccountsPane extends JPanel implements AccountsHolder, Updatable {
                 });
     }
 
-    private void renderCheckBoxes(final Collection<String> accountsInUse, final Collection<String> boundAccounts) {
+    private void renderCheckBoxes(final Collection<Account> accountsInUse, final Collection<String> boundAccounts) {
         checkBoxes.forEach(this.content::remove);
         checkBoxes.clear();
         checkBoxes.addAll(accountsInUse.stream()
-                .map(s -> createCheckBox(s, boundAccounts.contains(s)))
+                .map(account -> createCheckBox(account, boundAccounts.contains(account.name())))
                 .toList());
         checkBoxes.forEach(this.content::add);
     }
 
-    private JCheckBox createCheckBox(final String s, final boolean selected) {
-        final JCheckBox checkBox = new JCheckBox(s);
+    private JCheckBox createCheckBox(final Account account, final boolean selected) {
+        final JCheckBox checkBox = new JCheckBox(getTextForCheckBox(account));
         checkBox.addActionListener(e -> updateCheckBoxesAccessible());
         checkBox.setSelected(selected);
+        checkBox.putClientProperty(ACCOUNT_ID_PROPERTY, account.name());
         return checkBox;
+    }
+
+    private String getTextForCheckBox(final Account account) {
+        return account.name() + account.commentary().map(s -> " (" + s + ")").orElse("");
     }
 
     private void updateCheckBoxesAccessible(final int totalBaseWindows, final List<String> boundAccounts, final int maxAccountsSimultaneously) {
@@ -120,8 +126,8 @@ public class AccountsPane extends JPanel implements AccountsHolder, Updatable {
                 data -> updateCheckBoxesAccessible(data.allBaseAppWindows.size(), data.boundAccounts, data.maxAccountsSimultaneously));
     }
 
-    public record DataToUpdateForm (
-            Collection<String> accountsInUse,
+    public record DataToUpdateForm(
+            Collection<Account> accountsInUse,
             List<BaseAppWindow> allBaseAppWindows,
             List<String> boundAccounts,
             int maxAccountsSimultaneously
