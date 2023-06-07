@@ -195,11 +195,38 @@ public class MockedContext {
                 .build();
     }
 
-    public Account createAccount(final String name, final String login, final String password) {
+    public Account createAccountWithCommentary(final String name) {
         return Account.builder()
                 .name(name)
                 .login(name + "_login")
                 .password(name + "_password")
+                .commentary(name + "_commentary")
+                .build();
+    }
+
+    public Account createAccountWithCommentary(final String name, final String commentary) {
+        return Account.builder()
+                .name(name)
+                .login(name + "_login")
+                .password(name + "_password")
+                .commentary(commentary)
+                .build();
+    }
+
+    public Account createAccount(final String name, final String login, final String password) {
+        return Account.builder()
+                .name(name)
+                .login(login)
+                .password(password)
+                .build();
+    }
+
+    public Account createAccount(final String name, final String login, final String password, final String commentary) {
+        return Account.builder()
+                .name(name)
+                .login(login)
+                .password(password)
+                .commentary(commentary)
                 .build();
     }
 
@@ -264,13 +291,22 @@ public class MockedContext {
             return this;
         }
 
-        public Interaction setAccountsInUse(final String... accountBinding) {
-            final Map<Boolean, List<String>> map = Arrays.stream(accountBinding).collect(Collectors.partitioningBy(accountStorage::isExists));
+        public Interaction setTotalAccounts(final Account... accounts) {
+            Arrays.stream(accounts).forEach(accountStorage::store);
+            return this;
+        }
+
+        public Interaction setAccountsInUse(final String... accounts) {
+            final Map<Boolean, List<String>> map = Arrays.stream(accounts).collect(Collectors.partitioningBy(accountStorage::isExists));
             if (!map.get(false).isEmpty()) {
-                throw new IllegalArgumentException("Accounts " + map.get(false) + " do not exist. Maybe you forgot to add them in total accountBinding list.");
+                throw new IllegalArgumentException("Accounts " + map.get(false) + " do not exist. Maybe you forgot to add them in total accounts list.");
             }
             map.get(true).forEach(accountStorage::addToUsed);
             return this;
+        }
+
+        public Interaction setAccountsInUse(final Account... accounts) {
+            return setAccountsInUse(Arrays.stream(accounts).map(Account::name).toArray(String[]::new));
         }
 
         public Interaction generateAccountsInUse(final int count) {
