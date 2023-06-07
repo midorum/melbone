@@ -1,6 +1,7 @@
 package midorum.melbone.ui.dev;
 
 import com.midorum.win32api.win32.IWinUser;
+import midorum.melbone.model.dto.Account;
 import midorum.melbone.ui.context.MockedContext;
 import midorum.melbone.ui.internal.main.MainForm;
 import midorum.melbone.ui.internal.util.StandardDialogsProvider;
@@ -16,7 +17,8 @@ class MainFormVisualDev extends MockedContext {
         formWhenNotUnboundWindows,
         formWhenExistsUnboundWindow,
         formWhenExistThreeUnboundWindows,
-        formWhenExperimentalIsOn
+        formWhenExperimentalIsOn,
+        formWhenAccountsHaveCommentary
     }
 
     public MainFormVisualDev() {
@@ -24,7 +26,7 @@ class MainFormVisualDev extends MockedContext {
     }
 
     public static void main(String[] args) {
-        new MainFormVisualDev().show(IWantToSee.formWhenExperimentalIsOn);
+        new MainFormVisualDev().show(IWantToSee.formWhenAccountsHaveCommentary);
     }
 
     private void show(final IWantToSee wantToSee) {
@@ -35,6 +37,7 @@ class MainFormVisualDev extends MockedContext {
             case formWhenExistsUnboundWindow -> formWhenExistsUnboundWindow();
             case formWhenExistThreeUnboundWindows -> formWhenExistThreeUnboundWindows();
             case formWhenExperimentalIsOn -> formWhenExperimentalIsOn();
+            case formWhenAccountsHaveCommentary -> formWhenAccountsHaveCommentary();
         }
     }
 
@@ -110,6 +113,32 @@ class MainFormVisualDev extends MockedContext {
                 .whenTryTakeRectangleShotThenReturnStandardImage(); //mocking stamp pane
 
         new MainForm("experimental mode", context).display();
+    }
+
+    private void formWhenAccountsHaveCommentary() {
+        final int accountsLimit = 3;
+        final String commentaryGroup1 = "group1";
+        final String commentaryGroup2 = "group2";
+        final String commentaryGroup3 = "group3";
+        final Account account1 = createAccount("John");
+        final Account account2 = createAccountWithCommentary("Bob", commentaryGroup1);
+        final Account account3 = createAccountWithCommentary("Robert", commentaryGroup2);
+        final Account account4 = createAccount("David");
+        final Account account5 = createAccountWithCommentary("Anthony", commentaryGroup2);
+        final Account account6 = createAccountWithCommentary("Paul", commentaryGroup1);
+        final Account account7 = createAccountWithCommentary("Kevin", commentaryGroup1 + "; " + commentaryGroup3);
+        final Account account8 = createAccountWithCommentary("1_Robert", commentaryGroup3 + ";" + commentaryGroup1);
+        final Account account9 = createAccountWithCommentary("2_Bob", commentaryGroup1 + "; " + commentaryGroup2);
+        new Interaction()
+                .setAccountsLimit(accountsLimit)
+                .setTotalAccounts(account4, account2, account8, account3, account1, account6, account7, account9, account5)
+                .setAccountsInUse(account3, account1, account4, account2, account9, account6, account7, account5, account8)
+                .setBoundAccounts(account1.name(), account2.name(), account3.name())
+                .whenTryCatchMouseKeyEvent(IWinUser.WM_LBUTTONDOWN).thenCatchWithSuccess()
+                .whenTryGetWindowByAnyPoint().thenReturnAnyWindowPoint() //mocking settings pane
+                .whenTryTakeRectangleShotThenReturnStandardImage();
+
+        new MainForm("formWhenAccountsHaveCommentary", context).display();
     }
 
 }

@@ -108,7 +108,7 @@ public class AccountsPane extends JPanel {
         accountEditPane.add(editLoginTextField);
         accountEditPane.add(new JLabel("Password:"));
         accountEditPane.add(editPasswordTextField);
-        accountEditPane.add(new JLabel("Commentary:"));
+        accountEditPane.add(new JLabel("Commentary (you can enter several splitting by \";\"):"));
         accountEditPane.add(editCommentaryTextField);
         accountEditPane.add(inUseCheckBox);
         return accountEditPane;

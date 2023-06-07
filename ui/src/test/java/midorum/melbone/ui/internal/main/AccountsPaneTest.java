@@ -3,6 +3,7 @@ package midorum.melbone.ui.internal.main;
 import midorum.melbone.model.dto.Account;
 import midorum.melbone.ui.context.MockedContext;
 import midorum.melbone.ui.util.SwingTestUtil;
+import org.apache.logging.log4j.Level;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -10,6 +11,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -110,6 +112,101 @@ class AccountsPaneTest extends MockedContext {
                 .printStateBriefly();
     }
 
+    @Test
+    @DisplayName("Nine total accounts; nine accounts in use; some accounts with commentary; filtering accounts by commentary")
+    void testFiltering() {
+        final int accountsLimit = 3;
+        final String acc1 = "acc1";
+        final String acc2 = "acc2";
+        final String acc3 = "acc3";
+        final String acc4 = "acc4";
+        final String acc5 = "acc5";
+        final String acc6 = "acc6";
+        final String acc7 = "acc7";
+        final String acc8 = "acc8";
+        final String acc9 = "acc9";
+        final String commentaryGroup1 = "group1";
+        final String commentaryGroup2 = "group2";
+        final String commentaryGroup3 = "group3";
+        new AccountPaneInteraction()
+                .accountsLimit(accountsLimit)
+                .totalAccounts(
+                        createAccount(acc1),
+                        createAccountWithCommentary(acc2, commentaryGroup1),
+                        createAccountWithCommentary(acc3, commentaryGroup2),
+                        createAccount(acc4),
+                        createAccountWithCommentary(acc5, commentaryGroup2),
+                        createAccountWithCommentary(acc6, commentaryGroup1),
+                        createAccountWithCommentary(acc7, commentaryGroup1 + "; " + commentaryGroup3),
+                        createAccountWithCommentary(acc8, commentaryGroup3 + ";" + commentaryGroup1),
+                        createAccountWithCommentary(acc9, commentaryGroup1 + "; " + commentaryGroup2)
+                )
+                .accountsInUse(acc1, acc2, acc3, acc4, acc5, acc6, acc7, acc8, acc9)
+                .bindAccounts(acc1, acc2, acc3)
+                .updatePane()
+                .scenario("Check initial filter state")
+                .verifyFilterComboBoxHasValue(AccountsPane.FILTER_SHOW_ALL)
+                .verifyCheckBoxesRendering(acc1, acc2, acc3, acc4, acc5, acc6, acc7, acc8, acc9)
+                .printStateBriefly()
+                .scenario("Filter accounts by first comment")
+                .selectFilter(commentaryGroup1)
+                .verifyCheckBoxesRendering(acc1, acc2, acc3, acc6, acc7, acc8, acc9)
+                .printStateBriefly()
+                .scenario("Filter accounts by second comment")
+                .selectFilter(commentaryGroup2)
+                .verifyCheckBoxesRendering(acc1, acc2, acc3, acc5, acc9)
+                .printStateBriefly()
+                .scenario("Filter accounts by third comment")
+                .selectFilter(commentaryGroup3)
+                .verifyCheckBoxesRendering(acc1, acc2, acc3, acc7, acc8)
+                .printStateBriefly()
+                .scenario("Clear filter")
+                .selectFilter(AccountsPane.FILTER_SHOW_ALL)
+                .verifyCheckBoxesRendering(acc1, acc2, acc3, acc4, acc5, acc6, acc7, acc8, acc9)
+                .printStateBriefly()
+                .scenario("Filter accounts and then update")
+                .selectFilter(commentaryGroup3)
+                .verifyCheckBoxesRendering(acc1, acc2, acc3, acc7, acc8)
+                .updatePane()
+                .verifyCheckBoxesRendering(acc1, acc2, acc3, acc4, acc5, acc6, acc7, acc8, acc9)
+                .printStateBriefly();
+    }
+
+    @Test
+    @DisplayName("Nine total accounts; nine accounts in use; some accounts with commentary; filtering accounts by commentary")
+    void testOrdering() {
+        ///setLoggerLevel(Level.TRACE);
+        final int accountsLimit = 3;
+        final String commentaryGroup1 = "group1";
+        final String commentaryGroup2 = "group2";
+        final String commentaryGroup3 = "group3";
+        final Account account1 = createAccount("John");
+        final Account account2 = createAccountWithCommentary("Bob", commentaryGroup1);
+        final Account account3 = createAccountWithCommentary("Robert", commentaryGroup2);
+        final Account account4 = createAccount("David");
+        final Account account5 = createAccountWithCommentary("Anthony", commentaryGroup2);
+        final Account account6 = createAccountWithCommentary("Paul", commentaryGroup1);
+        final Account account7 = createAccountWithCommentary("Kevin", commentaryGroup1 + "; " + commentaryGroup3);
+        final Account account8 = createAccountWithCommentary("1_Robert", commentaryGroup3 + ";" + commentaryGroup1);
+        final Account account9 = createAccountWithCommentary("2_Bob", commentaryGroup1 + "; " + commentaryGroup2);
+        final List<String> orderedAccounts = orderAccounts(account4, account2, account8, account3, account1, account6, account7, account9, account5);
+        new AccountPaneInteraction()
+                .accountsLimit(accountsLimit)
+                .totalAccounts(account4, account2, account8, account3, account1, account6, account7, account9, account5)
+                .accountsInUse(account3, account1, account4, account2, account9, account6, account7, account5, account8)
+                .bindAccounts(account1.name(), account2.name(), account3.name())
+                .updatePane()
+                .verifyCheckBoxesOrdering(orderedAccounts)
+                .printStateBriefly();
+    }
+
+    private List<String> orderAccounts(final Account... accounts) {
+        return Arrays.stream(accounts)
+                .sorted(Comparator.comparing(account -> account.name() + account.commentary().map(s -> " (" + s + ")").orElse("")))
+                .map(Account::name)
+                .toList();
+    }
+
     private class AccountPaneInteraction {
         private final Interaction interaction;
         private final AccountsPane accountsPane;
@@ -136,6 +233,11 @@ class AccountsPaneTest extends MockedContext {
         }
 
         public AccountPaneInteraction accountsInUse(final String... accounts) {
+            interaction.setAccountsInUse(accounts);
+            return this;
+        }
+
+        public AccountPaneInteraction accountsInUse(final Account... accounts) {
             interaction.setAccountsInUse(accounts);
             return this;
         }
@@ -182,6 +284,13 @@ class AccountsPaneTest extends MockedContext {
             return verifyPaneState();
         }
 
+        /* info */
+
+        public AccountPaneInteraction scenario(final String scenarioName) {
+            logger.info("Scenario: {}", scenarioName);
+            return this;
+        }
+
         public AccountPaneInteraction printContextInstances() {
             interaction.printContextInstances();
             return this;
@@ -193,9 +302,44 @@ class AccountsPaneTest extends MockedContext {
         }
 
         public AccountPaneInteraction printStateBriefly() {
-            interaction.printStateBriefly("selectedCheckBoxes: " + selectedCheckBoxes);
+            interaction.printStateBriefly("selectedCheckBoxes: " + selectedCheckBoxes
+                    + "\n\tfilter combo box selected value: " + getFilterComboBoxCurrentValue()
+                    + "\n\tcheckboxes state: " + stringifyCheckBoxesState());
             return this;
         }
+
+        private String stringifyCheckBoxesState() {
+            final StringBuilder sb = new StringBuilder();
+            getRenderedCheckBoxes().forEach(checkBox -> sb.append("\n\t\t").append(checkBox.getText())
+                    .append("\t(visible=").append(checkBox.isVisible())
+                    .append(", enabled=").append(checkBox.isEnabled())
+                    .append(", selected=").append(checkBox.isSelected())
+                    .append(")"));
+            return sb.toString();
+        }
+
+        /* obtaining */
+
+        private JComboBox<?> getFilterComboBox() {
+            return SwingTestUtil.INSTANCE.getChildNamedOrThrow(accountsPane, "filter combo box", JComboBox.class);
+        }
+
+        private List<JCheckBox> getRenderedCheckBoxes() {
+            return SwingTestUtil.INSTANCE.getChildrenOfType(accountsPane, JCheckBox.class);
+        }
+
+        private String getFilterComboBoxCurrentValue() {
+            return (String) getFilterComboBox().getSelectedItem();
+        }
+
+        /* actions */
+
+        public AccountPaneInteraction selectFilter(final String value) {
+            getFilterComboBox().setSelectedItem(value);
+            return this;
+        }
+
+        /* verifying */
 
         private void checkInternalState() {
             if (interaction.getAccountsLimit() == -1)
@@ -254,6 +398,31 @@ class AccountsPaneTest extends MockedContext {
             assertEquals(shouldBeSelectedAccountsCount, obtainedSelectedAccounts.length, "Accounts pane should return " + shouldBeSelectedAccountsCount + " selected accounts");
             Arrays.stream(obtainedSelectedAccounts).forEach(account -> assertNotNull(account, "Accounts pane should not return \"null\" account but returns " + Arrays.toString(obtainedSelectedAccounts)));
             Arrays.stream(obtainedSelectedAccounts).map(Account::name).forEach(s -> assertTrue(selectedCheckBoxes.contains(s), "Accounts pane should return correspond account"));
+        }
+
+        public AccountPaneInteraction verifyCheckBoxesRendering(final String... accounts) {
+            final Set<String> set = Arrays.stream(accounts).collect(Collectors.toSet());
+            final Set<Object> renderedAccounts = getRenderedCheckBoxes().stream()
+                    .map(checkBox -> checkBox.getClientProperty(AccountsPane.ACCOUNT_ID_PROPERTY))
+                    .collect(Collectors.toSet());
+            accountStorage.accountsInUse().forEach(accountId -> {
+                if (set.contains(accountId))
+                    assertTrue(renderedAccounts.contains(accountId), "Checkbox \"" + accountId + "\" should be rendered");
+                else
+                    assertFalse(renderedAccounts.contains(accountId), "Checkbox \"" + accountId + "\" shouldn't be rendered");
+            });
+            return this;
+        }
+
+        public AccountPaneInteraction verifyFilterComboBoxHasValue(final String value) {
+            assertEquals(value, getFilterComboBox().getSelectedItem());
+            return this;
+        }
+
+        public AccountPaneInteraction verifyCheckBoxesOrdering(final List<String> orderedAccounts) {
+            final List<String> checkboxes = getRenderedCheckBoxes().stream().map(checkBox -> checkBox.getClientProperty(AccountsPane.ACCOUNT_ID_PROPERTY)).map(String.class::cast).toList();
+            assertEquals(orderedAccounts, checkboxes);
+            return this;
         }
     }
 }

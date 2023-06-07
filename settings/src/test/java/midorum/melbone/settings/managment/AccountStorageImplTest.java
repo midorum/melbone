@@ -9,6 +9,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,6 +28,7 @@ class AccountStorageImplTest {
         internalStorage.removeMap(StorageKey.inUse);
         internalStorage.removeMap(StorageKey.registryAccount2);
         internalStorage.removeMap(StorageKey.registryResource2);
+        internalStorage.removeMap(StorageKey.accountCommentaries);
     }
 
     private Account createAccount(final String name) {
@@ -33,6 +36,15 @@ class AccountStorageImplTest {
                 .name(name)
                 .login(name + "_login")
                 .password(name + "_password")
+                .build();
+    }
+
+    private Account createAccount(final String name, final String commentary) {
+        return Account.builder()
+                .name(name)
+                .login(name + "_login")
+                .password(name + "_password")
+                .commentary(commentary)
                 .build();
     }
 
@@ -127,6 +139,73 @@ class AccountStorageImplTest {
             accountStorage.remove(acc1);
             assertFalse(accountStorage.isInUse(acc1));
             assertEquals(0, accountStorage.accountsInUse().size());
+        }
+
+    }
+
+    @Nested
+    class TestAccountCommentaries {
+
+        @Test
+        void storingAndGettingCommentariesForOneAccount() {
+            final String acc1 = "acc1";
+            final String commentary1 = "group1";
+            final String commentary2 = "group2";
+            verifyCommentariesInStorage();
+
+            accountStorage.store(createAccount(acc1, commentary1));
+            assertTrue(accountStorage.get(acc1).commentary().isPresent());
+            assertEquals(commentary1, accountStorage.get(acc1).commentary().get());
+            verifyCommentariesInStorage(commentary1);
+
+            final String complexCommentary = commentary1 + ";" + commentary2;
+            accountStorage.store(createAccount(acc1, complexCommentary));
+            assertEquals(complexCommentary, accountStorage.get(acc1).commentary().get());
+            verifyCommentariesInStorage(commentary1, commentary2);
+
+            accountStorage.store(createAccount(acc1, commentary2));
+            assertTrue(accountStorage.get(acc1).commentary().isPresent());
+            assertEquals(commentary2, accountStorage.get(acc1).commentary().get());
+            verifyCommentariesInStorage(commentary2);
+
+            accountStorage.remove(acc1);
+            verifyCommentariesInStorage();
+
+        }
+
+        @Test
+        void storingAndGettingCommentariesForSeveralAccounts() {
+            final String acc1 = "acc1";
+            final String acc2 = "acc2";
+            final String acc3 = "acc3";
+            final String acc4 = "acc4";
+            final String commentary1 = "group1";
+            final String commentary2 = "group2";
+            final String sloppyCommentary2 = " " + commentary2 + " ";
+            final String commentary1_2 = commentary1 + ";" + sloppyCommentary2;
+            final String commentary2_1 = commentary2 + ";" + commentary1;
+            verifyCommentariesInStorage();
+
+            accountStorage.store(createAccount(acc1, commentary1));
+            accountStorage.store(createAccount(acc2, commentary1_2));
+            accountStorage.store(createAccount(acc3, sloppyCommentary2));
+            accountStorage.store(createAccount(acc4, commentary2_1));
+            verifyCommentariesInStorage(commentary1, commentary2);
+
+            accountStorage.remove(acc1);
+            verifyCommentariesInStorage(commentary1, commentary2);
+
+            accountStorage.remove(acc2);
+            accountStorage.remove(acc4);
+            verifyCommentariesInStorage(commentary2);
+
+        }
+
+        private void verifyCommentariesInStorage(final String... commentaries) {
+            final Collection<String> commentariesInStorage = accountStorage.commentaries();
+            System.out.println("commentaries in storage: " + commentariesInStorage);
+            assertEquals(commentaries.length, commentariesInStorage.size(), "actually commentaries in storage: " + commentariesInStorage);
+            Arrays.stream(commentaries).forEach(s -> assertTrue(commentariesInStorage.contains(s)));
         }
 
     }

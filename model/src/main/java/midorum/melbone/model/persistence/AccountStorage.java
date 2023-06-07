@@ -26,4 +26,6 @@ public interface AccountStorage {
     void addToUsed(final String accountId);
 
     Optional<String> removeFromUsed(final String accountId);
+
+    Collection<String> commentaries();
 }
