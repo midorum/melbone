@@ -23,6 +23,7 @@ public interface SettingKeys {
         return Stream.of(Application.values(), TargetLauncher.values(), TargetCountControl.values(), TargetBaseApp.values(), Uac.values())
                 .flatMap(Stream::of)
                 .filter(e -> e.internal().isEnabled())
+                .map(SettingKey.class::cast)
                 .toArray(SettingKey[]::new);
     }
 
@@ -44,6 +45,10 @@ public interface SettingKeys {
                 "overall speed: <1 - faster, >1 - slowly, 0 - for disable",
                 1F,
                 FLOAT_POSITIVE_PREDICATE.predicate()),
+        mouseClickDelay(Long.class,
+                "delay between mouse positioning and click - use when target window does not accept mouse clicks: 0 - for disable, >0 - delay in milliseconds",
+                0L,
+                LONG_POSITIVE_PREDICATE.predicate()),
         taskPerformingDelay(Integer.class,
                 "delay before starting execution user's order in seconds",
                 0,
@@ -72,6 +77,9 @@ public interface SettingKeys {
                 LONG_POSITIVE_PREDICATE.predicate()),
         checkHealthBeforeLaunch(Boolean.class,
                 "Check existing base windows health before launch new one. Use when have often disconnect problems. Disable to speed up launch.",
+                false),
+        closeOverlappingWindows(Boolean.class,
+                "Close topmost windows which can overlap target one. Caution: topmost windows are designed for important notices.",
                 false);
 
         private final SettingData settingData;

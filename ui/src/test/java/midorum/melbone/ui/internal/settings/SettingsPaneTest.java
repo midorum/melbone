@@ -198,7 +198,6 @@ class SettingsPaneTest extends MockedContext {
         final SettingKey settingKey = SettingKeys.TargetBaseApp.openMenuHotkey;
         final String newValue = "Alt+Ctrl+Shift+S";
         final KeyShortcut newValueToCheck = new KeyShortcut.Builder().code(Win32VirtualKey.VK_S.code).withAlt().withControl().withShift().build();
-//        final PointInt capturedPoint = new PointInt(3, 4);
         assertThat(settingKey.internal().obtainWay().action(), equalTo(SettingsManagerAction.pressHotkey));
         final SettingsPaneInteraction interaction = new SettingsPaneInteraction();
         interaction.scenario("Select setting in combo box")
@@ -217,15 +216,6 @@ class SettingsPaneTest extends MockedContext {
                 .verifySettingDefaultValueLabelContains(settingKey)
                 .verifySettingValueField(newValueToCheck.toPrettyString())
                 .printStateBriefly();
-//        interaction.scenario("Restore default value for setting")
-//                .clickSetDefaultValueButton()
-//                .verifySettingValueInStorage(settingKey, newValueToCheck);
-//        interaction.scenario("Capturing value")
-//                .clickCaptureButtonWithConfirm(capturedPoint)
-//                .verifySettingValueField(capturedPoint.toString())
-//                .clickSaveButton()
-//                .verifySettingValueInStorage(settingKey, capturedPoint)
-//                .printStateBriefly();
     }
 
     private class SettingsPaneInteraction {

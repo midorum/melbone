@@ -104,9 +104,7 @@ public class IdentifyDialog extends JDialog {
         JComboBox<String> comboBox = new JComboBox<>();
         comboBox.setName("select account combo box");
         comboBox.setSelectedIndex(-1);
-        comboBox.addActionListener(e -> {
-            bindButton.setEnabled(comboBox.getSelectedItem() != null);
-        });
+        comboBox.addActionListener(e -> bindButton.setEnabled(comboBox.getSelectedItem() != null));
         return comboBox;
     }
 

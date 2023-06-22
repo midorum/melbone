@@ -165,6 +165,7 @@ public class Context {
         return taskStorage;
     }
 
+    @SuppressWarnings("unused")
     public static class Builder {
 
         private ExecutorFactory executorFactory;

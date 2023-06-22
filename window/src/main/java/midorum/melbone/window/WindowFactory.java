@@ -1,7 +1,6 @@
 package midorum.melbone.window;
 
 import com.midorum.win32api.facade.IScreenShotMaker;
-import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.WindowPoint;
 import com.midorum.win32api.struct.PointInt;

@@ -6,14 +6,12 @@ import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.Win32System;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
-import com.midorum.win32api.struct.PointLong;
 import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.model.settings.setting.TargetLauncherSettings;
 import midorum.melbone.model.settings.stamp.Stamps;
 import midorum.melbone.model.window.launcher.LauncherWindow;
 import midorum.melbone.window.internal.common.CommonWindowService;
-import midorum.melbone.window.internal.common.StampValidator;
 import midorum.melbone.window.internal.uac.UacWindowFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -49,7 +47,6 @@ class LauncherWindowFactoryTest {
     private final Settings settings = mock(Settings.class);
     private final ApplicationSettings applicationSettings = mock(ApplicationSettings.class);
     private final TargetLauncherSettings targetLauncherSettings = mock(TargetLauncherSettings.class);
-    private final StampValidator stampValidator = mock(StampValidator.class);
     private final Stamps stamps = mock(Stamps.class);
 
     @BeforeAll
@@ -69,7 +66,6 @@ class LauncherWindowFactoryTest {
         when(mouse.move((PointInt) null)).thenThrow(new IllegalStateException("Passed null to mouse move method"));
         when(mouse.move((PointFloat) null)).thenThrow(new IllegalStateException("Passed null to mouse move method"));
         when(mouse.leftClick()).thenReturn(mouse);
-        when(commonWindowService.getStampValidator()).thenReturn(stampValidator);
         when(applicationSettings.speedFactor()).thenReturn(SPEED_FACTOR);
         // search launcher
         when(targetLauncherSettings.desktopShortcutLocationPoint()).thenReturn(DESKTOP_ICON_LOCATION_POINT_INT);

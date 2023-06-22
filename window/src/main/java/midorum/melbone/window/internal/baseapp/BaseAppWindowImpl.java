@@ -1,25 +1,26 @@
 package midorum.melbone.window.internal.baseapp;
 
-import com.midorum.win32api.facade.HotKey;
-import com.midorum.win32api.facade.IKeyboard;
 import com.midorum.win32api.facade.IMouse;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.struct.PointFloat;
 import dma.flow.Waiting;
-import dma.function.ConsumerThrowing;
 import dma.util.Delay;
 import dma.util.DurationFormatter;
-import midorum.melbone.model.exception.ControlledInterruptedException;
 import midorum.melbone.model.exception.CriticalErrorException;
 import midorum.melbone.model.settings.account.AccountBinding;
+import midorum.melbone.model.settings.setting.TargetBaseAppSettings;
 import midorum.melbone.model.settings.stamp.Stamps;
 import midorum.melbone.model.settings.stamp.Stamp;
+import midorum.melbone.model.window.WindowConsumer;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
 import midorum.melbone.model.window.baseapp.InGameBaseAppWindow;
 import midorum.melbone.model.window.baseapp.RestoredBaseAppWindow;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.settings.StampKeys;
+import midorum.melbone.model.exception.CannotGetUserInputException;
 import midorum.melbone.window.internal.common.CommonWindowService;
+import midorum.melbone.window.internal.common.ForegroundWindow;
+import midorum.melbone.window.internal.common.Mouse;
 import midorum.melbone.window.internal.util.Log;
 import midorum.melbone.window.internal.util.StaticResources;
 
@@ -32,6 +33,7 @@ public class BaseAppWindowImpl implements BaseAppWindow {
     private final IWindow window;
     private final CommonWindowService commonWindowService;
     private final Settings settings;
+    private final TargetBaseAppSettings targetBaseAppSettings;
     private final AccountBinding accountBinding;
     private final Stamps stamps;
     private final Log log;
@@ -44,6 +46,7 @@ public class BaseAppWindowImpl implements BaseAppWindow {
                              final Stamps stamps) {
         this.window = window;
         this.settings = settings;
+        this.targetBaseAppSettings = settings.targetBaseAppSettings();
         this.accountBinding = accountBinding;
         this.commonWindowService = commonWindowService;
         this.stamps = stamps;
@@ -68,61 +71,54 @@ public class BaseAppWindowImpl implements BaseAppWindow {
     }
 
     @Override
-    public void restoreAndDo(final ConsumerThrowing<RestoredBaseAppWindow, InterruptedException> consumer) throws InterruptedException {
+    public void restoreAndDo(final WindowConsumer<RestoredBaseAppWindow> consumer) throws InterruptedException {
+        if (!this.window.isExists()) {
+            log.warn("window not found - skip");
+            return;
+        }
         try {
-            if (!this.window.isExists()) {
-                log.warn("window not found - skip");
-                return;
-            }
-            checkIfNotDisconnected();
-            consumer.accept(new RestoredBaseAppWindowImpl());
-            minimizeOpenedWindow();
-        } catch (DisconnectedWindowException e) {
-            try {
-                log.warn("widow is disconnected: " + e.getMessage() + " - close and skip:", e);
-                closeOrKillDisconnectedWindow();
-            } catch (Throwable t) {
-                t.addSuppressed(e);
-                throw t;
-            }
-        } catch (BrokenWindowException e) {
-            try {
-                log.warn("widow has broken: " + e.getMessage() + " - close and skip:", e);
-                closeOrKillBrokenWindow();
-            } catch (Throwable t) {
-                t.addSuppressed(e);
-                throw t;
-            }
+            commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
+                try {
+                    checkWindowIsDisconnected(foregroundWindow);
+                    consumer.accept(new RestoredBaseAppWindowImpl(foregroundWindow));
+                    minimizeOpenedWindow(foregroundWindow);
+                } catch (DisconnectedWindowException e) {
+                    log.warn("widow is disconnected: " + e.getMessage() + " - close:", e);
+                    closeDisconnectedWindow(foregroundWindow);
+                }
+            });
+        } catch (BrokenWindowException | CannotGetUserInputException e) {
+            log.warn("widow is broken: " + e.getMessage() + " - close:", e);
+            closeOrKillBrokenWindow();
         }
     }
 
     @Override
-    public void doInGameWindow(final ConsumerThrowing<InGameBaseAppWindow, InterruptedException> consumer) throws InterruptedException {
+    public void doInGameWindow(final WindowConsumer<InGameBaseAppWindow> consumer) throws InterruptedException {
+        if (!this.window.isExists()) {
+            log.warn("window not found - skip");
+            return;
+        }
         try {
-            if (!this.window.isExists()) {
-                log.warn("window not found - skip");
-                return;
-            }
-            checkIfNotDisconnected();
-            checkIfInGameWindowRendered();
-            consumer.accept(new InGameBaseAppWindowImpl());
-            minimizeOpenedWindow();
-        } catch (DisconnectedWindowException e) {
-            try {
-                log.warn("widow is disconnected: " + e.getMessage() + " - close and skip", e);
-                closeOrKillDisconnectedWindow();
-            } catch (Throwable t) {
-                t.addSuppressed(e);
-                throw t;
-            }
-        } catch (BrokenWindowException e) {
-            try {
-                log.warn("widow has broken: " + e.getMessage() + " - close and skip", e);
-                closeOrKillBrokenWindow();
-            } catch (Throwable t) {
-                t.addSuppressed(e);
-                throw t;
-            }
+            commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
+                try {
+                    checkWindowIsDisconnected(foregroundWindow);
+                    checkIfInGameWindowRendered(foregroundWindow);
+                    consumer.accept(new InGameBaseAppWindowImpl(foregroundWindow));
+                    minimizeOpenedWindow(foregroundWindow);
+                } catch (DisconnectedWindowException e) {
+                    try {
+                        log.warn("widow is disconnected: " + e.getMessage() + " - close", e);
+                        closeDisconnectedWindow(foregroundWindow);
+                    } catch (Throwable t) {
+                        t.addSuppressed(e);
+                        throw t;
+                    }
+                }
+            });
+        } catch (BrokenWindowException | CannotGetUserInputException e) {
+            log.warn("widow has broken: " + e.getMessage() + " - close:", e);
+            closeOrKillBrokenWindow();
         }
     }
 
@@ -138,84 +134,47 @@ public class BaseAppWindowImpl implements BaseAppWindow {
         return window.getWindowMouse(settings.application().speedFactor());
     }
 
-    private void checkIfNotDisconnected() throws InterruptedException {
-        if (!commonWindowService.bringWindowForeground(window)) {
-            throw new BrokenWindowException("cannot bring window foreground");
-        }
-        if (isDisconnected()) {
+    private void checkWindowIsDisconnected(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
+        if (foregroundWindow.waiting()
+                .withTimeout(targetBaseAppSettings.disconnectedPopupRenderingTimeout())
+                .withDelay(targetBaseAppSettings.checkDisconnectedPopupRenderingDelay())
+                .withMousePosition(targetBaseAppSettings.manaIndicatorPoint())
+                .forStamp(stamps.targetBaseApp().disconnectedPopup()).isPresent())
             throw new DisconnectedWindowException("window is disconnected");
-        }
     }
 
-    private boolean isDisconnected() throws InterruptedException {
-        log.info("check if window disconnected");
-        return waitDisconnectedPopupRendering().isPresent();
-    }
-
-    private void checkIfInGameWindowRendered() throws InterruptedException {
-        if (!waitBaseWindowRendering()) {
+    private void checkIfInGameWindowRendered(final ForegroundWindow foregroundWindow) throws InterruptedException {
+        if (!waitBaseWindowRendering(foregroundWindow)) {
             throw new BrokenWindowException("base window is not rendered");
         }
     }
 
-    private boolean waitBaseWindowRendering() throws InterruptedException {
+    private boolean waitBaseWindowRendering(final ForegroundWindow foregroundWindow) throws InterruptedException {
         log.info("wait for base window rendering");
         return new Waiting()
-                .timeout(settings.targetBaseAppSettings().baseWindowRenderingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().checkBaseWindowRenderingDelay(), TimeUnit.MILLISECONDS)
+                .timeout(targetBaseAppSettings.baseWindowRenderingTimeout(), TimeUnit.MILLISECONDS)
+                .withDelay(targetBaseAppSettings.checkBaseWindowRenderingDelay(), TimeUnit.MILLISECONDS)
                 .doOnEveryFailedIteration(i -> log.debug("{}: base window has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitForBoolean(this::checkAccountInfoRendering);
+                .waitForBoolean(() -> {
+                    try {
+                        return checkAccountInfoRendering(foregroundWindow);
+                    } catch (CannotGetUserInputException e) {
+                        throw new BrokenWindowException(e.getMessage(), e);
+                    }
+                });
     }
 
-    private Optional<Stamp> waitDisconnectedPopupRendering() throws InterruptedException {
-        log.debug("wait for disconnected popup rendering");
-        final IMouse mouse = getMouse();
-        final Stamp checkingStamp = stamps.targetBaseApp().disconnectedPopup();
-        final Optional<Stamp> foundStamp = new Waiting()
-                .timeout(settings.targetBaseAppSettings().disconnectedPopupRenderingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().checkDisconnectedPopupRenderingDelay(), TimeUnit.MILLISECONDS)
-                .doOnEveryFailedIteration(i -> log.debug("{}: disconnected popup has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp, mouse, settings.targetBaseAppSettings().manaIndicatorPoint()));
-        if (foundStamp.isPresent()) {
-            final Stamp stamp = foundStamp.get();
-            log.debug("found stamp {}", stamp.key().internal().groupName() + "." + stamp.key().name());
-        }
-        return foundStamp;
-    }
-
-    private void minimizeOpenedWindow() throws InterruptedException {
+    private void minimizeOpenedWindow(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
         if (!this.window.isExists()) return;
         log.info("minimizing window");
-        //press Minimize frame button
-        getMouse().move(settings.targetBaseAppSettings().windowMinimizeButtonPoint()).leftClick();
+        foregroundWindow.getMouse().clickAtPoint(targetBaseAppSettings.windowMinimizeButtonPoint());
     }
 
-    private boolean closeWindowViaMenu() throws InterruptedException {
-        log.info("close window via menu");
-        final IMouse mouse = getMouse();
-        if (!waitForMenuRendering()) {
-            return false;
-        }
-        log.debug("click Close menu");
-        mouse.move(settings.targetBaseAppSettings().menuExitOptionPoint()).leftClick();
-        return waitWindowDisappearing(() -> {
-        });
-    }
-
-    private void closeWindowFrame() throws InterruptedException {
-        if (!this.window.isExists()) return;
-        log.info("close window frame");
-        //press Close frame button
-        getMouse().move(settings.targetBaseAppSettings().windowCloseButtonPoint()).leftClick();
-    }
-
-    private void closeOrKillDisconnectedWindow() throws InterruptedException {
+    private void closeDisconnectedWindow(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
         log.info("close disconnected popup");
-        getMouse().move(settings.targetBaseAppSettings().disconnectedPopupCloseButtonPoint()).leftClick();
+        foregroundWindow.getMouse().clickAtPoint(targetBaseAppSettings.disconnectedPopupCloseButtonPoint());
         if (!waitWindowDisappearing(() -> {
-        })) {
-            closeOrKillBrokenWindow();
-        }
+        })) throw getBrokenWindowException("Cannot close disconnected window", getLogMarker());
     }
 
     private void closeOrKillBrokenWindow() throws InterruptedException {
@@ -223,14 +182,6 @@ public class BaseAppWindowImpl implements BaseAppWindow {
         if (!tryCloseBrokenWindowAndCheckIfClosedNormally()) {
             killWindowProcess();
         }
-    }
-
-    private void killWindowProcess() throws InterruptedException {
-        if (!this.window.isExists()) return;
-        log.info("terminating window process");
-        this.window.getProcess().terminate();
-        if (!waitWindowDisappearing(() -> {
-        })) throw new CriticalErrorException("cannot terminate window process");
     }
 
     private boolean tryCloseBrokenWindowAndCheckIfClosedNormally() throws InterruptedException {
@@ -251,12 +202,27 @@ public class BaseAppWindowImpl implements BaseAppWindow {
         return true;
     }
 
+    private void closeWindowFrame() throws InterruptedException {
+        if (!this.window.isExists()) return;
+        log.info("close window frame");
+        //press Close frame button
+        getMouse().move(targetBaseAppSettings.windowCloseButtonPoint()).leftClick();
+    }
+
+    private void killWindowProcess() throws InterruptedException {
+        if (!this.window.isExists()) return;
+        log.info("terminating window process");
+        this.window.getProcess().terminate();
+        if (!waitWindowDisappearing(() -> {
+        })) throw new CriticalErrorException("cannot terminate window process");
+    }
+
     private boolean waitWindowDisappearing(final Waiting.EmptyConsumer closeWindowAction) throws InterruptedException {
         assert closeWindowAction != null;
-        log.info("waiting window disappearing");
+        log.info("wait for window disappearing");
         final boolean result = new Waiting()
-                .timeout(settings.targetBaseAppSettings().windowDisappearingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().checkWindowDisappearingDelay(), TimeUnit.MILLISECONDS)
+                .timeout(targetBaseAppSettings.windowDisappearingTimeout(), TimeUnit.MILLISECONDS)
+                .withDelay(targetBaseAppSettings.checkWindowDisappearingDelay(), TimeUnit.MILLISECONDS)
                 .doOnEveryFailedIteration(i -> {
                     log.debug("{}: window has not disappeared yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
                     closeWindowAction.accept();
@@ -271,316 +237,229 @@ public class BaseAppWindowImpl implements BaseAppWindow {
         return result;
     }
 
-    private boolean waitForMenuRendering() throws InterruptedException {
-        log.info("waiting for menu rendering");
-        final IKeyboard keyboard = window.getKeyboard();
-        final Stamp checkingStamp = stamps.targetBaseApp().menuExitOption();
-        final HotKey openMenuHotKey = settings.targetBaseAppSettings().openMenuHotkey().toHotKey();
-        final boolean result = new Waiting()
-                .timeout(settings.targetBaseAppSettings().menuRenderingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().checkMenuRenderingDelay(), TimeUnit.MILLISECONDS)
-                .doOnEveryFailedIteration(i -> {
-                    log.debug("{}: menu has not rendered yet - try to open again", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
-                    keyboard.enterHotKey(openMenuHotKey);
-                })
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp)).isPresent();
-        if (result)
-            log.debug("menu has rendered");
-        else
-            log.warn("menu has not rendered");
-        return result;
+    private boolean openMenuAndCheck(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
+        log.info("wait for menu rendering");
+        return foregroundWindow.waiting()
+                .withTimeout(targetBaseAppSettings.menuRenderingTimeout())
+                .withDelay(targetBaseAppSettings.checkMenuRenderingDelay())
+                .usingHotKey(targetBaseAppSettings.openMenuHotkey().toHotKey())
+                .forStamp(stamps.targetBaseApp().menuExitOption()).isPresent();
     }
 
-    private Stamp waitServerPageRendering() throws InterruptedException {
-        final IKeyboard keyboard = window.getKeyboard();
-        final HotKey stopAnimationHotKey = settings.targetBaseAppSettings().stopAnimationHotkey().toHotKey();
-        log.info("waiting for server page rendering");
-        // сначала ищем базовый масштаб, а затем дефолтный, чтобы не менять масштаб если не нужно
-        final Stamp[] checkingStamps = {stamps.targetBaseApp().optionsButtonBaseScale(),
-                stamps.targetBaseApp().optionsButtonDefaultScale()};
-        final Stamp foundStamp = new Waiting()
-                .timeout(settings.targetBaseAppSettings().serverPageRenderingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().checkServerPageRenderingDelay(), TimeUnit.MILLISECONDS)
-                .doOnEveryFailedIteration(i -> {
-                    log.debug("{}: server page has not rendered yet - try to stop animation", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
-                    keyboard.enterHotKey(stopAnimationHotKey);
-                })
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamps))
-                .orElseThrow(() -> getBrokenWindowException("server page has not rendered - maybe window broken", checkingStamps));
-        log.debug("found stamp {}", foundStamp.key().internal().groupName() + "." + foundStamp.key().name());
-        return foundStamp;
+    private Stamp waitServerPageRendering(final ForegroundWindow foregroundWindow) throws CannotGetUserInputException, InterruptedException {
+        log.info("wait for server page rendering");
+        final String logMarker = getLogMarker();
+        return foregroundWindow.waiting()
+                .withTimeout(targetBaseAppSettings.serverPageRenderingTimeout())
+                .withDelay(targetBaseAppSettings.checkServerPageRenderingDelay())
+                .usingHotKey(targetBaseAppSettings.stopAnimationHotkey().toHotKey())
+                .logFailedStampsWithMarker(logMarker)
+                // сначала ищем базовый масштаб, а затем дефолтный, чтобы не менять масштаб если не нужно
+                .forAnyStamp(stamps.targetBaseApp().optionsButtonBaseScale(), stamps.targetBaseApp().optionsButtonDefaultScale())
+                .orElseThrow(() -> getBrokenWindowException("server page has not rendered - maybe window broken", logMarker));
     }
 
-    private void changeUISizeToBaseAndMute(IMouse mouse) throws InterruptedException {
-        openOptionsPopupAndWaitRendering(mouse);
+    private void changeUISizeToBaseAndMute(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
+        log.info("try change settings");
+        final String logMarker = getLogMarker();
+        foregroundWindow.waiting()
+                .withTimeout(targetBaseAppSettings.optionsDialogRenderingTimeout())
+                .withDelay(targetBaseAppSettings.checkOptionsDialogRenderingDelay())
+                .usingMouseClickAt(targetBaseAppSettings.openOptionsButtonPoint())
+                .logFailedStampsWithMarker(logMarker)
+                .forStamp(stamps.targetBaseApp().optionsPopupCaption())
+                .orElseThrow(() -> getBrokenWindowException("options popup not found", logMarker));
+
+        final Mouse mouse = foregroundWindow.getMouse();
         log.info("changing window settings");
         //scale window
         log.info("changing window scale");
-        mouse.move(settings.targetBaseAppSettings().screenSettingsTabPoint()).leftClick();
-        mouse.move(settings.targetBaseAppSettings().uiScaleChooser80Point()).leftClick(); // 100% -> 90%
-        mouse.move(settings.targetBaseAppSettings().uiScaleChooser80Point()).leftClick(); // 90% -> 80%
+        mouse.clickAtPoint(targetBaseAppSettings.screenSettingsTabPoint());
+        mouse.clickAtPoint(targetBaseAppSettings.uiScaleChooser80Point()); // 100% -> 90%
+        mouse.clickAtPoint(targetBaseAppSettings.uiScaleChooser80Point()); // 90% -> 80%
         //mute
         log.info("muting window");
-        mouse.move(settings.targetBaseAppSettings().soundSettingsTabPoint()).leftClick();
-        mouse.move(settings.targetBaseAppSettings().overallVolumeZeroLevelPoint()).leftClick();
+        mouse.clickAtPoint(targetBaseAppSettings.soundSettingsTabPoint());
+        mouse.clickAtPoint(targetBaseAppSettings.overallVolumeZeroLevelPoint());
         //apply
         log.info("applying settings");
-        mouse.move(settings.targetBaseAppSettings().optionsApplyButtonPoint()).leftClick();
+        mouse.clickAtPoint(targetBaseAppSettings.optionsApplyButtonPoint());
 
         //check need restart popup is appeared
-        waitNeedRestartPopupRendering()
-                .ifPresent(stamp -> {
-                    log.info("need restart popup has rendered");
-                    try {
-                        mouse.move(settings.targetBaseAppSettings().needRestartPopupConfirmButtonPoint()).leftClick();
-                    } catch (InterruptedException e) {
-                        throw new ControlledInterruptedException(e.getMessage(), e);
-                    }
-                });
-
+        if (foregroundWindow.waiting()
+                .withTimeout(targetBaseAppSettings.needRestartPopupRenderingTimeout())
+                .withDelay(targetBaseAppSettings.checkNeedRestartPopupRenderingDelay())
+                .forStamp(stamps.targetBaseApp().needRestartPopup()).isPresent()) {
+            log.info("need restart popup has rendered");
+            mouse.clickAtPoint(targetBaseAppSettings.needRestartPopupConfirmButtonPoint());
+        }
         log.info("options has changed");
     }
 
-    private void openOptionsPopupAndWaitRendering(final IMouse mouse) throws InterruptedException {
-        log.info("waiting for options popup rendering");
-        final Stamp checkingStamp = stamps.targetBaseApp().optionsPopupCaption();
-        final Waiting.EmptyConsumer action = () -> {
-            log.info("try open options popup");
-            mouse.move(settings.targetBaseAppSettings().openOptionsButtonPoint()).leftClick();
-        };
-        final Stamp foundStamp = new Waiting()
-                .timeout(settings.targetBaseAppSettings().optionsDialogRenderingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().checkOptionsDialogRenderingDelay(), TimeUnit.MILLISECONDS)
-                .startFrom(action)
-                .latency(1, TimeUnit.SECONDS)
-                .doOnEveryFailedIteration(i -> {
-                    log.debug("{}: options popup has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
-                    action.accept();
-                })
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp))
-                .orElseThrow(() -> getBrokenWindowException("options popup not found", checkingStamp));
-        log.debug("found stamp {}", foundStamp.key().internal().groupName() + "." + foundStamp.key().name());
+    private void waitServerLineRendering(final ForegroundWindow foregroundWindow) throws CannotGetUserInputException, InterruptedException {
+        log.info("wait server line rendering");
+        final String logMarker = getLogMarker();
+        foregroundWindow.waiting()
+                .withTimeout(targetBaseAppSettings.serverLineRenderingTimeout())
+                .withDelay(targetBaseAppSettings.checkServerLineRenderingDelay())
+                .logFailedStampsWithMarker(logMarker)
+                .forAnyStamp(stamps.targetBaseApp().serverLineUnselected(),
+                        stamps.targetBaseApp().serverLineSelected())
+                .orElseThrow(() -> getBrokenWindowException("server line not found", logMarker));
     }
 
-    private Optional<Stamp> waitNeedRestartPopupRendering() throws InterruptedException {
-        log.info("waiting for need restart popup rendering");
-        final Stamp checkingStamp = stamps.targetBaseApp().needRestartPopup();
-        final Optional<Stamp> maybeStamp = new Waiting()
-                .timeout(settings.targetBaseAppSettings().needRestartPopupRenderingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().checkNeedRestartPopupRenderingDelay(), TimeUnit.MILLISECONDS)
-                .doOnEveryFailedIteration(i -> log.debug("{}: need restart popup has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp));
-        maybeStamp.ifPresent(stamp -> log.debug("found stamp {}", stamp.key().internal().groupName() + "." + stamp.key().name()));
-        return maybeStamp;
+    private void connectServer(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
+        final Mouse mouse = foregroundWindow.getMouse();
+        //select server
+        log.info("selecting server");
+        mouse.clickAtPoint(targetBaseAppSettings.selectServerButtonPoint());
+        //connect server
+        log.info("connecting server");
+        mouse.clickAtPoint(targetBaseAppSettings.connectServerButtonPoint());
     }
 
-    private void waitServerLineRendering() throws InterruptedException {
-        log.info("waiting for server line rendering");
-        final Stamp[] checkingStamp = new Stamp[]{
-                stamps.targetBaseApp().serverLineUnselected(),
-                stamps.targetBaseApp().serverLineSelected()};
-        final Stamp foundStamp = new Waiting()
-                .timeout(settings.targetBaseAppSettings().serverLineRenderingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().checkServerLineRenderingDelay(), TimeUnit.MILLISECONDS)
-                .doOnEveryFailedIteration(i -> log.debug("{}: server line has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp))
-                .orElseThrow(() -> getBrokenWindowException("server line not found", checkingStamp));
-        log.debug("found stamp {}", foundStamp.key().internal().groupName() + "." + foundStamp.key().name());
+    private void waitStartButtonRendering(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
+        log.info("wait for start button rendering");
+        final String logMarker = getLogMarker();
+        foregroundWindow.waiting()
+                .withTimeout(targetBaseAppSettings.startButtonRenderingTimeout())
+                .withDelay(targetBaseAppSettings.checkStartButtonRenderingDelay())
+                .logFailedStampsWithMarker(logMarker)
+                .forStamp(stamps.targetBaseApp().startButton())
+                .orElseThrow(() -> getBrokenWindowException("start button not rendered", logMarker));
     }
 
-    private void waitStartButtonRendering() throws InterruptedException {
-        log.info("waiting for start button rendering");
-        final Stamp checkingStamp = stamps.targetBaseApp().startButton();
-        final Stamp foundStamp = new Waiting()
-                .timeout(settings.targetBaseAppSettings().startButtonRenderingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().checkStartButtonRenderingDelay(), TimeUnit.MILLISECONDS)
-                .doOnEveryFailedIteration(i -> log.debug("{}: start button has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp))
-                .orElseThrow(() -> getBrokenWindowException("start button not rendered", checkingStamp));
-        log.debug("found stamp {}", foundStamp.key().internal().groupName() + "." + foundStamp.key().name());
+    private boolean openDailyTrackerPopupAndCheckRendering(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
+        log.info("wait for daily tracker popup");
+        return foregroundWindow.waiting()
+                .withTimeout(targetBaseAppSettings.dailyTrackerPopupRenderingTimeout())
+                .withDelay(targetBaseAppSettings.checkDailyTrackerPopupRenderingDelay())
+                .usingMouseClickAt(targetBaseAppSettings.dailyTrackerButtonPoint())
+                .forStamp(stamps.targetBaseApp().dailyTrackerPopupCaption())
+                .isPresent();
     }
 
-    private boolean openDailyTrackerPopupAndCheckRendering(final IMouse mouse) throws InterruptedException {
-        log.info("waiting for daily tracker popup");
-        final Stamp checkingStamp = stamps.targetBaseApp().dailyTrackerPopupCaption();
-        final Waiting.EmptyConsumer openPopupAction = () -> mouse.move(settings.targetBaseAppSettings().dailyTrackerButtonPoint()).leftClick();
-        final boolean rendered = new Waiting()
-                .timeout(settings.targetBaseAppSettings().dailyTrackerPopupRenderingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().checkDailyTrackerPopupRenderingDelay(), TimeUnit.MILLISECONDS)
-                .startFrom(openPopupAction)
-                .doOnEveryFailedIteration(i -> {
-                    log.debug("{}: daily tracker popup has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
-                    openPopupAction.accept();
-                })
-                .waitForBoolean(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp).isPresent());
-        if (!rendered)
-            log.warn("daily tracker popup has not rendered (marker={})", commonWindowService.logFailedStamps(this.window, checkingStamp));
-        else log.info("daily tracker popup has rendered");
-        return rendered;
+    private boolean closeDailyTrackerPopupAndCheckRendering(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
+        log.info("close daily tracker popup");
+        return foregroundWindow.waiting()
+                .withTimeout(targetBaseAppSettings.dailyTrackerPopupRenderingTimeout())
+                .withDelay(targetBaseAppSettings.checkDailyTrackerPopupRenderingDelay())
+                .usingMouseClickAt(targetBaseAppSettings.closeDailyTrackerPopupButtonPoint())
+                .forStampDisappearing(stamps.targetBaseApp().dailyTrackerPopupCaption());
     }
 
-    private boolean closeDailyTrackerPopupAndCheckRendering(final IMouse mouse) throws InterruptedException {
-        log.info("closing daily tracker popup");
-        final Stamp checkingStamp = stamps.targetBaseApp().dailyTrackerPopupCaption();
-        final Waiting.EmptyConsumer closePopupAction = () -> mouse.move(settings.targetBaseAppSettings().closeDailyTrackerPopupButtonPoint()).leftClick();
-        ;
-        final boolean notRendered = new Waiting()
-                .timeout(settings.targetBaseAppSettings().dailyTrackerPopupRenderingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().checkDailyTrackerPopupRenderingDelay(), TimeUnit.MILLISECONDS)
-                .startFrom(closePopupAction)
-                .doOnEveryFailedIteration(i -> {
-                    log.debug("{}: daily tracker popup still rendered", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
-                    closePopupAction.accept();
-                })
-                .waitForBoolean(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp).isEmpty());
-        if (notRendered) log.info("daily tracker popup closed");
-        else
-            log.warn("daily tracker popup has not closed (marker={})", commonWindowService.logFailedStamps(this.window, checkingStamp));
-        return notRendered;
-    }
-
-    private boolean checkAccountInfoRendering() throws InterruptedException {
+    private boolean checkAccountInfoRendering(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
         log.info("check account info rendering");
-        final Optional<Stamp> maybe = openAccountInfoPopup();
-        if (maybe.isPresent()) {
-            window.getKeyboard().enterHotKey(settings.targetBaseAppSettings().openAccountInfoHotkey().toHotKey());
-            return true;
-        }
-        return false;
+        return foregroundWindow.waiting()
+                .withTimeout(targetBaseAppSettings.accountInfoPopupRenderingTimeout())
+                .withDelay(targetBaseAppSettings.accountInfoPopupRenderingDelay())
+                .usingHotKeyEnclose(targetBaseAppSettings.openAccountInfoHotkey().toHotKey())
+                .forStamp(stamps.targetBaseApp().accountInfoPopupCaption())
+                .isPresent();
     }
 
-    private Optional<Stamp> openAccountInfoPopup() throws InterruptedException {
-        log.info("wait for account info popup rendering");
-        final IKeyboard keyboard = window.getKeyboard();
-        final Stamp checkingStamp = stamps.targetBaseApp().accountInfoPopupCaption();
-        final HotKey hotKey = settings.targetBaseAppSettings().openAccountInfoHotkey().toHotKey();
-        final Optional<Stamp> maybeStamp = new Waiting()
-                .timeout(settings.targetBaseAppSettings().accountInfoPopupRenderingTimeout(), TimeUnit.MILLISECONDS)
-                .withDelay(settings.targetBaseAppSettings().accountInfoPopupRenderingDelay(), TimeUnit.MILLISECONDS)
-                .doOnEveryFailedIteration(i -> {
-                    log.debug("{}: account info popup has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
-                    keyboard.enterHotKey(hotKey);
-                })
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamp));
-        maybeStamp.ifPresent(stamp -> log.debug("found stamp {}", stamp.key().internal().groupName() + "." + stamp.key().name()));
-        return maybeStamp;
+    private String getLogMarker() {
+        return Long.toString(System.currentTimeMillis());
     }
 
-    private BrokenWindowException getBrokenWindowException(final String message, Stamp... stamps) {
-        final String marker = Long.toString(System.currentTimeMillis());
-        final BrokenWindowException exception = new BrokenWindowException(message + " (marker=" + marker + ")");
-        //log failed stamps
-        try {
-            commonWindowService.getStampValidator().logFailedStamps(marker, this.window, stamps);
-        } catch (InterruptedException e) {
-            exception.addSuppressed(e);
-        }
-        return exception;
+    private BrokenWindowException getBrokenWindowException(final String message, final String marker) {
+        return new BrokenWindowException(message + " (marker=" + marker + ")");
     }
 
     public class RestoredBaseAppWindowImpl implements RestoredBaseAppWindow {
 
-        private RestoredBaseAppWindowImpl() {
+        private final ForegroundWindow foregroundWindow;
+
+        private RestoredBaseAppWindowImpl(final ForegroundWindow foregroundWindow) {
+            this.foregroundWindow = foregroundWindow;
         }
 
         @Override
-        public void close() throws InterruptedException {
-            if (!closeWindowViaMenu()) throw new BrokenWindowException("cannot close base window via menu");
+        public void close() throws InterruptedException, CannotGetUserInputException {
+            log.info("close window via menu");
+            if (!openMenuAndCheck(foregroundWindow)) throw new BrokenWindowException("cannot open base window menu");
+            foregroundWindow.getMouse().clickAtPoint(targetBaseAppSettings.menuExitOptionPoint());
+            if (!waitWindowDisappearing(() -> {
+            })) throw new BrokenWindowException("cannot close base window via menu");
         }
 
         @Override
-        public void selectServer() throws InterruptedException {
-            final Stamp foundStamp = waitServerPageRendering();
-            log.info("server page rendered successfully");
-
-            checkIfNotDisconnected();
-
-            final IMouse mouse = getMouse();
-            //проверяем нужно ли менять масштаб (масштаб не равен базовому)
-            if (!foundStamp.key().equals(StampKeys.TargetBaseApp.optionsButtonBaseScale)) {
-                log.info("try change settings");
-                changeUISizeToBaseAndMute(mouse);
-            }
-
-            waitServerLineRendering();
-
-            //TODO здесь проверять на то, что сервер под обслуживанием и прерывать работу
-            checkIfNotDisconnected();
-
-            //select server
-            log.info("selecting server");
-            mouse.move(settings.targetBaseAppSettings().selectServerButtonPoint()).leftClick();
-            //connect server
-            log.info("connecting server");
-            mouse.move(settings.targetBaseAppSettings().connectServerButtonPoint()).leftClick().leftClick();
+        public void selectServer() throws InterruptedException, CannotGetUserInputException {
+            final Stamp foundStamp = waitServerPageRendering(foregroundWindow);
+            checkWindowIsDisconnected(foregroundWindow);
+            if (!foundStamp.key().equals(StampKeys.TargetBaseApp.optionsButtonBaseScale))
+                changeUISizeToBaseAndMute(foregroundWindow);
+            waitServerLineRendering(foregroundWindow);
+            checkWindowIsDisconnected(foregroundWindow);
+            connectServer(foregroundWindow);
             log.info("processing select server page done");
         }
 
         @Override
-        public void chooseCharacter() throws InterruptedException {
-            waitStartButtonRendering();
-            log.info("start button has rendered successfully");
+        public void chooseCharacter() throws InterruptedException, CannotGetUserInputException {
+            waitStartButtonRendering(foregroundWindow);
+            checkWindowIsDisconnected(foregroundWindow);
 
-            checkIfNotDisconnected();
+            log.info("select character");
+            final Mouse mouse = foregroundWindow.getMouse();
+            mouse.clickAtPoint(targetBaseAppSettings.selectCharacterButtonPoint());
 
-            //select character
-            final IMouse mouse = getMouse();
-            log.info("selecting character");
-            mouse.move(settings.targetBaseAppSettings().selectCharacterButtonPoint()).leftClick();
+            new Delay(settings.application().speedFactor()).sleep(500, TimeUnit.MILLISECONDS);//FIXME get rid
 
-            new Delay(settings.application().speedFactor()).sleep(500, TimeUnit.MILLISECONDS);
-
-            //start game
-            log.info("starting game");
-            mouse.move(settings.targetBaseAppSettings().startButtonPoint()).leftClick();
-
+            log.info("start game");
+            mouse.clickAtPoint(targetBaseAppSettings.startButtonPoint());
             log.info("character has been selected");
         }
 
         @Override
         public void checkInGameWindowRendered() throws InterruptedException {
-            checkIfNotDisconnected();
-            checkIfInGameWindowRendered();
+            checkIfInGameWindowRendered(foregroundWindow);
         }
+
     }
 
     private class InGameBaseAppWindowImpl implements InGameBaseAppWindow {
+
+        private final ForegroundWindow foregroundWindow;
+
+        private InGameBaseAppWindowImpl(final ForegroundWindow foregroundWindow) {
+            this.foregroundWindow = foregroundWindow;
+        }
+
         @Override
-        public void checkInLoginTracker() throws InterruptedException {
+        public void checkInLoginTracker() throws InterruptedException, CannotGetUserInputException {
             log.info("check in login tracker");
-            final IMouse mouse = getMouse();
-            if (!openDailyTrackerPopupAndCheckRendering(mouse)) {
+            if (!openDailyTrackerPopupAndCheckRendering(foregroundWindow)) {
                 log.warn("skip daily tracking, because tracker popup has not rendered");
                 return;
             }
             final Delay delay = new Delay(settings.application().speedFactor());
-            mouse.move(settings.targetBaseAppSettings().dailyTrackerTabPoint()).leftClick();
+            final Mouse mouse = foregroundWindow.getMouse();
+            mouse.clickAtPoint(targetBaseAppSettings.dailyTrackerTabPoint());
             delay.sleep(1, TimeUnit.SECONDS); //FIXME вместо задержки проверять отрисовку
-            mouse.move(settings.targetBaseAppSettings().trackLoginButtonPoint()).leftClick();
+            mouse.clickAtPoint(targetBaseAppSettings.trackLoginButtonPoint());
             log.info("login tacker has clicked");
             delay.sleep(1, TimeUnit.SECONDS); //FIXME вместо задержки проверять отрисовку
-            closeDailyTrackerPopupAndCheckRendering(mouse);
+            closeDailyTrackerPopupAndCheckRendering(foregroundWindow);
             log.info("checked in login tracker");
         }
 
         @Override
-        public void checkInAction() throws InterruptedException {
+        public void checkInAction() throws InterruptedException, CannotGetUserInputException {
             final int actionsCount = settings.application().actionsCount();
             if (actionsCount < 1) {
                 log.info("checking in action disabled");
                 return;
             }
-            final IMouse mouse = getMouse();
+            final Mouse mouse = foregroundWindow.getMouse();
             log.info("try check in action (actions count = {})", actionsCount);
             int index = actionsCount;
             while (index-- > 0) {
-                final PointFloat actionButtonPoint = settings.targetBaseAppSettings().actionButtonPoint();
-                final PointFloat actionSecondButtonPoint = settings.targetBaseAppSettings().actionSecondButtonPoint();
+                final PointFloat actionButtonPoint = targetBaseAppSettings.actionButtonPoint();
+                final PointFloat actionSecondButtonPoint = targetBaseAppSettings.actionSecondButtonPoint();
                 final float xOffset = actionSecondButtonPoint.x() - actionButtonPoint.x();
                 final float buttonOffset = xOffset * index;
-                mouse.move(actionButtonPoint.x() + buttonOffset, actionButtonPoint.y())
-                        .leftClick()
-                        .leftClick(); //FIXME один клик почему то не отрабатывает
+                mouse.clickAtPoint(actionButtonPoint.x() + buttonOffset, actionButtonPoint.y());
             }
             new Delay(settings.application().speedFactor()).sleep(1, TimeUnit.SECONDS); //FIXME вместо задержки проверять отрисовку
             log.info("checked in action");
@@ -592,6 +471,9 @@ public class BaseAppWindowImpl implements BaseAppWindow {
             super(message);
         }
 
+        public BrokenWindowException(final String message, final Throwable cause) {
+            super(message, cause);
+        }
     }
 
     private static class DisconnectedWindowException extends RuntimeException {

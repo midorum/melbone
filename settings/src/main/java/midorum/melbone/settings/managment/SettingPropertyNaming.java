@@ -2,6 +2,7 @@ package midorum.melbone.settings.managment;
 
 import dma.validation.Validator;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class SettingPropertyNaming {
 
     public static final String IN_MEMORY = "mem";

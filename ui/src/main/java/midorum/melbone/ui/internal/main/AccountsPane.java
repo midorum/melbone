@@ -11,7 +11,6 @@ import midorum.melbone.ui.internal.util.DataLoader;
 import org.apache.logging.log4j.Logger;
 
 import javax.swing.*;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.util.List;
 import java.util.*;

@@ -82,13 +82,12 @@ class StampsPaneTest extends MockedContext {
     private class StampsPaneInteraction {
 
         private final Interaction interaction;
-        private final FrameStateOperations ownerFrame;
         private final StampsPane stampsPane;
         private Stamp stampShouldBeDisplayed;
 
         public StampsPaneInteraction() {
             this.interaction = new Interaction();
-            this.ownerFrame = mock(FrameStateOperations.class);
+            final FrameStateOperations ownerFrame = mock(FrameStateOperations.class);
             this.stampsPane = new StampsPane(ownerFrame, context);
         }
 

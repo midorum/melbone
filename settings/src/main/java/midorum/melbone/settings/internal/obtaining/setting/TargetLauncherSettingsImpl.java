@@ -49,21 +49,6 @@ public class TargetLauncherSettingsImpl extends SettingValueExtractor implements
     }
 
     @Override
-    public Rectangle confirmQuitDialogDimensions() {
-        return (Rectangle) getValue(SettingKeys.TargetLauncher.confirmQuitDialogDimensions);
-    }
-
-    @Override
-    public String confirmQuitDialogTitle() {
-        return (String) getValue(SettingKeys.TargetLauncher.confirmQuitDialogTitle);
-    }
-
-    @Override
-    public PointFloat closeQuitConfirmPopupButtonPoint() {
-        return (PointFloat) getValue(SettingKeys.TargetLauncher.closeQuitConfirmPopupButtonPoint);
-    }
-
-    @Override
     public PointFloat accountDropListPoint() {
         return (PointFloat) getValue(SettingKeys.TargetLauncher.accountDropListPoint);
     }
@@ -101,8 +86,15 @@ public class TargetLauncherSettingsImpl extends SettingValueExtractor implements
     }
 
     @Override
+    public int searchStartButtonTimeout() {
+        //FIXME такая большая задержка нужна для запуска после обнов, когда ждем скачивания и установки патча;
+        // а еще бывает не дожидается кнопки когда система тупит и мало свободной памяти
+        return 600_000;
+    }
+
+    @Override
     public int searchStartButtonDelay() {
-        return 1;
+        return 1_000;
     }
 
     @Override
@@ -111,13 +103,23 @@ public class TargetLauncherSettingsImpl extends SettingValueExtractor implements
     }
 
     @Override
+    public int windowRenderingTimeout() {
+        return 120_000;
+    }
+
+    @Override
     public int windowRenderingDelay() {
-        return 1;
+        return 1_000;
+    }
+
+    @Override
+    public int closingWindowTimeout() {
+        return 120_000;
     }
 
     @Override
     public int closingWindowDelay() {
-        return 10;
+        return 1_000;
     }
 
     @Override
@@ -143,5 +145,40 @@ public class TargetLauncherSettingsImpl extends SettingValueExtractor implements
     @Override
     public long brokenProcessTimeout() {
         return 600_000;
+    }
+
+    @Override
+    public int loginTimeout() {
+        return 5_000;
+    }
+
+    @Override
+    public int checkLoginDelay() {
+        return 1_000;
+    }
+
+    @Override
+    public Rectangle confirmQuitDialogDimensions() {
+        return (Rectangle) getValue(SettingKeys.TargetLauncher.confirmQuitDialogDimensions);
+    }
+
+    @Override
+    public String confirmQuitDialogTitle() {
+        return (String) getValue(SettingKeys.TargetLauncher.confirmQuitDialogTitle);
+    }
+
+    @Override
+    public int confirmQuitDialogRenderingTimeout() {
+        return 3_000;
+    }
+
+    @Override
+    public int confirmQuitDialogRenderingDelay() {
+        return 500;
+    }
+
+    @Override
+    public PointFloat closeQuitConfirmPopupButtonPoint() {
+        return (PointFloat) getValue(SettingKeys.TargetLauncher.closeQuitConfirmPopupButtonPoint);
     }
 }

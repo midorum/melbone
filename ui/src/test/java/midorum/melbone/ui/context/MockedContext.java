@@ -6,7 +6,6 @@ import com.midorum.win32api.hook.GlobalMouseKeyHook;
 import com.midorum.win32api.hook.MouseHookHelper;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
-import com.midorum.win32api.util.RelativeCoordinates;
 import dma.function.ConsumerThrowing;
 import dma.function.VoidAction;
 import midorum.melbone.executor.ExecutorFactory;
@@ -21,6 +20,7 @@ import midorum.melbone.model.settings.key.StampKey;
 import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.model.settings.stamp.Stamp;
+import midorum.melbone.model.window.WindowConsumer;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
 import midorum.melbone.model.window.baseapp.RestoredBaseAppWindow;
 import midorum.melbone.settings.managment.StampBuilder;
@@ -122,7 +122,7 @@ public class MockedContext {
 
     @SuppressWarnings("unchecked")
     public final <X extends Throwable> BaseAppWindow createBaseAppWindowMock(
-            final ConsumerThrowing<ConsumerThrowing<RestoredBaseAppWindow, InterruptedException>, X> restoreAndDoInvocationConsumer,
+            final ConsumerThrowing<WindowConsumer<RestoredBaseAppWindow>, X> restoreAndDoInvocationConsumer,
             final BiConsumer<String, BaseAppWindow> bindWithAccountInvocationConsumer,
             final Supplier<Optional<String>> boundCharacterNameSupplier
     ) {
@@ -131,7 +131,7 @@ public class MockedContext {
             doAnswer(invocation -> {
                 restoreAndDoInvocationConsumer.accept(invocation.getArgument(0));
                 return null;
-            }).when(mock).restoreAndDo(any(ConsumerThrowing.class));
+            }).when(mock).restoreAndDo(any(WindowConsumer.class));
             doAnswer(invocation -> {
                 bindWithAccountInvocationConsumer.accept(invocation.getArgument(0), mock);
                 return null;
@@ -255,7 +255,7 @@ public class MockedContext {
         doReturn(true).when(propertiesProvider).isModeSet(mode);
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private void mockDataLoaderInvocation() {
         doAnswer(invocation -> {
             assertEquals(2, invocation.getArguments().length);

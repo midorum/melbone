@@ -57,7 +57,7 @@ class ActionPaneTest {
     }
 
     @Test
-    void oneAccount_oneUnboundWindow() throws InterruptedException {
+    void oneAccount_oneUnboundWindow() {
         when(accountsHolder.getAccountsCount()).thenReturn(1);
         when(targetWindowOperations.isExistUnboundWindows()).thenReturn(true);
 

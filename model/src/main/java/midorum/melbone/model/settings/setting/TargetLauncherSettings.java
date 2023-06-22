@@ -10,10 +10,6 @@ public interface TargetLauncherSettings {
 
     Rectangle windowDimensions();
 
-    String confirmQuitDialogTitle();
-
-    Rectangle confirmQuitDialogDimensions();
-
     PointInt desktopShortcutLocationPoint();
 
     String initializationErrorDialogTitle();
@@ -22,13 +18,14 @@ public interface TargetLauncherSettings {
 
     PointFloat closeInitializationErrorDialogButtonPoint();
 
+    @Deprecated
     int attemptToFindStartButton();
+
+    int searchStartButtonTimeout();
 
     int searchStartButtonDelay();
 
     PointFloat windowCloseButtonPoint();
-
-    PointFloat closeQuitConfirmPopupButtonPoint();
 
     PointFloat accountDropListPoint();
 
@@ -42,9 +39,15 @@ public interface TargetLauncherSettings {
 
     PointFloat startButtonPoint();
 
+    @Deprecated
+    //FIXME >>> remove
     int attemptsToWindowRendering();
 
+    int windowRenderingTimeout();
+
     int windowRenderingDelay();
+
+    int closingWindowTimeout();
 
     int closingWindowDelay();
 
@@ -58,4 +61,17 @@ public interface TargetLauncherSettings {
 
     long brokenProcessTimeout();
 
+    int loginTimeout();
+
+    int checkLoginDelay();
+
+    String confirmQuitDialogTitle();
+
+    Rectangle confirmQuitDialogDimensions();
+
+    int confirmQuitDialogRenderingTimeout();
+
+    int confirmQuitDialogRenderingDelay();
+
+    PointFloat closeQuitConfirmPopupButtonPoint();
 }

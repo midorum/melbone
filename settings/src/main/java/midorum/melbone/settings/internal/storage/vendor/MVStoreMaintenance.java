@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 
+@SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
 public class MVStoreMaintenance {
 
     private static final Set<String> settingsMapSet = Set.of(
@@ -46,16 +47,16 @@ public class MVStoreMaintenance {
     public static void main(String[] args) {
         new MVStoreMaintenance().openStoragesAndDo((instance) -> {
             instance.printStore(instance.srcStore);
-            //instance.cloneStorage();
-            //instance.cloneMaps(requiredMapSet);
-            //instance.removeMap(instance.dstStore, "registryResource2");
+            ///instance.cloneStorage();
+            ///instance.cloneMaps(requiredMapSet);
+            ///instance.removeMap(instance.dstStore, "registryResource2");
             instance.printStore(instance.dstStore);
         });
     }
 
     public void openStoragesAndDo(final Consumer<Instance> consumer) {
         try (final MVStore srcStore = openStore(path + File.separator + srcStoreFileName, srcStorePassword.toCharArray());
-             final MVStore dstStore = openStore(path + File.separator + dstStoreFileName, dstStorePassword.toCharArray());) {
+             final MVStore dstStore = openStore(path + File.separator + dstStoreFileName, dstStorePassword.toCharArray())) {
             consumer.accept(new Instance(srcStore, dstStore));
         }
     }

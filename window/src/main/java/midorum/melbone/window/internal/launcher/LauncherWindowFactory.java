@@ -1,7 +1,6 @@
 package midorum.melbone.window.internal.launcher;
 
 import com.midorum.win32api.facade.*;
-import com.midorum.win32api.struct.PointInt;
 import dma.flow.Waiting;
 import dma.util.Delay;
 import dma.util.DurationFormatter;
@@ -49,6 +48,7 @@ public class LauncherWindowFactory {
 
     public Optional<LauncherWindow> findWindowOrTryStartLauncher() throws InterruptedException {
         logger.info("find or start launcher");
+        final String marker = Long.toString(System.currentTimeMillis());
         final Optional<LauncherWindow> maybeExistLauncherWindow = searchExistLauncherWindow();
         if (maybeExistLauncherWindow.isPresent()) return maybeExistLauncherWindow;
         detectLauncherInitializationError(); //TODO check network accessibility before start launcher to prevent this error
@@ -56,6 +56,7 @@ public class LauncherWindowFactory {
         if (maybeNewLauncherWindow.isPresent()) return maybeNewLauncherWindow;
         detectLauncherInitializationError(); //TODO check network accessibility before start launcher to prevent this error
         detectPossibleOverlay();
+        commonWindowService.takeAndSaveWholeScreenShot(marker);
         logger.warn("can not start launcher or find launcher window");
         return Optional.empty();
     }
@@ -139,20 +140,6 @@ public class LauncherWindowFactory {
                 .findFirst();
     }
 
-    // unsafe operation because of possible anti-cheat detection
-    private void startLauncherProcess() {
-//        try {
-//            ProcessBuilder processBuilder = new ProcessBuilder()
-//                    .command(Settings.TargetLauncher.path())
-//                    .directory(new File(Settings.TargetLauncher.workingDirectory()));
-//            Process process = processBuilder.start();
-//            long pid = process.pid();
-//            logger.info("process {} started with pid:{}", process.info().toString(), pid);
-//        } catch (IOException ex) {
-//            throw new CriticalErrorException(ex);
-//        }
-    }
-
     private void clickLauncherDesktopIcon() throws InterruptedException {
         win32System.getScreenMouse(settings.application().speedFactor())
                 .move(settings.targetLauncher().desktopShortcutLocationPoint())
@@ -206,7 +193,6 @@ public class LauncherWindowFactory {
     private void detectPossibleOverlay() {
         if (uacWindowFactory.findUacOverlayWindow().isPresent())
             throw new CriticalErrorException("UAC window found. Can not confirm UAC request programmatically.");
-        commonWindowService.logPossibleOverlay();
     }
 
     public static class InitializationErrorDialog {

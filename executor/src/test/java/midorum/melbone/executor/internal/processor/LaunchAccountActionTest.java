@@ -1,10 +1,10 @@
 package midorum.melbone.executor.internal.processor;
 
-import dma.function.ConsumerThrowing;
 import midorum.melbone.model.dto.Account;
 import midorum.melbone.model.exception.CriticalErrorException;
 import midorum.melbone.model.exception.NeedRetryException;
 import midorum.melbone.model.settings.setting.TargetBaseAppSettings;
+import midorum.melbone.model.window.WindowConsumer;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
 import midorum.melbone.model.window.launcher.LauncherWindow;
 import midorum.melbone.model.window.baseapp.RestoredBaseAppWindow;
@@ -70,7 +70,7 @@ class LaunchAccountActionTest {
         instance.perform();
         testWindowsForCheck.forEach(baseAppWindow -> {
             try {
-                Mockito.verify(baseAppWindow, Mockito.times(1)).doInGameWindow(Mockito.any(ConsumerThrowing.class));
+                Mockito.verify(baseAppWindow, Mockito.times(1)).doInGameWindow(Mockito.any(WindowConsumer.class));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -89,7 +89,7 @@ class LaunchAccountActionTest {
         instance.perform();
         testWindowsForCheck.forEach(baseAppWindow -> {
             try {
-                Mockito.verify(baseAppWindow, Mockito.never()).doInGameWindow(Mockito.any(ConsumerThrowing.class));
+                Mockito.verify(baseAppWindow, Mockito.never()).doInGameWindow(Mockito.any(WindowConsumer.class));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -112,9 +112,9 @@ class LaunchAccountActionTest {
         existWindows.forEach(baseAppWindow -> {
             try {
                 if (baseAppWindow.getCharacterName().isEmpty()) {
-                    Mockito.verify(baseAppWindow, Mockito.times(1)).restoreAndDo(Mockito.any(ConsumerThrowing.class));
+                    Mockito.verify(baseAppWindow, Mockito.times(1)).restoreAndDo(Mockito.any(WindowConsumer.class));
                 } else if (TEST_ACCOUNT_FOR_CLOSE.equals(baseAppWindow.getCharacterName().get())) {
-                    Mockito.verify(baseAppWindow, Mockito.times(1)).restoreAndDo(Mockito.any(ConsumerThrowing.class));
+                    Mockito.verify(baseAppWindow, Mockito.times(1)).restoreAndDo(Mockito.any(WindowConsumer.class));
                 } else {
                     Mockito.verify(baseAppWindow, Mockito.never()).restoreAndDo(Mockito.any());
                 }
@@ -173,13 +173,7 @@ class LaunchAccountActionTest {
     }
 
     private List<BaseAppWindow> getTestBoundWindowsForCheck(final String account, final String... accounts) {
-        return Stream.concat(Stream.of(account), Stream.of(accounts)).map(s -> {
-            try {
-                return getBaseAppWindow(s);
-            } catch (InterruptedException e) {
-                throw new CriticalErrorException(e);
-            }
-        }).toList();
+        return Stream.concat(Stream.of(account), Stream.of(accounts)).map(this::getBaseAppWindow).toList();
     }
 
     private List<BaseAppWindow> getTestUnboundWindowsForClose(final String account, final String... accounts) {
@@ -197,7 +191,7 @@ class LaunchAccountActionTest {
         return Collections.EMPTY_LIST;
     }
 
-    private BaseAppWindow getBaseAppWindow(final String characterName) throws InterruptedException {
+    private BaseAppWindow getBaseAppWindow(final String characterName) {
         final BaseAppWindow mock = Mockito.mock(BaseAppWindow.class);
         when(mock.getCharacterName()).thenReturn(Optional.ofNullable(characterName));
         return mock;
@@ -209,12 +203,12 @@ class LaunchAccountActionTest {
         doAnswer(invocation -> {
             final Object[] args = invocation.getArguments();
             Assertions.assertEquals(1, args.length);
-            final ConsumerThrowing<RestoredBaseAppWindow, InterruptedException> consumer = (ConsumerThrowing<RestoredBaseAppWindow, InterruptedException>) args[0];
+            final WindowConsumer<RestoredBaseAppWindow> consumer = (WindowConsumer<RestoredBaseAppWindow>) args[0];
             final RestoredBaseAppWindow restoredBaseAppWindowMock = Mockito.mock(RestoredBaseAppWindow.class);
             consumer.accept(restoredBaseAppWindowMock);
             Mockito.verify(restoredBaseAppWindowMock, Mockito.times(1)).close();
             return null;
-        }).when(mock).restoreAndDo(Mockito.any(ConsumerThrowing.class));
+        }).when(mock).restoreAndDo(Mockito.any(WindowConsumer.class));
         return mock;
     }
 
@@ -229,13 +223,13 @@ class LaunchAccountActionTest {
         when(windowFactory.findUnboundBaseAppWindowAndBindWithAccount(Mockito.anyString())).thenReturn(Optional.of(mock));
         doAnswer(invocation -> {
             Assertions.assertEquals(1, invocation.getArguments().length);
-            final ConsumerThrowing<RestoredBaseAppWindow, InterruptedException> consumer = invocation.getArgument(0);
+            final WindowConsumer<RestoredBaseAppWindow> consumer = invocation.getArgument(0);
             final RestoredBaseAppWindow restoredBaseAppWindowMock = Mockito.mock(RestoredBaseAppWindow.class);
             consumer.accept(restoredBaseAppWindowMock);
             Mockito.verify(restoredBaseAppWindowMock, Mockito.times(1)).selectServer();
             Mockito.verify(restoredBaseAppWindowMock, Mockito.times(1)).chooseCharacter();
             return null;
-        }).when(mock).restoreAndDo(Mockito.any(ConsumerThrowing.class));
+        }).when(mock).restoreAndDo(Mockito.any(WindowConsumer.class));
     }
 
     private void mockLauncherWindowForNotFoundCase() throws InterruptedException {
@@ -256,11 +250,11 @@ class LaunchAccountActionTest {
         doAnswer(invocation -> {
             Assertions.assertEquals(1, invocation.getArguments().length);
             final RestoredLauncherWindow restoredLauncherWindowMock = Mockito.mock(RestoredLauncherWindow.class);
-            invocation.<ConsumerThrowing<RestoredLauncherWindow, InterruptedException>>getArgument(0).accept(restoredLauncherWindowMock);
+            invocation.<WindowConsumer<RestoredLauncherWindow>>getArgument(0).accept(restoredLauncherWindowMock);
             Mockito.verify(restoredLauncherWindowMock, Mockito.times(1)).checkClientIsAlreadyRunningWindowRendered();
             Mockito.verify(restoredLauncherWindowMock, Mockito.times(1)).login(account);
             return null;
-        }).when(mock).restoreAndDo(Mockito.any(ConsumerThrowing.class));
+        }).when(mock).restoreAndDo(Mockito.any(WindowConsumer.class));
         return mock;
     }
 
