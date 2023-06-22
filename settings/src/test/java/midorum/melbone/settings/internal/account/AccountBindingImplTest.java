@@ -17,7 +17,7 @@ class AccountBindingImplTest {
     private final SettingsFactoryInternal settingsFactoryInternal = new SettingsFactoryInternal.Builder()
             .settingPropertyNaming(new SettingPropertyNaming.Builder().inMemoryStorage().build()).build();
     private final AccountBinding accountBinding = settingsFactoryInternal.settingsProvider().accountBinding();
-    private final AccountStorage accountStorage = settingsFactoryInternal.accountStorage();;
+    private final AccountStorage accountStorage = settingsFactoryInternal.accountStorage();
 
     private final KeyValueStorage internalStorage = settingsFactoryInternal.getKeyValueStorage();
 

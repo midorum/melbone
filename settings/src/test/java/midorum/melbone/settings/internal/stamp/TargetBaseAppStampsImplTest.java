@@ -31,11 +31,6 @@ class TargetBaseAppStampsImplTest {
     private final KeyValueStorage internalStorage = settingsFactoryInternal.getKeyValueStorage();
     private final SettingStorage settingStorage = settingsFactoryInternal.settingStorage();
 
-    @BeforeEach
-    void beforeEach() {
-        //internalStorage.removeMap(StorageKey.targetBaseAppStamp);
-    }
-
     @AfterEach
     void afterEach() {
         printKeysInStorage();
@@ -66,14 +61,6 @@ class TargetBaseAppStampsImplTest {
             final Stamp deserializedStamp = (Stamp) in.readObject();
             System.out.println("deserializedStamp: " + deserializedStamp);
         }
-    }
-
-    @Disabled
-    @Test
-    void storingDeprecatedStamp() {
-        //storing deprecated stamp
-        ////keyValueStorageManager.write(StampKeys.TargetBaseApp.manaIndicator,
-        //        createStamp(StampKeys.TargetBaseApp.manaIndicator));
     }
 
     @Test

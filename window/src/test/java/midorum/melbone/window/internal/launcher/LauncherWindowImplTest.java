@@ -3,9 +3,8 @@ package midorum.melbone.window.internal.launcher;
 import com.midorum.win32api.facade.*;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
-import com.midorum.win32api.win32.Win32VirtualKey;
-import com.sun.jna.platform.win32.Win32VK;
 import midorum.melbone.model.dto.Account;
+import midorum.melbone.model.exception.CannotGetUserInputException;
 import midorum.melbone.model.settings.stamp.Stamp;
 import midorum.melbone.settings.StampKeys;
 import midorum.melbone.model.exception.NeedRetryException;
@@ -16,7 +15,9 @@ import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.model.settings.setting.TargetLauncherSettings;
 import midorum.melbone.window.internal.common.CommonWindowService;
-import midorum.melbone.window.internal.common.StampValidator;
+import midorum.melbone.window.internal.common.ForegroundWindow;
+import midorum.melbone.window.internal.common.Mouse;
+import midorum.melbone.window.internal.util.MockitoUtil;
 import org.junit.jupiter.api.*;
 import org.mockito.invocation.InvocationOnMock;
 
@@ -24,7 +25,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @DisplayName("Tests for launcher window implementation")
@@ -32,8 +32,6 @@ class LauncherWindowImplTest {
 
     private static final String CONFIRM_DIALOG_TITLE = "confirm_dialog_title";
     private static final float SPEED_FACTOR = 1.0F;
-    private static final PointFloat POINT_FLOAT = new PointFloat(-1f, -1f);
-    private static final PointFloat START_BUTTON_POINT = new PointFloat(-2f, -2f);
     private static final int LAUNCHER_WINDOW_WIDTH = 150;
     private static final int LAUNCHER_WINDOW_HEIGHT = 100;
     private static final int CONFIRM_QUIT_DIALOG_WINDOW_WIDTH = 125;
@@ -51,7 +49,6 @@ class LauncherWindowImplTest {
     //stamps
     private final Stamps stamps = mock(Stamps.class);
     private final TargetLauncherStamps targetLauncherStamps = mock(TargetLauncherStamps.class);
-    private final StampValidator stampValidator = mock(StampValidator.class);
     private final Stamp quitConfirmPopupStamp = mock(Stamp.class);
     private final Stamp clientIsAlreadyRunningStamp = mock(Stamp.class);
     private final Stamp loginButtonNoErrorActiveStamp = mock(Stamp.class);
@@ -68,6 +65,13 @@ class LauncherWindowImplTest {
         add(startButtonActiveStamp);
         add(startButtonInactiveStamp);
     }};
+    //points
+    private final PointFloat loginInputPoint = new PointFloat(-1f, -1f);
+    private final PointFloat passwordInputPoint = new PointFloat(-2f, -1f);
+    private final PointFloat loginButtonPoint = new PointFloat(-3f, -1f);
+    private final PointFloat startButtonPoint = new PointFloat(-4f, -1f);
+    private final PointFloat windowCloseButtonPoint = new PointFloat(-5f, -1f);
+    private final PointFloat closeQuitConfirmPopupButtonPoint = new PointFloat(-6f, -1f);
 
     @BeforeAll
     public static void beforeAll() {
@@ -77,24 +81,25 @@ class LauncherWindowImplTest {
     @BeforeEach
     public void beforeEach() throws InterruptedException {
         //system
-        when(commonWindowService.getStampValidator()).thenReturn(stampValidator);
         when(commonWindowService.getWin32System()).thenReturn(win32System);
         //settings
         when(settings.application()).thenReturn(applicationSettings);
         when(applicationSettings.speedFactor()).thenReturn(SPEED_FACTOR);
         when(settings.targetLauncher()).thenReturn(targetLauncherSettings);
-        when(targetLauncherSettings.attemptsToWindowRendering()).thenReturn(2);
-        when(targetLauncherSettings.attemptToFindStartButton()).thenReturn(2);
         when(targetLauncherSettings.closingWindowDelay()).thenReturn(1);
-        when(targetLauncherSettings.loginInputPoint()).thenReturn(POINT_FLOAT);
-        when(targetLauncherSettings.passwordInputPoint()).thenReturn(POINT_FLOAT);
-        when(targetLauncherSettings.loginButtonPoint()).thenReturn(POINT_FLOAT);
-        when(targetLauncherSettings.startButtonPoint()).thenReturn(START_BUTTON_POINT);
-        when(targetLauncherSettings.windowCloseButtonPoint()).thenReturn(POINT_FLOAT);
-        when(targetLauncherSettings.closeQuitConfirmPopupButtonPoint()).thenReturn(POINT_FLOAT);
+        when(targetLauncherSettings.loginInputPoint()).thenReturn(loginInputPoint);
+        when(targetLauncherSettings.passwordInputPoint()).thenReturn(passwordInputPoint);
+        when(targetLauncherSettings.loginButtonPoint()).thenReturn(loginButtonPoint);
+        when(targetLauncherSettings.startButtonPoint()).thenReturn(startButtonPoint);
+        when(targetLauncherSettings.windowCloseButtonPoint()).thenReturn(windowCloseButtonPoint);
+        when(targetLauncherSettings.closeQuitConfirmPopupButtonPoint()).thenReturn(closeQuitConfirmPopupButtonPoint);
         when(targetLauncherSettings.windowDimensions()).thenReturn(new Rectangle(0, 0, LAUNCHER_WINDOW_WIDTH, LAUNCHER_WINDOW_HEIGHT));
         when(targetLauncherSettings.confirmQuitDialogDimensions()).thenReturn(new Rectangle(0, 0, CONFIRM_QUIT_DIALOG_WINDOW_WIDTH, CONFIRM_QUIT_DIALOG_WINDOW_HEIGHT));
         when(targetLauncherSettings.confirmQuitDialogTitle()).thenReturn(CONFIRM_DIALOG_TITLE);
+        when(targetLauncherSettings.confirmQuitDialogRenderingTimeout()).thenReturn(50);
+        when(targetLauncherSettings.confirmQuitDialogRenderingDelay()).thenReturn(10);
+        when(targetLauncherSettings.closingWindowTimeout()).thenReturn(100);
+        when(targetLauncherSettings.closingWindowDelay()).thenReturn(10);
         //window
         when(window.getWindowMouse(SPEED_FACTOR)).thenReturn(mouse);
         when(mouse.move(any(PointInt.class))).thenReturn(mouse);
@@ -131,83 +136,98 @@ class LauncherWindowImplTest {
 
     @Test
     @DisplayName("\"Client is already running\" window rendered")
-    void clientIsAlreadyRunningWindowRendered() throws InterruptedException {
+    void clientIsAlreadyRunningWindowRendered() throws InterruptedException, CannotGetUserInputException {
         System.out.println("clientIsAlreadyRunningWindowRendered");
         //given
-        clientIsAlreadyRunningAlertDetected();
-        //when and then
-        getLauncherWindowInstance().restoreAndDo(restoredLauncherWindow -> {
-            assertTrue(restoredLauncherWindow.checkClientIsAlreadyRunningWindowRendered());
-        });
+        windowIsAlive();
+        launcherWindowMocked().stateIs(found(clientIsAlreadyRunningStamp));
+        //when
+        getLauncherWindowInstance().restoreAndDo(restoredLauncherWindow -> assertTrue(restoredLauncherWindow.checkClientIsAlreadyRunningWindowRendered()));
+        //then
+        verify(targetLauncherStamps).clientIsAlreadyRunning();
     }
 
     @Test
-    void clientIsAlreadyRunningWindowNotRendered() throws InterruptedException {
+    void clientIsAlreadyRunningWindowNotRendered() throws InterruptedException, CannotGetUserInputException {
         System.out.println("clientIsAlreadyRunningWindowNotRendered");
         //given
-        clientIsAlreadyRunningAlertNotDetected();
-        //when and then
-        getLauncherWindowInstance().restoreAndDo(restoredLauncherWindow -> {
-            assertFalse(restoredLauncherWindow.checkClientIsAlreadyRunningWindowRendered());
-        });
+        windowIsAlive();
+        launcherWindowMocked().stateIs(notFound(clientIsAlreadyRunningStamp));
+        //when
+        getLauncherWindowInstance().restoreAndDo(restoredLauncherWindow -> assertFalse(restoredLauncherWindow.checkClientIsAlreadyRunningWindowRendered()));
+        //then
+        verify(targetLauncherStamps).clientIsAlreadyRunning();
     }
 
     @Test
-    void launcherNotRenderedError() throws InterruptedException {
+    void launcherNotRenderedError() throws InterruptedException, CannotGetUserInputException {
         System.out.println("launcherNotRenderedError");
+        final Mouse launcherMouse = getMouseMock();
         //given
-        launcherWindowNotRenderedNormally();
-        //when
+        windowIsAlive();
+        launcherWindowMocked().stateIs(notFoundAnyFrom(stampsToCheckLauncherRendering)).returnsMouse(launcherMouse);
+        //when and then
         assertThrows(NeedRetryException.class,
                 () -> getLauncherWindowInstance().restoreAndDo(restoredLauncherWindow -> restoredLauncherWindow.login(account)));
-        //then
-        verify(stampValidator, atLeastOnce()).validateStampWholeData(eq(window), (Stamp[]) any());
     }
 
     @Test
-    void loginSuccessfully() throws InterruptedException {
+    void loginSuccessfully() throws InterruptedException, CannotGetUserInputException {
         System.out.println("loginSuccessfully");
+        final Mouse launcherMouse = getMouseMock();
         //given
-        launcherWindowRenderedNormallyOnLoginForm();
+        windowIsAlive();
+        launcherWindowMocked().stateIs(foundFrom(stampsToCheckLauncherRendering, loginButtonNoErrorInactiveStamp)).returnsMouse(launcherMouse);
         //when
         getLauncherWindowInstance().restoreAndDo(restoredLauncherWindow -> restoredLauncherWindow.login(account));
         //then
         verify(account, atLeastOnce()).login();
         verify(account, atLeastOnce()).password();
+        verify(launcherMouse).clickAtPoint(loginButtonPoint);
     }
 
     @Test
-    void startGameWhenGetReady() throws InterruptedException {
+    void startGameWhenGetReady() throws InterruptedException, CannotGetUserInputException {
         System.out.println("startGameWhenGetReady");
+        final Mouse launcherMouse = getMouseMock();
         //given
-        activeStartButtonDetected();
+        windowIsAlive();
+        launcherWindowMocked().stateIs(found(startButtonActiveStamp)).returnsMouse(launcherMouse);
         //when
         getLauncherWindowInstance().restoreAndDo(RestoredLauncherWindow::startGameWhenGetReady);
         //then
-        verify(mouse).move(START_BUTTON_POINT);
-        verify(mouse).leftClick();
+        verify(launcherMouse).clickAtPoint(startButtonPoint);
     }
 
     @Test
-    void startGameNotReady_windowClosedNormally() throws InterruptedException {
+    void startGameNotReady_windowClosedNormally() throws InterruptedException, CannotGetUserInputException {
         System.out.println("startGameNotReady_windowClosedNormally");
+        final Mouse launcherMouse = getMouseMock();
+        final Mouse confirmDialogMouse = getMouseMock();
         //given
-        activeStartButtonIsNotDetected();
+        when(window.isExists())
+                .thenReturn(true) // restoring window
+                .thenReturn(false); // confirm quit dialog accepted
+        launcherWindowMocked().stateIs(notFound(startButtonActiveStamp)).returnsMouse(launcherMouse);
+        confirmCloseDialogWindowMocked().stateIs(found(quitConfirmPopupStamp)).returnsMouse(confirmDialogMouse);
         //when and then
-        windowIsAlive_confirmCloseDialogWindowDetected();
         assertThrows(NeedRetryException.class, () -> getLauncherWindowInstance().restoreAndDo(RestoredLauncherWindow::startGameWhenGetReady));
-        verify(mouse, never()).move(START_BUTTON_POINT);
+        verify(targetLauncherSettings).closeQuitConfirmPopupButtonPoint();
+        verify(confirmDialogMouse).clickAtPoint(closeQuitConfirmPopupButtonPoint);
+        verify(launcherMouse, never()).clickAtPoint(startButtonPoint);
+        verify(process, never()).terminate();
     }
 
     @Test
-    void startGameNotReady_windowProcessTerminated() throws InterruptedException {
+    void startGameNotReady_windowProcessTerminated() throws InterruptedException, CannotGetUserInputException {
         System.out.println("startGameNotReady_windowProcessTerminated");
         //given
-        activeStartButtonIsNotDetected();
         windowIsCorrupted();
+        launcherWindowMocked().stateIs(notFound(startButtonActiveStamp));
         //when and then
         assertThrows(NeedRetryException.class, () -> getLauncherWindowInstance().restoreAndDo(RestoredLauncherWindow::startGameWhenGetReady));
-        verify(mouse, never()).move(START_BUTTON_POINT);
+        verify(targetLauncherSettings, never()).closeQuitConfirmPopupButtonPoint();
+        verify(mouse, never()).move(startButtonPoint);
         verify(process).terminate();
     }
 
@@ -215,71 +235,132 @@ class LauncherWindowImplTest {
         return new LauncherWindowImpl(window, commonWindowService, settings, stamps);
     }
 
-    private void clientIsAlreadyRunningAlertDetected() throws InterruptedException {
-        when(stampValidator.validateStampWholeData(window, clientIsAlreadyRunningStamp)).thenReturn(Optional.of(clientIsAlreadyRunningStamp));
-    }
-
-    private void clientIsAlreadyRunningAlertNotDetected() throws InterruptedException {
-        when(stampValidator.validateStampWholeData(window, clientIsAlreadyRunningStamp)).thenReturn(Optional.empty());
-    }
-
-    private void launcherWindowNotRenderedNormally() throws InterruptedException {
-        when(stampValidator.validateStampWholeData(eq(window), (Stamp[]) any())).thenAnswer(invocation -> {
-            checkLauncherRenderingValidatorInvocation(invocation);
-            return Optional.empty();
-        });
-    }
-
-    private void launcherWindowRenderedNormallyOnLoginForm() throws InterruptedException {
-        when(stampValidator.validateStampWholeData(eq(window), (Stamp[]) any())).thenAnswer(invocation -> {
-            checkLauncherRenderingValidatorInvocation(invocation);
-            return Optional.of(loginButtonNoErrorInactiveStamp);
-        });
-    }
-
-    private void checkLauncherRenderingValidatorInvocation(final InvocationOnMock invocation) {
-        final int mustBePassedArguments = 7;
-        final Object[] arguments = invocation.getArguments();
-        assertEquals(mustBePassedArguments, arguments.length, () -> "wrong arguments passed to check window rendering (must be 1 window and 6 stamps)");
-        final IWindow windowArg = invocation.getArgument(0, IWindow.class);
-        assertEquals(window, windowArg);
-        final Set<Stamp> passedStamps = Arrays.stream(arguments)
-                .dropWhile(o -> !(o instanceof Stamp))
-                .map(Stamp.class::cast)
-                .collect(Collectors.toSet());
-        assertTrue(passedStamps.containsAll(stampsToCheckLauncherRendering));
-        assertTrue(stampsToCheckLauncherRendering.containsAll(passedStamps));
-    }
-
-    private void activeStartButtonDetected() throws InterruptedException {
-        final Stamp stampToValidate = this.startButtonActiveStamp;
-        when(stampValidator.validateStampWholeData(window, new Stamp[]{stampToValidate})).thenReturn(Optional.of(stampToValidate));
-    }
-
-    private void activeStartButtonIsNotDetected() throws InterruptedException {
-        when(stampValidator.validateStampWholeData(window, new Stamp[]{startButtonActiveStamp})).thenReturn(Optional.empty());
-    }
-
-    private void windowIsAlive_confirmCloseDialogWindowDetected() throws InterruptedException {
-        when(window.isExists()).thenReturn(true).thenReturn(true).thenReturn(false);
-        final List<IWindow> confirmDialogWindows = getConfirmDialogWindows();
-        when(win32System.findAllWindows(CONFIRM_DIALOG_TITLE, null, true)).thenReturn(confirmDialogWindows);
-    }
-
-    private List<IWindow> getConfirmDialogWindows() throws InterruptedException {
-        return List.of(getConfirmDialogWindowMock());
-    }
-
-    private IWindow getConfirmDialogWindowMock() throws InterruptedException {
-        final IWindow mock = mock(IWindow.class);
-        when(mock.getSystemId()).thenReturn("0xa8d5");
-        when(mock.getWindowRectangle()).thenReturn(new Rectangle(0, 0, CONFIRM_QUIT_DIALOG_WINDOW_WIDTH, CONFIRM_QUIT_DIALOG_WINDOW_HEIGHT));
-        when(stampValidator.validateStampWholeData(mock, quitConfirmPopupStamp)).thenReturn(Optional.of(quitConfirmPopupStamp));
-        return mock;
+    private void windowIsAlive() {
+        when(window.isExists()).thenReturn(true);
+        when(window.isVisible()).thenReturn(true);
     }
 
     private void windowIsCorrupted() {
         when(window.isExists()).thenReturn(true);
         when(window.isVisible()).thenReturn(false);
+    }
+
+    private Mouse getMouseMock() {
+        return mock(Mouse.class);
+    }
+
+    private ForegroundWindowMocked launcherWindowMocked() throws InterruptedException, CannotGetUserInputException {
+        return getForegroundWindowFor(window);
+    }
+
+    private ForegroundWindowMocked confirmCloseDialogWindowMocked() throws InterruptedException, CannotGetUserInputException {
+        final IWindow confirmDialogWindowMock = getConfirmDialogWindowMock();
+        final ForegroundWindowMocked foregroundWindow = getForegroundWindowFor(confirmDialogWindowMock);
+        final List<IWindow> foundConfirmDialogWindow = List.of(confirmDialogWindowMock);
+        when(win32System.findAllWindows(CONFIRM_DIALOG_TITLE, null, true)).thenReturn(foundConfirmDialogWindow);
+        return foregroundWindow;
+    }
+
+    private IWindow getConfirmDialogWindowMock() {
+        final IWindow mock = mock(IWindow.class);
+        when(mock.getSystemId()).thenReturn("0xa8d5");
+        when(mock.getWindowRectangle()).thenReturn(new Rectangle(0, 0, CONFIRM_QUIT_DIALOG_WINDOW_WIDTH, CONFIRM_QUIT_DIALOG_WINDOW_HEIGHT));
+        return mock;
+    }
+
+    @SuppressWarnings("unchecked")
+    private ForegroundWindowMocked getForegroundWindowFor(final IWindow window) throws CannotGetUserInputException, InterruptedException {
+        final ForegroundWindow foregroundWindow = mock(ForegroundWindow.class);
+        when(foregroundWindow.getKeyboard()).thenReturn(keyboard);
+        final CommonWindowService.ForegroundWindowSupplier foregroundWindowSupplier = mock(CommonWindowService.ForegroundWindowSupplier.class);
+        when(commonWindowService.bringForeground(window)).thenReturn(foregroundWindowSupplier);
+        doAnswer(invocation -> {
+            final CommonWindowService.ForegroundWindowSupplier.ForegroundWindowConsumer consumer = invocation.getArgument(0);
+            consumer.accept(foregroundWindow);
+            return null;
+        }).when(foregroundWindowSupplier).andDo(any(CommonWindowService.ForegroundWindowSupplier.ForegroundWindowConsumer.class));
+        when(foregroundWindowSupplier.andDo(any(CommonWindowService.ForegroundWindowSupplier.ForegroundWindowFunction.class))).thenAnswer(invocation -> {
+            final CommonWindowService.ForegroundWindowSupplier.ForegroundWindowFunction<ForegroundWindow> function = invocation.getArgument(0);
+            return function.apply(foregroundWindow);
+        });
+        return new ForegroundWindowMocked(foregroundWindow);
+    }
+
+    private ForegroundWindow.StateWaiting getStateWaitingMock() {
+        final ForegroundWindow.StateWaiting stateWaiting = mock(ForegroundWindow.StateWaiting.class);
+        when(stateWaiting.withTimeout(anyInt())).thenReturn(stateWaiting);
+        when(stateWaiting.withDelay(anyInt())).thenReturn(stateWaiting);
+        when(stateWaiting.withMousePosition(any(PointFloat.class))).thenReturn(stateWaiting);
+        when(stateWaiting.usingHotKey(any())).thenReturn(stateWaiting);
+        when(stateWaiting.usingHotKeyEnclose(any())).thenReturn(stateWaiting);
+        when(stateWaiting.usingMouseClickAt(any())).thenReturn(stateWaiting);
+        when(stateWaiting.logFailedStampsWithMarker(anyString())).thenReturn(stateWaiting);
+        return stateWaiting;
+    }
+
+    private ForegroundWindow.StateWaiting found(final Stamp stamp) throws InterruptedException, CannotGetUserInputException {
+        final ForegroundWindow.StateWaiting stateWaiting = getStateWaitingMock();
+        when(stateWaiting.forStamp(stamp)).thenReturn(Optional.of(stamp));
+        return stateWaiting;
+    }
+
+    private ForegroundWindow.StateWaiting notFound(final Stamp stamp) throws InterruptedException, CannotGetUserInputException {
+        final ForegroundWindow.StateWaiting stateWaiting = getStateWaitingMock();
+        when(stateWaiting.forStamp(stamp)).thenReturn(Optional.empty());
+        return stateWaiting;
+    }
+
+    private ForegroundWindow.StateWaiting foundFrom(final Set<Stamp> stampsToCheck, final Stamp stamp) throws InterruptedException, CannotGetUserInputException {
+        final ForegroundWindow.StateWaiting stateWaiting = getStateWaitingMock();
+        when(stateWaiting.forAnyStamp(any())).thenAnswer(invocation -> {
+            checkValidatorInvocation(invocation, stampsToCheck);
+            return Optional.of(stamp);
+        });
+        return stateWaiting;
+    }
+
+    private ForegroundWindow.StateWaiting notFoundAnyFrom(final Set<Stamp> stampsToCheck) throws InterruptedException, CannotGetUserInputException {
+        final ForegroundWindow.StateWaiting stateWaiting = getStateWaitingMock();
+        when(stateWaiting.forAnyStamp(any())).thenAnswer(invocation -> {
+            checkValidatorInvocation(invocation, stampsToCheck);
+            return Optional.empty();
+        });
+        return stateWaiting;
+    }
+
+    private void checkValidatorInvocation(final InvocationOnMock invocation, final Set<Stamp> stampsToCheck) {
+        final int shouldBePassedArguments = stampsToCheck.size();
+        final Object[] arguments = invocation.getArguments();
+        assertEquals(shouldBePassedArguments, arguments.length, () -> "wrong arguments passed to check (should be " + shouldBePassedArguments + ")");
+        final Set<Stamp> passedStamps = Arrays.stream(arguments)
+                .map(Stamp.class::cast)
+                .collect(Collectors.toSet());
+        assertTrue(passedStamps.containsAll(stampsToCheck));
+        assertTrue(stampsToCheck.containsAll(passedStamps));
+    }
+
+    @SuppressWarnings("ClassCanBeRecord")
+    private static class ForegroundWindowMocked {
+
+        private final ForegroundWindow foregroundWindow;
+
+        ForegroundWindowMocked(final ForegroundWindow foregroundWindow) {
+            this.foregroundWindow = foregroundWindow;
+        }
+
+        private ForegroundWindowMocked returnsMouse(final Mouse mouse) throws InterruptedException, CannotGetUserInputException {
+            when(foregroundWindow.getMouse()).thenReturn(mouse);
+            return this;
+        }
+
+        private ForegroundWindowMocked stateIs(final ForegroundWindow.StateWaiting state) {
+            when(foregroundWindow.waiting()).thenReturn(state);
+            return this;
+        }
+
+        private ForegroundWindowMocked windowStatesAre(final ForegroundWindow.StateWaiting... states) {
+            MockitoUtil.INSTANCE.mockReturnVararg(foregroundWindow.waiting(), List.of(states));
+            return this;
+        }
     }
 }

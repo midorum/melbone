@@ -39,7 +39,7 @@ class RoutineAccountProcessorTest {
     }
 
     @Test
-    void runLaunchAccountActionOnce_inAnyCase() throws InterruptedException {
+    void runLaunchAccountActionOnce_inAnyCase() {
         System.out.println("runLaunchAccountActionOnce_inAnyCase");
         final VerificationMode countOfRunAction = Mockito.only();
         final RoutineAccountProcessor instance = new RoutineAccountProcessor(launchAccountActionMock, onRunningAccountActionMock, windowFactory, settingsMock);
@@ -48,7 +48,7 @@ class RoutineAccountProcessorTest {
     }
 
     @Test
-    void runOnRunningAccountActionOnce_whenExistsBoundWindow() throws InterruptedException {
+    void runOnRunningAccountActionOnce_whenExistsBoundWindow() {
         System.out.println("runOnRunningAccountActionOnce_whenExistsBoundWindow");
         final List<BaseAppWindow> testBaseWindows = getNonEmptyTestBaseWindows();
         final VerificationMode countOfRunAction = Mockito.only();
@@ -59,7 +59,7 @@ class RoutineAccountProcessorTest {
     }
 
     @Test
-    void neverRunOnRunningAccountAction_whenNotFoundBoundWindows() throws InterruptedException {
+    void neverRunOnRunningAccountAction_whenNotFoundBoundWindows() {
         System.out.println("neverRunOnRunningAccountAction_whenNotFoundBoundWindows");
         final List<BaseAppWindow> testBaseWindows = getNotBoundTestBaseWindows();
         final VerificationMode countOfRunAction = Mockito.never();
@@ -70,7 +70,7 @@ class RoutineAccountProcessorTest {
     }
 
     @Test
-    void neverRunOnRunningAccountAction_whenNotFoundWindows() throws InterruptedException {
+    void neverRunOnRunningAccountAction_whenNotFoundWindows() {
         System.out.println("neverRunOnRunningAccountAction_whenNotFoundWindows");
         final List<BaseAppWindow> testBaseWindows = getEmptyTestBaseWindows();
         final VerificationMode countOfRunAction = Mockito.never();

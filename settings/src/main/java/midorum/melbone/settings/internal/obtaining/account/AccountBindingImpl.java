@@ -7,6 +7,7 @@ import midorum.melbone.settings.internal.storage.KeyValueStorage;
 
 import java.util.Optional;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class AccountBindingImpl implements AccountBinding {
 
     private final KeyValueStorage keyValueStorage;

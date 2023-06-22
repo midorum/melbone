@@ -1,6 +1,6 @@
 package midorum.melbone.model.window.baseapp;
 
-import dma.function.ConsumerThrowing;
+import midorum.melbone.model.window.WindowConsumer;
 
 import java.util.Optional;
 
@@ -10,7 +10,7 @@ public interface BaseAppWindow {
 
     void bindWithAccount(final String accountId);
 
-    void restoreAndDo(ConsumerThrowing<RestoredBaseAppWindow, InterruptedException> consumer) throws InterruptedException;
+    void restoreAndDo(WindowConsumer<RestoredBaseAppWindow> consumer) throws InterruptedException;
 
-    void doInGameWindow(ConsumerThrowing<InGameBaseAppWindow, InterruptedException> consumer) throws InterruptedException;
+    void doInGameWindow(WindowConsumer<InGameBaseAppWindow> consumer) throws InterruptedException;
 }

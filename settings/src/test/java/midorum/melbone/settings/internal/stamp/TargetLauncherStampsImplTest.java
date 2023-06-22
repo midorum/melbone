@@ -26,11 +26,6 @@ class TargetLauncherStampsImplTest {
     private final KeyValueStorage internalStorage = settingsFactoryInternal.getKeyValueStorage();
     private final SettingStorage settingStorage = settingsFactoryInternal.settingStorage();
 
-    @BeforeEach
-    void beforeEach() {
-        //internalStorage.removeMap(StorageKey.targetLauncherStamp);
-    }
-
     @AfterEach
     void afterEach() {
         printKeysInStorage();

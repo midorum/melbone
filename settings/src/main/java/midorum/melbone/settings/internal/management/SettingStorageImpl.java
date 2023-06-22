@@ -10,6 +10,7 @@ import midorum.melbone.settings.internal.storage.KeyValueStorage;
 import java.util.Optional;
 import java.util.Set;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class SettingStorageImpl implements SettingStorage {
 
     private final KeyValueStorage keyValueStorage;

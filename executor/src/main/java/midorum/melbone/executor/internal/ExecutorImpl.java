@@ -11,6 +11,7 @@ import midorum.melbone.window.WindowFactory;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class ExecutorImpl implements IExecutor {
 
     private final InternalScheduledExecutor internalExecutor;

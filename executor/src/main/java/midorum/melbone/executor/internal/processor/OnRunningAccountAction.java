@@ -16,7 +16,7 @@ public class OnRunningAccountAction implements VoidActionThrowing<InterruptedExc
     }
 
     @Override
-    public void perform() throws InterruptedException {
+    public void perform() {
         logger.info("on-running task started");
         windowFactory.getAllBaseAppWindows().forEach(baseAppWindow -> {
             final String characterName = baseAppWindow.getCharacterName().orElse("unbound");

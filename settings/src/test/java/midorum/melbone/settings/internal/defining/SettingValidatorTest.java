@@ -92,6 +92,7 @@ class SettingValidatorTest {
                 .mustThrow(1.0, 1L, 1, 1.0F, "text", new Object());
     }
 
+    @SuppressWarnings("ClassCanBeRecord")
     private static class PredicateChecker {
 
         private final SettingValidator validator;

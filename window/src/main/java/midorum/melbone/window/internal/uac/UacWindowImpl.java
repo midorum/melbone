@@ -5,6 +5,7 @@ import com.midorum.win32api.facade.Rectangle;
 import midorum.melbone.model.window.uac.UacWindow;
 import midorum.melbone.model.settings.setting.Settings;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class UacWindowImpl implements UacWindow {
 
     private final IWindow window;

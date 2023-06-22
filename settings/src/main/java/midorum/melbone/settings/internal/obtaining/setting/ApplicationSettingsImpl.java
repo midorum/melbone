@@ -31,6 +31,11 @@ public class ApplicationSettingsImpl extends SettingValueExtractor implements Ap
     }
 
     @Override
+    public long mouseClickDelay() {
+        return (long) getValue(SettingKeys.Application.mouseClickDelay);
+    }
+
+    @Override
     public long randomRoutineDelayMax() {
         return (long) getValue(SettingKeys.Application.randomRoutineDelayMax);
     }
@@ -48,5 +53,20 @@ public class ApplicationSettingsImpl extends SettingValueExtractor implements Ap
     @Override
     public boolean checkHealthBeforeLaunch() {
         return (boolean) getValue(SettingKeys.Application.checkHealthBeforeLaunch);
+    }
+
+    @Override
+    public boolean closeOverlappingWindows() {
+        return (boolean) getValue(SettingKeys.Application.closeOverlappingWindows);
+    }
+
+    @Override
+    public int bringWindowForegroundTimeout() {
+        return 5_000;
+    }
+
+    @Override
+    public int bringWindowForegroundDelay() {
+        return 100;
     }
 }

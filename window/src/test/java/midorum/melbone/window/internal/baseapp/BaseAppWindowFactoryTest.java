@@ -43,7 +43,7 @@ class BaseAppWindowFactoryTest {
     }
 
     @BeforeEach
-    public void beforeEach() throws InterruptedException {
+    public void beforeEach() {
         // system
         when(commonWindowService.getWin32System()).thenReturn(win32System);
         when(settings.targetBaseAppSettings()).thenReturn(targetBaseAppSettings);

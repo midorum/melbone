@@ -1,9 +1,9 @@
 package midorum.melbone.window.internal.appcountcontrol;
 
-import com.midorum.win32api.facade.IMouse;
 import com.midorum.win32api.facade.IWindow;
-import midorum.melbone.model.window.appcountcontrol.ApplicationsCountControlWindow;
 import midorum.melbone.model.settings.setting.Settings;
+import midorum.melbone.model.window.appcountcontrol.ApplicationsCountControlWindow;
+import midorum.melbone.model.exception.CannotGetUserInputException;
 import midorum.melbone.window.internal.common.CommonWindowService;
 import midorum.melbone.window.internal.util.Log;
 import midorum.melbone.window.internal.util.StaticResources;
@@ -25,15 +25,15 @@ public class ApplicationsCountControlWindowImpl implements ApplicationsCountCont
     @Override
     public void clickConfirmButton() throws InterruptedException {
         log.info("confirm dialog");
-        if (commonWindowService.bringWindowForeground(window)) {
-            getMouse().move(settings.targetCountControl().confirmButtonPoint()).leftClick();
-            log.info("dialog confirmed");
-        } else {
-            log.warn("cannot bring window foreground");
+        try {
+            commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
+                foregroundWindow.getMouse().clickAtPoint(settings.targetCountControl().confirmButtonPoint());
+                log.info("dialog confirmed");
+            });
+        } catch (CannotGetUserInputException e) {
+            final String marker = Long.toString(System.currentTimeMillis());
+            log.error("Cannot get user input in target window (marker=" + marker + "): ", e);
+            commonWindowService.takeAndSaveWholeScreenShot(marker);
         }
-    }
-
-    private IMouse getMouse() {
-        return window.getWindowMouse(settings.application().speedFactor());
     }
 }

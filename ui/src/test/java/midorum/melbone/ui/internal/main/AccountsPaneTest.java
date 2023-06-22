@@ -3,7 +3,6 @@ package midorum.melbone.ui.internal.main;
 import midorum.melbone.model.dto.Account;
 import midorum.melbone.ui.context.MockedContext;
 import midorum.melbone.ui.util.SwingTestUtil;
-import org.apache.logging.log4j.Level;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

@@ -5,7 +5,6 @@ import midorum.melbone.model.settings.PropertiesProvider;
 import javax.swing.*;
 import java.awt.*;
 import java.util.Arrays;
-import java.util.Optional;
 
 public class TabbedPane extends JTabbedPane {
 

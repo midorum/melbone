@@ -1,7 +1,7 @@
 package midorum.melbone.executor.internal.processor;
 
-import dma.function.ConsumerThrowing;
 import midorum.melbone.model.exception.ControlledInterruptedException;
+import midorum.melbone.model.window.WindowConsumer;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
 import midorum.melbone.model.window.baseapp.InGameBaseAppWindow;
 import midorum.melbone.window.WindowFactory;
@@ -75,20 +75,20 @@ class OnRunningAccountActionTest {
         Mockito.doAnswer(invocation -> {
             final Object[] arguments = invocation.getArguments();
             Assertions.assertEquals(1, arguments.length);
-            final ConsumerThrowing<InGameBaseAppWindow, InterruptedException> consumer = (ConsumerThrowing<InGameBaseAppWindow, InterruptedException>) arguments[0];
+            final WindowConsumer<InGameBaseAppWindow> consumer = (WindowConsumer<InGameBaseAppWindow>) arguments[0];
             final InGameBaseAppWindow inGameBaseAppWindow = Mockito.mock(InGameBaseAppWindow.class);
             consumer.accept(inGameBaseAppWindow);
             Mockito.verify(inGameBaseAppWindow, Mockito.times(1)).checkInLoginTracker();
             Mockito.verify(inGameBaseAppWindow, Mockito.times(1)).checkInAction();
             return null;
-        }).when(mock).doInGameWindow(Mockito.any(ConsumerThrowing.class));
+        }).when(mock).doInGameWindow(Mockito.any(WindowConsumer.class));
         return mock;
     }
 
     @SuppressWarnings("unchecked")
     private BaseAppWindow mockBaseAppWindowThrowing(final String characterName) throws InterruptedException {
         final BaseAppWindow mock = mockBaseAppWindow(characterName);
-        Mockito.doThrow(InterruptedException.class).when(mock).doInGameWindow(Mockito.any(ConsumerThrowing.class));
+        Mockito.doThrow(InterruptedException.class).when(mock).doInGameWindow(Mockito.any(WindowConsumer.class));
         return mock;
     }
 
@@ -97,7 +97,7 @@ class OnRunningAccountActionTest {
         baseAppWindows.forEach(baseAppWindow -> {
             Mockito.verify(baseAppWindow, Mockito.times(1)).getCharacterName();
             try {
-                Mockito.verify(baseAppWindow, Mockito.times(1)).doInGameWindow(Mockito.any(ConsumerThrowing.class));
+                Mockito.verify(baseAppWindow, Mockito.times(1)).doInGameWindow(Mockito.any(WindowConsumer.class));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

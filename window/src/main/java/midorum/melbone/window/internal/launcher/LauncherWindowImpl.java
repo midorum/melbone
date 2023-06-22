@@ -4,10 +4,11 @@ import com.midorum.win32api.facade.*;
 import com.midorum.win32api.win32.MsLcid;
 import com.midorum.win32api.win32.Win32VirtualKey;
 import dma.flow.Waiting;
-import dma.function.ConsumerThrowing;
 import dma.util.DurationFormatter;
 import midorum.melbone.model.dto.Account;
+import midorum.melbone.model.exception.CannotGetUserInputException;
 import midorum.melbone.model.settings.stamp.Stamp;
+import midorum.melbone.model.window.WindowConsumer;
 import midorum.melbone.settings.StampKeys;
 import midorum.melbone.model.exception.ControlledInterruptedException;
 import midorum.melbone.model.exception.CriticalErrorException;
@@ -17,10 +18,11 @@ import midorum.melbone.model.window.launcher.LauncherWindow;
 import midorum.melbone.model.window.launcher.RestoredLauncherWindow;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.window.internal.common.CommonWindowService;
+import midorum.melbone.window.internal.common.ForegroundWindow;
+import midorum.melbone.window.internal.common.Mouse;
 import midorum.melbone.window.internal.util.Log;
 import midorum.melbone.window.internal.util.StaticResources;
 
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -33,117 +35,122 @@ public class LauncherWindowImpl implements LauncherWindow {
     private final Stamps stamps;
 
     public LauncherWindowImpl(final IWindow window, final CommonWindowService commonWindowService, final Settings settings, final Stamps stamps) {
+        this.window = window;
         this.commonWindowService = commonWindowService;
         this.settings = settings;
         this.stamps = stamps;
-        Objects.requireNonNull(window);
-        this.window = window;
         this.log = new Log(StaticResources.LOGGER, "launcher [" + window.getSystemId() + "]");
     }
 
     @Override
-    public void restoreAndDo(final ConsumerThrowing<RestoredLauncherWindow, InterruptedException> consumer) throws InterruptedException {
-        commonWindowService.bringWindowForeground(window);
+    public void restoreAndDo(final WindowConsumer<RestoredLauncherWindow> consumer) throws InterruptedException {
+        if (!this.window.isExists()) {
+            log.warn("window not found - skip");
+            return;
+        }
         try {
-            consumer.accept(new RestoredLauncherWindowImpl(this.window, this.log));
-        } catch (BrokenLauncherException e) {
-            try {
-                log.warn("launcher has broken - need retry");
-                if (this.window.isExists() && !tryCloseWindowAndCheckIfClosedNormally()) killProcess();
-                throw new NeedRetryException(e.getMessage(), e);
-            } catch (Throwable t) {
-                t.addSuppressed(e);
-                throw t;
-            }
+            commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
+                try {
+                    consumer.accept(new RestoredLauncherWindowImpl(foregroundWindow, log));
+                } catch (BrokenLauncherException e) {
+                    log.warn("launcher is broken - " + e.getMessage() + " - close:", e);
+                    tryCloseWindowAndCheckIfClosedNormally(foregroundWindow);
+                    throw e;
+                }
+            });
+        } catch (BrokenLauncherException | CannotGetUserInputException e) {
+            final String message = "launcher is broken - " + e.getMessage() + " - need retry";
+            log.warn(message + ":", e);
+            if (this.window.isExists()) killProcess();
+            throw new NeedRetryException(message, e);
         }
     }
 
-    private IMouse getMouse() {
-        return window.getWindowMouse(settings.application().speedFactor());
+    private String getLogMarker() {
+        return Long.toString(System.currentTimeMillis());
     }
 
-    private Stamp waitLauncherRendering() throws InterruptedException {
-        log.info("waiting launcher rendering");
-        final Stamp[] checkingStamps = {stamps.targetLauncher().loginButtonNoErrorInactive(),
-                stamps.targetLauncher().loginButtonWithErrorInactive(),
-                stamps.targetLauncher().loginButtonNoErrorActive(),
-                stamps.targetLauncher().loginButtonWithErrorActive(),
-                stamps.targetLauncher().startButtonInactive(),
-                stamps.targetLauncher().startButtonActive()};
-        final Stamp foundStamp = new Waiting()
-                .withDelay(settings.targetLauncher().windowRenderingDelay(), TimeUnit.SECONDS)
-                .maxTimes(settings.targetLauncher().attemptsToWindowRendering())
-                .doOnEveryFailedIteration(i -> log.debug("{}: launcher not rendered properly yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamps))
-                .orElseThrow(() -> getBrokenLauncherException("launcher not rendered properly", checkingStamps));
-        log.debug("found stamp {}", foundStamp.key().internal().groupName() + "." + foundStamp.key().name());
-        return foundStamp;
+    private Stamp waitLauncherRendering(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
+        log.info("wait for launcher rendering");
+        final String logMarker = getLogMarker();
+        return foregroundWindow.waiting()
+                .withTimeout(settings.targetLauncher().windowRenderingTimeout())
+                .withDelay(settings.targetLauncher().windowRenderingDelay())
+                .logFailedStampsWithMarker(logMarker)
+                .forAnyStamp(stamps.targetLauncher().loginButtonNoErrorInactive(),
+                        stamps.targetLauncher().loginButtonWithErrorInactive(),
+                        stamps.targetLauncher().loginButtonNoErrorActive(),
+                        stamps.targetLauncher().loginButtonWithErrorActive(),
+                        stamps.targetLauncher().startButtonInactive(),
+                        stamps.targetLauncher().startButtonActive())
+                .orElseThrow(() -> getBrokenLauncherException("launcher not rendered properly", logMarker));
     }
 
-    private void waitStartButtonRendering() throws InterruptedException {
-        log.info("waiting for start button");
-        final Stamp[] checkingStamps = {stamps.targetLauncher().startButtonActive()};
-        final Stamp foundStamp = new Waiting()
-                .withDelay(settings.targetLauncher().searchStartButtonDelay(), TimeUnit.SECONDS)
-                .maxTimes(settings.targetLauncher().attemptToFindStartButton())
-                .doOnEveryFailedIteration(i -> log.debug("{}: not ready to start yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamps))
-                .orElseThrow(() -> getBrokenLauncherException("not ready to start", checkingStamps));
-        log.debug("found stamp {}", foundStamp.key().internal().groupName() + "." + foundStamp.key().name());
+    private Stamp waitStartButtonRendering(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
+        log.info("wait for start button rendering");
+        final String logMarker = getLogMarker();
+        return foregroundWindow.waiting()
+                .withTimeout(settings.targetLauncher().searchStartButtonTimeout())
+                .withDelay(settings.targetLauncher().searchStartButtonDelay())
+                .logFailedStampsWithMarker(logMarker)
+                .forStamp(stamps.targetLauncher().startButtonActive())
+                .orElseThrow(() -> getBrokenLauncherException("not ready to start", logMarker));
     }
 
-    private void logOutAndWaitLoginForm(final IMouse mouse) throws InterruptedException {
+    private Stamp logOutAndWaitLoginForm(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
         log.info("try log out");
-        mouse.move(settings.targetLauncher().accountDropListPoint()).leftClick();
-        mouse.move(settings.targetLauncher().accountLogoutPoint()).leftClick();
+        final Mouse mouse = foregroundWindow.getMouse();
+        mouse.clickAtPoint(settings.targetLauncher().accountDropListPoint());
+        mouse.clickAtPoint(settings.targetLauncher().accountLogoutPoint());
 
-        checkLoginFormRendered();
+        return checkLoginFormRendered(foregroundWindow);
     }
 
-    private void checkLoginFormRendered() throws InterruptedException {
+    private Stamp checkLoginFormRendered(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
         log.info("waiting login form rendering");
-        final Stamp[] checkingStamps = {stamps.targetLauncher().loginButtonNoErrorInactive(),
-                stamps.targetLauncher().loginButtonNoErrorActive()};
-        final Stamp foundStamp = new Waiting()
-                .withDelay(1, TimeUnit.SECONDS)
-                .maxTimes(60)
-                .doOnEveryFailedIteration(i -> log.debug("{}: login form not rendered properly yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, checkingStamps))
-                .orElseThrow(() -> getBrokenLauncherException("login form not rendered properly - abort", checkingStamps));
-        log.debug("found stamp {}", foundStamp.key().internal().groupName() + "." + foundStamp.key().name());
+        final String logMarker = getLogMarker();
+        return foregroundWindow.waiting()
+                .withTimeout(settings.targetLauncher().windowRenderingTimeout())
+                .withDelay(settings.targetLauncher().windowRenderingDelay())
+                .logFailedStampsWithMarker(logMarker)
+                .forAnyStamp(stamps.targetLauncher().loginButtonNoErrorInactive(),
+                        stamps.targetLauncher().loginButtonNoErrorActive())
+                .orElseThrow(() -> getBrokenLauncherException("login form not rendered properly - abort", logMarker));
     }
 
-    private void enterLoginAndPasswordAndLoginOnErroneousForm(final Account account, final IMouse mouse) throws InterruptedException {
-        enterLoginAndPasswordAndLogin(account, mouse);
+    private void enterLoginAndPasswordAndLoginOnErroneousForm(final ForegroundWindow foregroundWindow, final Account account) throws InterruptedException, CannotGetUserInputException {
+        enterLoginAndPasswordAndLogin(foregroundWindow, account);
     }
 
-    private void enterLoginAndPasswordAndLogin(final Account account, final IMouse mouse) throws InterruptedException {
+    private void enterLoginAndPasswordAndLogin(final ForegroundWindow foregroundWindow, final Account account) throws InterruptedException, CannotGetUserInputException {
         log.info("try log in for {}", account.login());
-        final IKeyboard keyboard = window.getKeyboard();
+
+        final Mouse mouse = foregroundWindow.getMouse();
+        final IKeyboard keyboard = foregroundWindow.getKeyboard();
+        final HotKey hotKeyCtrlA = new HotKey.Builder().withControl().code(Win32VirtualKey.VK_A).build();
+        final HotKey hotKeyDelete = new HotKey.Builder().code(Win32VirtualKey.VK_DELETE).build();
 
         //preset layout and capital
         window.setKeyboardLayout(MsLcid.enUs);
         keyboard.setCapital(false);
 
         //input login
-        mouse.move(settings.targetLauncher().loginInputPoint()).leftClick();
-        final HotKey hotKeyCtrlA = new HotKey.Builder().withControl().code(Win32VirtualKey.VK_A).build();
-        final HotKey hotKeyDelete = new HotKey.Builder().code(Win32VirtualKey.VK_DELETE).build();
+        mouse.clickAtPoint(settings.targetLauncher().loginInputPoint());
         keyboard.enterHotKey(hotKeyCtrlA)
                 .enterHotKey(hotKeyDelete)
                 .type(account.login());
         log.info("entered login for {}", account.login());
         //input password
-        mouse.move(settings.targetLauncher().passwordInputPoint()).leftClick();
+        mouse.clickAtPoint(settings.targetLauncher().passwordInputPoint());
         keyboard.enterHotKey(hotKeyCtrlA)
                 .enterHotKey(hotKeyDelete)
                 .type(account.password());
         log.info("entered password for {}", account.login());
         //press login button
-        mouse.move(settings.targetLauncher().loginButtonPoint()).leftClick();
+        mouse.clickAtPoint(settings.targetLauncher().loginButtonPoint());
         log.info("pressed login button");
 
-        checkLoginError();
+        checkLoginError(foregroundWindow);
 
         //TODO select game type
         //TODO select server type
@@ -151,36 +158,39 @@ public class LauncherWindowImpl implements LauncherWindow {
         log.info("{} logged in successfully", account.login());
     }
 
-    private void checkLoginError() throws InterruptedException {
+    private void checkLoginError(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
         log.info("checking for login error");
-        new Waiting()
-                .withDelay(1, TimeUnit.SECONDS)
-                .maxTimes(2)
-                .doOnEveryFailedIteration(i -> log.debug("{}: check for login error", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitFor(() -> commonWindowService.getStampValidator().validateStampWholeData(this.window, stamps.targetLauncher().errorExclamationSign()))
+        foregroundWindow.waiting()
+                .withTimeout(settings.targetLauncher().loginTimeout())
+                .withDelay(settings.targetLauncher().checkLoginDelay())
+                .forStamp(stamps.targetLauncher().errorExclamationSign())
                 .ifPresent(stamp -> {
                     throw new CriticalErrorException("login error occurred - abort");
                 });
     }
 
-    private boolean tryCloseWindowAndCheckIfClosedNormally() throws InterruptedException {
-        if (!windowIsVisibleAndHasNormalMetrics()) return false;
-        log.info("try close broken launcher");
+    private void tryCloseWindowAndCheckIfClosedNormally(final ForegroundWindow foregroundWindow) throws InterruptedException {
+        if (!windowIsVisibleAndHasNormalMetrics()) return;
         final Waiting.EmptyConsumer closeWindowAction = () -> {
-            if (windowIsVisibleAndHasNormalMetrics()) closeWindow();
+            if (windowIsVisibleAndHasNormalMetrics()) {
+                try {
+                    closeWindow(foregroundWindow);
+                } catch (CannotGetUserInputException e) {
+                    throw new BrokenLauncherException("Cannot close launcher window", e);
+                }
+            }
         };
         final boolean windowClosed = new Waiting()
                 .startFrom(closeWindowAction)
-                .latency(settings.targetLauncher().closingWindowDelay(), TimeUnit.SECONDS)
-                .maxTimes(5)
-                .withDelay(settings.targetLauncher().closingWindowDelay(), TimeUnit.SECONDS)
+                .latency(settings.targetLauncher().closingWindowDelay(), TimeUnit.MILLISECONDS)
+                .timeout(settings.targetLauncher().closingWindowTimeout(), TimeUnit.MILLISECONDS)
+                .withDelay(settings.targetLauncher().closingWindowDelay(), TimeUnit.MILLISECONDS)
                 .doOnEveryFailedIteration(i -> {
                     log.debug("{}: launcher hasn't closed yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
                     closeWindowAction.accept();
                 })
                 .waitForBoolean(() -> !this.window.isExists());
         log.info("launcher{}closed normally", windowClosed ? " " : " hasn't ");
-        return windowClosed;
     }
 
     private boolean windowIsVisibleAndHasNormalMetrics() {
@@ -195,10 +205,9 @@ public class LauncherWindowImpl implements LauncherWindow {
         return equals;
     }
 
-    private void closeWindow() throws InterruptedException {
+    private void closeWindow(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
         log.info("closing launcher window");
-        final IMouse mouse = getMouse();
-        mouse.move(settings.targetLauncher().windowCloseButtonPoint()).leftClick();
+        foregroundWindow.getMouse().clickAtPoint(settings.targetLauncher().windowCloseButtonPoint());
         checkConfirmQuitDialogRenderedAndAcceptIt();
     }
 
@@ -208,105 +217,109 @@ public class LauncherWindowImpl implements LauncherWindow {
     }
 
     private void checkConfirmQuitDialogRenderedAndAcceptIt() throws InterruptedException {
-        log.info("waiting for confirm quit dialog");
+        log.info("wait for confirm quit dialog");
+        final ConfirmQuitDialogFactory confirmQuitDialogFactory = new ConfirmQuitDialogFactory();
         new Waiting()
-                .withDelay(500, TimeUnit.MILLISECONDS)
-                .maxTimes(5)
+                .timeout(settings.targetLauncher().confirmQuitDialogRenderingTimeout(), TimeUnit.MILLISECONDS)
+                .withDelay(settings.targetLauncher().confirmQuitDialogRenderingDelay(), TimeUnit.MILLISECONDS)
                 .doOnEveryFailedIteration(i -> log.debug("{}: confirm quit dialog has not rendered yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts()))
-                .waitFor(this::findConfirmQuitDialog)
-                .ifPresent(confirmQuitDialog -> {
-                    log.info("accepting confirm quit dialog");
-                    try {
-                        confirmQuitDialog.clickConfirmButton();
-                    } catch (InterruptedException e) {
-                        throw new ControlledInterruptedException(e.getMessage(), e);
-                    }
-                });
+                .waitFor(confirmQuitDialogFactory::findConfirmQuitDialog)
+                .ifPresent(ConfirmQuitDialog::clickConfirmButton);
     }
 
-    private Optional<ConfirmQuitDialog> findConfirmQuitDialog() {
-        log.info("searching confirm quit dialog");
-        final Rectangle requiredDimensions = settings.targetLauncher().confirmQuitDialogDimensions();
-        return commonWindowService.getWin32System()
-                .findAllWindows(settings.targetLauncher().confirmQuitDialogTitle(), null, true).stream()
-                .filter(w -> {
-                    final Rectangle windowRectangle = w.getWindowRectangle();
-                    return requiredDimensions.width() == windowRectangle.width()
-                            && requiredDimensions.height() == windowRectangle.height();
-                })
-                .filter(w -> {
-                    try {
-                        return commonWindowService.getStampValidator().validateStampWholeData(w, stamps.targetLauncher().quitConfirmPopup()).isPresent();
-                    } catch (InterruptedException e) {
-                        throw new ControlledInterruptedException(e.getMessage(), e);
-                    }
-                })
-                .map(ConfirmQuitDialog::new)
-                .findFirst();
-    }
-
-    private BrokenLauncherException getBrokenLauncherException(final String message, Stamp... stamps) {
-        final String marker = Long.toString(System.currentTimeMillis());
-        final BrokenLauncherException exception = new BrokenLauncherException(message + " (marker=" + marker + ")");
-        //log failed stamps
-        try {
-            commonWindowService.getStampValidator().logFailedStamps(marker, this.window, stamps);
-        } catch (InterruptedException e) {
-            exception.addSuppressed(e);
-        }
-        return exception;
+    private BrokenLauncherException getBrokenLauncherException(final String message, final String marker) {
+        return new BrokenLauncherException(message + " (marker=" + marker + ")");
     }
 
     private class RestoredLauncherWindowImpl implements RestoredLauncherWindow {
 
-        private final IWindow window;
+        private final ForegroundWindow foregroundWindow;
         private final Log log;
 
-        public RestoredLauncherWindowImpl(final IWindow window, final Log log) {
-            this.window = window;
+        public RestoredLauncherWindowImpl(final ForegroundWindow foregroundWindow, final Log log) {
+            this.foregroundWindow = foregroundWindow;
             this.log = log;
         }
 
         @Override
-        public boolean checkClientIsAlreadyRunningWindowRendered() throws InterruptedException {
-            return commonWindowService.getStampValidator().validateStampWholeData(this.window, stamps.targetLauncher().clientIsAlreadyRunning()).isPresent();
+        public boolean checkClientIsAlreadyRunningWindowRendered() throws InterruptedException, CannotGetUserInputException {
+            return foregroundWindow.waiting()
+                    .forStamp(stamps.targetLauncher().clientIsAlreadyRunning())
+                    .isPresent();
         }
 
         @Override
-        public void login(final Account account) throws InterruptedException {
-            final IMouse mouse = getMouse();
-            final Stamp foundStamp = waitLauncherRendering();
+        public void login(final Account account) throws InterruptedException, CannotGetUserInputException {
+            final Stamp foundStamp = waitLauncherRendering(foregroundWindow);
             //log out if needed
             if (foundStamp.key().equals(StampKeys.TargetLauncher.playButtonInactive)) {
                 log.info("play form is opened; play button is inactive");
-                logOutAndWaitLoginForm(mouse);
+                logOutAndWaitLoginForm(foregroundWindow);
             } else if (foundStamp.key().equals(StampKeys.TargetLauncher.playButtonActive)) {
                 log.info("play form is opened; play button is active");
-                logOutAndWaitLoginForm(mouse);
+                logOutAndWaitLoginForm(foregroundWindow);
             }
             log.info("login form has rendered");
-            enterLoginAndPasswordAndLogin(account, mouse);
+            enterLoginAndPasswordAndLogin(foregroundWindow, account);
         }
 
         @Override
-        public void startGameWhenGetReady() throws InterruptedException {
-            waitStartButtonRendering();
+        public void startGameWhenGetReady() throws InterruptedException, CannotGetUserInputException {
+            waitStartButtonRendering(foregroundWindow);
             log.info("starting game");
-            //press Start button
-            getMouse().move(settings.targetLauncher().startButtonPoint()).leftClick();
+            foregroundWindow.getMouse().clickAtPoint(settings.targetLauncher().startButtonPoint());
         }
     }
 
+    private class ConfirmQuitDialogFactory {
+
+        public Optional<ConfirmQuitDialog> findConfirmQuitDialog() {
+            log.info("searching confirm quit dialog");
+            final Rectangle requiredDimensions = settings.targetLauncher().confirmQuitDialogDimensions();
+            return commonWindowService.getWin32System()
+                    .findAllWindows(settings.targetLauncher().confirmQuitDialogTitle(), null, true).stream()
+                    .filter(w -> {
+                        final Rectangle windowRectangle = w.getWindowRectangle();
+                        return requiredDimensions.width() == windowRectangle.width()
+                                && requiredDimensions.height() == windowRectangle.height();
+                    })
+                    .filter(w -> {
+                        try {
+                            return commonWindowService.bringForeground(w).andDo(foregroundWindow -> {
+                                return foregroundWindow.waiting().forStamp(stamps.targetLauncher().quitConfirmPopup());
+                            }).isPresent();
+                        } catch (InterruptedException e) {
+                            throw new ControlledInterruptedException(e.getMessage(), e);
+                        } catch (CannotGetUserInputException e) {
+                            throw new BrokenLauncherException("Cannot get user input in window " + w.getSystemId(), e);
+                        }
+                    })
+                    .map(ConfirmQuitDialog::new)
+                    .findFirst();
+        }
+
+    }
+
     private class ConfirmQuitDialog {
+        private final IWindow window;
         private final Log log;
 
         private ConfirmQuitDialog(final IWindow window) {
-            log = new Log(StaticResources.LOGGER, this.getClass().getSimpleName() + " [" + window.getSystemId() + "]");
+            this.window = window;
+            this.log = new Log(StaticResources.LOGGER, this.getClass().getSimpleName() + " [" + window.getSystemId() + "]");
         }
 
-        public void clickConfirmButton() throws InterruptedException {
-            log.info("closing confirm quit dialog");
-            getMouse().move(settings.targetLauncher().closeQuitConfirmPopupButtonPoint()).leftClick();
+        public void clickConfirmButton() {
+            log.info("accepting confirm quit dialog");
+            try {
+                commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
+                    foregroundWindow.getMouse().clickAtPoint(settings.targetLauncher().closeQuitConfirmPopupButtonPoint());
+                });
+            } catch (CannotGetUserInputException e) {
+                throw new BrokenLauncherException("Cannot get user input in dialog", e);
+            } catch (InterruptedException e) {
+                throw new ControlledInterruptedException(e.getMessage(), e);
+            }
         }
     }
 
@@ -316,5 +329,8 @@ public class LauncherWindowImpl implements LauncherWindow {
             super(message);
         }
 
+        public BrokenLauncherException(final String message, final Throwable cause) {
+            super(message, cause);
+        }
     }
 }

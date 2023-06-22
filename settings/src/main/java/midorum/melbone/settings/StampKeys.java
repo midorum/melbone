@@ -17,6 +17,7 @@ public interface StampKeys {
         return Stream.of(TargetLauncher.values(), TargetBaseApp.values())
                 .flatMap(Stream::of)
                 .filter(e -> e.internal().isEnabled())
+                .map(StampKey.class::cast)
                 .toArray(StampKey[]::new);
     }
 

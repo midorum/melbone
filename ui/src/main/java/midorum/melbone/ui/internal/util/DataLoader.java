@@ -25,7 +25,7 @@ public class DataLoader {
         final Consumer<T> dataConsumerChecked = Validator.checkNotNull(dataConsumer).orThrowForSymbol("dataConsumer");
         (new SwingWorker<T, Object>() {
             @Override
-            protected T doInBackground() throws Exception {
+            protected T doInBackground() {
                 return dataSupplierChecked.get();
             }
 

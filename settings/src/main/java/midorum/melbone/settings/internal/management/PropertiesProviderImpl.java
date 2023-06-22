@@ -12,6 +12,7 @@ import java.net.URISyntaxException;
 import java.util.Optional;
 import java.util.Properties;
 
+@SuppressWarnings("FieldCanBeLocal")
 public class PropertiesProviderImpl implements PropertiesProvider {
 
     private final String modeKey = "app.mode";

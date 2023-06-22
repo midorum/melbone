@@ -37,7 +37,7 @@ public class LaunchAccountAction implements VoidActionThrowing<InterruptedExcept
     }
 
     @Override
-    public void perform() throws InterruptedException {
+    public void perform() {
         logger.info("launch account task started");
 
         closeAllUnnecessaryWindowsAndCheckHealthForRest();
