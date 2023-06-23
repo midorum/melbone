@@ -32,6 +32,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues()
                 .wrongTypeValues()
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("test", "test"))
                 .test();
     }
 
@@ -44,6 +45,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues()
                 .wrongTypeValues()
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("test", "test"))
                 .test();
     }
 
@@ -56,6 +58,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -68,6 +71,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -80,6 +84,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -92,6 +97,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -104,6 +110,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -116,6 +123,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -128,6 +136,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -140,6 +149,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -152,6 +162,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -164,6 +175,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -176,6 +188,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -188,6 +201,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -200,6 +214,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -212,6 +227,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -224,6 +240,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -236,6 +253,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -248,6 +266,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -260,6 +279,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -272,6 +292,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -284,6 +305,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -296,6 +318,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -308,6 +331,7 @@ class TargetBaseAppSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 

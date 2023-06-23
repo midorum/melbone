@@ -32,6 +32,7 @@ class UacSettingsImplTest {
                 .invalidValues()
                 .wrongTypeValues()
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("test", "test"))
                 .test();
     }
 
@@ -44,6 +45,7 @@ class UacSettingsImplTest {
                 .invalidValues(new Rectangle(-1, -1, -1, -1), new Rectangle(0, 0, -1, -1))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[(0,1)(1919,1080)-(1919:1079)]", new Rectangle(0, 1, 1919, 1080)))
                 .test();
     }
 }
