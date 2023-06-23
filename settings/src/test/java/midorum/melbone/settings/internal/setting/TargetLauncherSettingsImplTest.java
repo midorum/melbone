@@ -35,6 +35,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues()
                 .wrongTypeValues()
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("test", "test"))
                 .test();
     }
 
@@ -50,6 +51,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues()
                 .wrongTypeValues()
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("test", "test"))
                 .test());
     }
 
@@ -62,6 +64,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new Rectangle(-1, -1, -1, -1), new Rectangle(0, 0, -1, -1))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[(0,1)(1919,1080)-(1919:1079)]", new Rectangle(0, 1, 1919, 1080)))
                 .test();
     }
 
@@ -74,6 +77,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues()
                 .wrongTypeValues()
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("test", "test"))
                 .test();
     }
 
@@ -86,6 +90,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new Rectangle(-1, -1, -1, -1), new Rectangle(0, 0, -1, -1))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[(0,1)(1919,1080)-(1919:1079)]", new Rectangle(0, 1, 1919, 1080)))
                 .test();
     }
 
@@ -98,6 +103,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues()
                 .wrongTypeValues()
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("test", "test"))
                 .test();
     }
 
@@ -110,6 +116,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new Rectangle(-1, -1, -1, -1), new Rectangle(0, 0, -1, -1))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[(0,1)(1919,1080)-(1919:1079)]", new Rectangle(0, 1, 1919, 1080)))
                 .test();
     }
 
@@ -122,6 +129,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new PointFloat(-.5f, -.3f), new PointFloat(1.1f, 1.6f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -134,6 +142,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new PointInt(-1, 0), new PointInt(0, -1))
                 .wrongTypeValues("string")
                 .extractFrom(new PointInt(100, 50))
+                .parseFrom(new SettingTester.ParsePair("[x=100, y=50]", new PointInt(100, 50)))
                 .test();
     }
 
@@ -146,6 +155,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -158,6 +168,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -170,6 +181,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -182,6 +194,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -194,6 +207,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -206,6 +220,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -218,6 +233,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 
@@ -230,6 +246,7 @@ class TargetLauncherSettingsImplTest {
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
                 .extractFrom(new WindowPoint(window, new PointFloat(0.5f, 0.5f)))
+                .parseFrom(new SettingTester.ParsePair("[x=0.5, y=0.75]", new PointFloat(.5f, .75f)))
                 .test();
     }
 

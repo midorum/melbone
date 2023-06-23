@@ -20,6 +20,7 @@ class ApplicationSettingsImplTest {
                 .invalidValues(-1, 6, 10)
                 .wrongTypeValues("string")
                 .extractFrom()
+                .parseFrom(new SettingTester.ParsePair("1", 1))
                 .test();
     }
 
@@ -31,6 +32,7 @@ class ApplicationSettingsImplTest {
                 .invalidValues(-1)
                 .wrongTypeValues("string")
                 .extractFrom()
+                .parseFrom(new SettingTester.ParsePair("1", 1))
                 .test();
     }
 
@@ -42,6 +44,7 @@ class ApplicationSettingsImplTest {
                 .invalidValues(-0.3F, -1.0F, -1.1F)
                 .wrongTypeValues("string")
                 .extractFrom()
+                .parseFrom(new SettingTester.ParsePair("1.5", 1.5f))
                 .test();
     }
 
@@ -53,6 +56,7 @@ class ApplicationSettingsImplTest {
                 .invalidValues(-1)
                 .wrongTypeValues("string")
                 .extractFrom()
+                .parseFrom(new SettingTester.ParsePair("1", 1))
                 .test();
     }
 
@@ -64,6 +68,7 @@ class ApplicationSettingsImplTest {
                 .invalidValues(-1)
                 .wrongTypeValues("string")
                 .extractFrom()
+                .parseFrom(new SettingTester.ParsePair("1", 1))
                 .test();
     }
 
@@ -75,6 +80,7 @@ class ApplicationSettingsImplTest {
                 .invalidValues(-1)
                 .wrongTypeValues("string")
                 .extractFrom()
+                .parseFrom(new SettingTester.ParsePair("1", 1L))
                 .test();
     }
 
