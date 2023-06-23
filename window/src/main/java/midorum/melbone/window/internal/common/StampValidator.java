@@ -15,6 +15,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
@@ -57,7 +58,7 @@ public class StampValidator {
 
     public void takeAndSaveWholeScreenShot(final String marker) {
         final BufferedImage screenImage = takeWholeScreenShot();
-        saveImage(screenImage, "wholeScreenShot_" + marker);
+        saveImage(screenImage, "wholeScreenShot_" + Objects.requireNonNull(marker));
     }
 
     private IScreenShotMaker getScreenShotMaker() {

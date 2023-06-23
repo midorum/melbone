@@ -10,6 +10,8 @@ import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.window.internal.util.StaticResources;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Objects;
+
 public class CommonWindowService {
 
     private final Logger logger;
@@ -49,7 +51,8 @@ public class CommonWindowService {
         return new ForegroundWindowSupplier(window);
     }
 
-    public void takeAndSaveWholeScreenShot(final String marker) {
+    public void takeAndSaveWholeScreenShot(final String cause, final String marker) {
+        logger.warn("whole screenshot requested (cause={}, marker={})", Objects.requireNonNull(cause), Objects.requireNonNull(marker));
         stampValidator.takeAndSaveWholeScreenShot(marker);
     }
 
