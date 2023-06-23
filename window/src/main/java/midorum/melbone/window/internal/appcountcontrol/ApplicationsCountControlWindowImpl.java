@@ -33,7 +33,7 @@ public class ApplicationsCountControlWindowImpl implements ApplicationsCountCont
         } catch (CannotGetUserInputException e) {
             final String marker = Long.toString(System.currentTimeMillis());
             log.error("Cannot get user input in target window (marker=" + marker + "): ", e);
-            commonWindowService.takeAndSaveWholeScreenShot(marker);
+            commonWindowService.takeAndSaveWholeScreenShot("cannot get user input in app count control window", marker);
         }
     }
 }

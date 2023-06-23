@@ -56,7 +56,7 @@ public class LauncherWindowFactory {
         if (maybeNewLauncherWindow.isPresent()) return maybeNewLauncherWindow;
         detectLauncherInitializationError(); //TODO check network accessibility before start launcher to prevent this error
         detectPossibleOverlay();
-        commonWindowService.takeAndSaveWholeScreenShot(marker);
+        commonWindowService.takeAndSaveWholeScreenShot("launcher window not found", marker);
         logger.warn("can not start launcher or find launcher window");
         return Optional.empty();
     }
@@ -124,7 +124,7 @@ public class LauncherWindowFactory {
     }
 
     public Optional<LauncherWindow> findWindow() {
-        logger.info("searching launcher");
+        logger.info("search launcher");
         //TODO need regexp based search
         final List<IWindow> allWindows = win32System.findAllWindows(settings.targetLauncher().windowTitle(), null, true);
         return allWindows.stream()
@@ -166,7 +166,7 @@ public class LauncherWindowFactory {
     }
 
     private Optional<InitializationErrorDialog> findInitializationErrorDialog() {
-        logger.info("searching launcher initialization error dialog");
+        logger.info("search launcher initialization error dialog");
         final List<IWindow> allWindows = win32System.findAllWindows(settings.targetLauncher().initializationErrorDialogTitle(), null, true);
         return allWindows.stream()
                 .filter(w -> {

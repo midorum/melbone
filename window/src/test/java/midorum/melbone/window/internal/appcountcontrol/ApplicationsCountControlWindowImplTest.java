@@ -71,6 +71,6 @@ class ApplicationsCountControlWindowImplTest {
         when(foregroundWindow.getMouse()).thenThrow(new CannotGetUserInputException());
         final ApplicationsCountControlWindowImpl instance = new ApplicationsCountControlWindowImpl(window, commonWindowService, settings);
         instance.clickConfirmButton();
-        verify(commonWindowService).takeAndSaveWholeScreenShot(anyString());
+        verify(commonWindowService).takeAndSaveWholeScreenShot(anyString(), anyString());
     }
 }
