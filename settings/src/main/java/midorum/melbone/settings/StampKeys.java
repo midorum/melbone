@@ -24,8 +24,6 @@ public interface StampKeys {
     enum TargetLauncher implements StampKey {
         clientIsAlreadyRunning("\"The client is already running\" window"),
         quitConfirmPopup("Quit confirm popup"),
-        @Deprecated //FIXME >>> delete
-        initializationErrorDialog("initialization error dialog"),
         networkErrorDialog("network error dialog"),
         loginButtonNoErrorActive("Login button; No error; Active"),
         loginButtonNoErrorInactive("Login button; No error; Inactive"),
