@@ -67,4 +67,8 @@ public interface TargetLauncherSettings {
     int confirmQuitDialogRenderingDelay();
 
     PointFloat closeQuitConfirmPopupButtonPoint();
+
+    int networkErrorDialogTimeout();
+
+    int networkErrorDialogDelay();
 }

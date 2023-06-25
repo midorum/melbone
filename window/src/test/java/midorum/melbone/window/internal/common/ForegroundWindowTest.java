@@ -309,6 +309,7 @@ class ForegroundWindowTest {
     private IWindow getWindowMock(final Rectangle windowRectangle, final IMouse mouse) {
         final IWindow window = mock(IWindow.class);
         when(window.getSystemId()).thenReturn("0xdf67");
+        when(window.getProcessId()).thenReturn(window.hashCode());
         when(window.getWindowMouse(anyFloat())).thenReturn(mouse);
         when(window.getWindowRectangle()).thenReturn(windowRectangle);
         return window;
@@ -317,6 +318,7 @@ class ForegroundWindowTest {
     private IWindow getTopmostWindowMock(final Rectangle windowRectangle) {
         final IWindow window = mock(IWindow.class);
         when(window.getSystemId()).thenReturn("0xca83");
+        when(window.getProcessId()).thenReturn(window.hashCode());
         when(window.getStyle()).thenReturn(IWinUser.WS_VISIBLE);
         when(window.hasStyles(IWinUser.WS_VISIBLE)).thenReturn(true);
         when(window.getExtendedStyle()).thenReturn(IWinUser.WS_EX_TOPMOST);

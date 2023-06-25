@@ -169,4 +169,14 @@ public class TargetLauncherSettingsImpl extends SettingValueExtractor implements
     public PointFloat closeQuitConfirmPopupButtonPoint() {
         return (PointFloat) getValue(SettingKeys.TargetLauncher.closeQuitConfirmPopupButtonPoint);
     }
+
+    @Override
+    public int networkErrorDialogTimeout() {
+        return 5_000;
+    }
+
+    @Override
+    public int networkErrorDialogDelay() {
+        return 500;
+    }
 }

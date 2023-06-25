@@ -20,7 +20,7 @@
     </modules>
 
     <properties>
-        <revision>2.1.0-rc.0.2.1-network_error_check.0.1.0</revision>
+        <revision>2.1.0-rc.0.2.1-network_error_check.0.3.0</revision>
         <app.build.properties.filename>app-build.properties</app.build.properties.filename>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>16</maven.compiler.source>
@@ -36,7 +36,7 @@
         <midorum.Win32API.version>3.2.4</midorum.Win32API.version>
         <h2database.version>2.1.210</h2database.version>
         <log4j.version>2.20.0</log4j.version>
-        <!--        <junit.platform.version>1.9.2</junit.platform.version>-->
+        <!--<junit.platform.version>1.9.2</junit.platform.version>-->
         <junit.version>5.9.2</junit.version>
         <mockito.version>4.5.1</mockito.version>
         <hamcrest.version>2.2</hamcrest.version>

@@ -83,6 +83,7 @@ public class ForegroundWindow {
         final String topmostMarker = "topmost_" + marker;
         final Rectangle windowRectangle = window.getWindowRectangle();
         win32System.listAllWindows().stream()
+                .filter(found -> found.getProcessId() != window.getProcessId())
                 .filter(w -> w.hasStyles(IWinUser.WS_VISIBLE) && w.hasExtendedStyles(IWinUser.WS_EX_TOPMOST) && areRectanglesOverlay(windowRectangle, w.getWindowRectangle()))
                 .forEach(topmost -> {
                     final String topmostId = topmost.getSystemId();

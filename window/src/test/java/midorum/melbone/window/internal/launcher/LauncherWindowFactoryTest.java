@@ -6,13 +6,16 @@ import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.Win32System;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
+import midorum.melbone.model.exception.CannotGetUserInputException;
 import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.model.settings.setting.TargetLauncherSettings;
 import midorum.melbone.model.settings.stamp.Stamps;
 import midorum.melbone.model.window.launcher.LauncherWindow;
 import midorum.melbone.window.internal.common.CommonWindowService;
+import midorum.melbone.window.internal.common.Mouse;
 import midorum.melbone.window.internal.uac.UacWindowFactory;
+import midorum.melbone.window.internal.util.ForegroundWindowMocked;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,16 +95,20 @@ class LauncherWindowFactoryTest {
     }
 
     @Test
-    void closeNetworkErrorDialog() throws InterruptedException {
+    void closeNetworkErrorDialog() throws InterruptedException, CannotGetUserInputException {
         System.out.println("closeNetworkErrorDialog");
-        final List<IWindow> networkDialogWindows = getNetworkDialogWindows();
-        when(win32System.findAllWindows(NETWORK_ERROR_DIALOG_TITLE, null, true)).thenReturn(networkDialogWindows);
+        final Mouse mouse = mock(Mouse.class);
+        final IWindow networkErrorDialogWindow = createNetworkDialogWindowMock();
+        new ForegroundWindowMocked.Builder()
+                .withCommonWindowService(commonWindowService)
+                .getForegroundWindowFor(networkErrorDialogWindow)
+                .returnsMouse(mouse);
+        when(win32System.findAllWindows(NETWORK_ERROR_DIALOG_TITLE, null, true)).thenReturn(List.of(networkErrorDialogWindow));
         final LauncherWindowFactory instance = new LauncherWindowFactory(commonWindowService, settings, uacWindowFactory, stamps);
         final Optional<LauncherWindow> maybeLauncher = instance.findWindowOrTryStartLauncher();
         assertTrue(maybeLauncher.isEmpty());
         verify(targetLauncherSettings, atLeast(1)).closeNetworkErrorDialogButtonPoint();
-        verify(mouse, atLeast(1)).move(NETWORK_ERROR_DIALOG_CONFIRM_POINT_FLOAT);
-        verify(mouse, atLeast(1)).leftClick();
+        verify(mouse, atLeast(1)).clickAtPoint(NETWORK_ERROR_DIALOG_CONFIRM_POINT_FLOAT);
     }
 
     @SuppressWarnings("unchecked")
@@ -139,10 +146,6 @@ class LauncherWindowFactoryTest {
         when(mock.getWindowRectangle()).thenReturn(new Rectangle(0, 0, LAUNCHER_WINDOW_WIDTH, LAUNCHER_WINDOW_HEIGHT));
         when(mock.getSystemId()).thenReturn("0x7f34");
         return mock;
-    }
-
-    private List<IWindow> getNetworkDialogWindows() {
-        return List.of(createNetworkDialogWindowMock());
     }
 
     private IWindow createNetworkDialogWindowMock() {
