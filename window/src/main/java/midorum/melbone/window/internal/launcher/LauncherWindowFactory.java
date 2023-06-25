@@ -51,11 +51,11 @@ public class LauncherWindowFactory {
         final String marker = Long.toString(System.currentTimeMillis());
         final Optional<LauncherWindow> maybeExistLauncherWindow = searchExistLauncherWindow();
         if (maybeExistLauncherWindow.isPresent()) return maybeExistLauncherWindow;
-        detectLauncherInitializationError(); //TODO check network accessibility before start launcher to prevent this error
+        //TODO check network accessibility before start launcher
         final Optional<LauncherWindow> maybeNewLauncherWindow = tryStartNewLauncherWindow();
         if (maybeNewLauncherWindow.isPresent()) return maybeNewLauncherWindow;
-        detectLauncherInitializationError(); //TODO check network accessibility before start launcher to prevent this error
-        detectPossibleOverlay();
+        detectLauncherNetworkError();
+        detectPossibleUac();
         commonWindowService.takeAndSaveWholeScreenShot("launcher window not found", marker);
         logger.warn("can not start launcher or find launcher window");
         return Optional.empty();
@@ -64,6 +64,7 @@ public class LauncherWindowFactory {
     private Optional<LauncherWindow> searchExistLauncherWindow() throws InterruptedException {
         final Optional<LauncherWindow> maybeExistLauncherWindow = findWindow();
         if (maybeExistLauncherWindow.isPresent()) return maybeExistLauncherWindow;
+        detectLauncherNetworkError();
         final List<IProcess> processes = win32System.listProcessesWithName(settings.targetLauncher().processName());
         if (processes.isEmpty()) return Optional.empty();
         final Delay delay = new Delay(settings.application().speedFactor());
@@ -147,30 +148,30 @@ public class LauncherWindowFactory {
                 .leftClick();
     }
 
-    private void detectLauncherInitializationError() {
-        if (detectAndCloseInitializationErrorDialog())
+    private void detectLauncherNetworkError() {
+        if (detectAndCloseNetworkErrorDialog())
             logger.warn("launcher started with error and closed");
     }
 
-    private boolean detectAndCloseInitializationErrorDialog() {
-        final Optional<InitializationErrorDialog> maybeInitializationErrorDialog = findInitializationErrorDialog();
-        maybeInitializationErrorDialog.ifPresent(initializationErrorDialog -> {
-            logger.warn("initialization error dialog found: close it");
+    private boolean detectAndCloseNetworkErrorDialog() {
+        final Optional<NetworkErrorDialog> maybeNetworkErrorDialog = findNetworkErrorDialog();
+        maybeNetworkErrorDialog.ifPresent(networkErrorDialog -> {
+            logger.warn("network error launcher dialog found: close it");
             try {
-                initializationErrorDialog.clickConfirmButton();
+                networkErrorDialog.clickConfirmButton();
             } catch (InterruptedException e) {
                 throw new ControlledInterruptedException(e);
             }
         });
-        return maybeInitializationErrorDialog.isPresent();
+        return maybeNetworkErrorDialog.isPresent();
     }
 
-    private Optional<InitializationErrorDialog> findInitializationErrorDialog() {
-        logger.info("search launcher initialization error dialog");
-        final List<IWindow> allWindows = win32System.findAllWindows(settings.targetLauncher().initializationErrorDialogTitle(), null, true);
+    private Optional<NetworkErrorDialog> findNetworkErrorDialog() {
+        logger.info("search launcher network error dialog");
+        final List<IWindow> allWindows = win32System.findAllWindows(settings.targetLauncher().networkErrorDialogTitle(), null, true);
         return allWindows.stream()
                 .filter(w -> {
-                    final Rectangle requiredDimensions = settings.targetLauncher().initializationErrorDialogDimensions();
+                    final Rectangle requiredDimensions = settings.targetLauncher().networkErrorDialogDimensions();
                     final Rectangle windowRect = w.getWindowRectangle();
                     return requiredDimensions.width() == windowRect.width()
                             && requiredDimensions.height() == windowRect.height();
@@ -179,38 +180,36 @@ public class LauncherWindowFactory {
                 //TODO после исправления включить
 //                    .filter(w -> {
 //                        try {
-//                            final boolean present = StampValidator.INSTANCE.validateStampWholeData(w, Stamps.TargetLauncher.initializationErrorDialog()).isPresent();
-//                            logger.debug("validating stamp {}", present);
-//                            return present;
+//                            return StampValidator.INSTANCE.validateStampWholeData(w, Stamps.TargetLauncher.networkErrorDialog()).isPresent();
 //                        } catch (InterruptedException e) {
 //                            throw new ControlledInterruptedException(e.getMessage(), e);
 //                        }
 //                    })
-                .map((IWindow window) -> new InitializationErrorDialog(window, settings))
+                .map((IWindow window) -> new NetworkErrorDialog(window, settings))
                 .findFirst();
     }
 
-    private void detectPossibleOverlay() {
+    private void detectPossibleUac() {
         if (uacWindowFactory.findUacOverlayWindow().isPresent())
             throw new CriticalErrorException("UAC window found. Can not confirm UAC request programmatically.");
     }
 
-    public static class InitializationErrorDialog {
+    public static class NetworkErrorDialog {
 
         private final IWindow window;
         private final Settings settings;
         private final Log log;
 
 
-        public InitializationErrorDialog(final IWindow window, final Settings settings) {
+        public NetworkErrorDialog(final IWindow window, final Settings settings) {
             this.window = window;
             this.settings = settings;
             this.log = new Log(StaticResources.LOGGER, window.getSystemId());
         }
 
         public void clickConfirmButton() throws InterruptedException {
-            log.info("close initialization error dialog");
-            getMouse().move(settings.targetLauncher().closeInitializationErrorDialogButtonPoint()).leftClick();
+            log.info("close network error dialog");
+            getMouse().move(settings.targetLauncher().closeNetworkErrorDialogButtonPoint()).leftClick();
         }
 
         private IMouse getMouse() {

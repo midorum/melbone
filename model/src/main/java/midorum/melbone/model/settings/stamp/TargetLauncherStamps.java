@@ -20,7 +20,7 @@ public interface TargetLauncherStamps {
 
     Stamp errorExclamationSign();
 
-    Stamp initializationErrorDialog();
+    Stamp networkErrorDialog();
 
     Stamp maintenanceNotice();
 

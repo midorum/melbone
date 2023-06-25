@@ -64,14 +64,14 @@ class TargetLauncherStampsImplTest {
     }
 
     @Test
-    void initializationErrorDialog() {
+    void networkErrorDialog() {
         //storing stamp
-        settingStorage.write(StampKeys.TargetLauncher.initializationErrorDialog,
-                createStamp(StampKeys.TargetLauncher.initializationErrorDialog));
+        settingStorage.write(StampKeys.TargetLauncher.networkErrorDialog,
+                createStamp(StampKeys.TargetLauncher.networkErrorDialog));
         //reading stamp
-        final Stamp stamp = targetLauncherStamps.initializationErrorDialog();
+        final Stamp stamp = targetLauncherStamps.networkErrorDialog();
         assertNotNull(stamp);
-        assertEquals(StampKeys.TargetLauncher.initializationErrorDialog, stamp.key());
+        assertEquals(StampKeys.TargetLauncher.networkErrorDialog, stamp.key());
     }
 
     @Test

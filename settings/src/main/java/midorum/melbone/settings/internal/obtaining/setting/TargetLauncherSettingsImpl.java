@@ -19,18 +19,18 @@ public class TargetLauncherSettingsImpl extends SettingValueExtractor implements
     }
 
     @Override
-    public Rectangle initializationErrorDialogDimensions() {
-        return (Rectangle) getValue(SettingKeys.TargetLauncher.initializationErrorDialogDimensions);
+    public String networkErrorDialogTitle() {
+        return (String) getValue(SettingKeys.TargetLauncher.networkErrorDialogTitle);
     }
 
     @Override
-    public String initializationErrorDialogTitle() {
-        return (String) getValue(SettingKeys.TargetLauncher.initializationErrorDialogTitle);
+    public Rectangle networkErrorDialogDimensions() {
+        return (Rectangle) getValue(SettingKeys.TargetLauncher.networkErrorDialogDimensions);
     }
 
     @Override
-    public PointFloat closeInitializationErrorDialogButtonPoint() {
-        return (PointFloat) getValue(SettingKeys.TargetLauncher.closeInitializationErrorDialogButtonPoint);
+    public PointFloat closeNetworkErrorDialogButtonPoint() {
+        return (PointFloat) getValue(SettingKeys.TargetLauncher.closeNetworkErrorDialogButtonPoint);
     }
 
     @Override
@@ -79,13 +79,6 @@ public class TargetLauncherSettingsImpl extends SettingValueExtractor implements
     }
 
     @Override
-    public int attemptToFindStartButton() {
-        //FIXME такая большая задержка нужна для запуска после обнов, когда ждем скачивания и установки патча;
-        // а еще бывает не дожидается кнопки когда система тупит и мало свободной памяти
-        return 300;
-    }
-
-    @Override
     public int searchStartButtonTimeout() {
         //FIXME такая большая задержка нужна для запуска после обнов, когда ждем скачивания и установки патча;
         // а еще бывает не дожидается кнопки когда система тупит и мало свободной памяти
@@ -95,11 +88,6 @@ public class TargetLauncherSettingsImpl extends SettingValueExtractor implements
     @Override
     public int searchStartButtonDelay() {
         return 1_000;
-    }
-
-    @Override
-    public int attemptsToWindowRendering() {
-        return 60;
     }
 
     @Override
