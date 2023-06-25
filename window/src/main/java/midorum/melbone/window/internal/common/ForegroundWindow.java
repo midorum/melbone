@@ -83,6 +83,7 @@ public class ForegroundWindow {
         final String topmostMarker = "topmost_" + marker;
         final Rectangle windowRectangle = window.getWindowRectangle();
         win32System.listAllWindows().stream()
+                .filter(found -> found.getProcessId() != window.getProcessId())
                 .filter(w -> w.hasStyles(IWinUser.WS_VISIBLE) && w.hasExtendedStyles(IWinUser.WS_EX_TOPMOST) && areRectanglesOverlay(windowRectangle, w.getWindowRectangle()))
                 .forEach(topmost -> {
                     final String topmostId = topmost.getSystemId();
@@ -278,8 +279,7 @@ public class ForegroundWindow {
                 final String stampsString = stringifyStamp(stampChecked);
                 final Rectangle windowRectShouldBe = stampChecked.windowRect();
                 final Supplier<Optional<Stamp>> stampSupplier = () -> stampValidator.validateStamp(stampChecked);
-                final VoidAction stampsMismatchingLogger = () -> stampValidator.logStampsMismatching(logMarker, stampChecked);
-                return waitForStampDisappearing(stampsString, windowRectShouldBe, stampSupplier, stampsMismatchingLogger);
+                return waitForStampDisappearing(stampsString, windowRectShouldBe, stampSupplier);
             }
 
             private Optional<Stamp> waitForStamp(final String stampsString, final Rectangle windowRectShouldBe, final Supplier<Optional<Stamp>> stampSupplier, final VoidAction stampsMismatchingLogger) throws InterruptedException, CannotGetUserInputException {
@@ -321,7 +321,7 @@ public class ForegroundWindow {
                 return foundStamp;
             }
 
-            private boolean waitForStampDisappearing(final String stampsString, final Rectangle windowRectShouldBe, final Supplier<Optional<Stamp>> stampSupplier, final VoidAction stampsMismatchingLogger) throws InterruptedException, CannotGetUserInputException {
+            private boolean waitForStampDisappearing(final String stampsString, final Rectangle windowRectShouldBe, final Supplier<Optional<Stamp>> stampSupplier) throws InterruptedException, CannotGetUserInputException {
                 logger.debug("[{}] wait for stamp(s) {}", windowId, stampsString);
                 final IKeyboard keyboard = window.getKeyboard();
                 final boolean result = new Waiting()

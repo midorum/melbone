@@ -146,6 +146,7 @@
                         <id>read-project-properties</id>
                         <inherited>false</inherited>
                         <configuration>
+                            <!--suppress MavenModelInspection -->
                             <files>
                                 <file>${project.parent.basedir}/${app.build.properties.filename}</file>
                             </files>

@@ -12,14 +12,11 @@ public interface TargetLauncherSettings {
 
     PointInt desktopShortcutLocationPoint();
 
-    String initializationErrorDialogTitle();
+    String networkErrorDialogTitle();
 
-    Rectangle initializationErrorDialogDimensions();
+    Rectangle networkErrorDialogDimensions();
 
-    PointFloat closeInitializationErrorDialogButtonPoint();
-
-    @Deprecated
-    int attemptToFindStartButton();
+    PointFloat closeNetworkErrorDialogButtonPoint();
 
     int searchStartButtonTimeout();
 
@@ -38,10 +35,6 @@ public interface TargetLauncherSettings {
     PointFloat loginButtonPoint();
 
     PointFloat startButtonPoint();
-
-    @Deprecated
-    //FIXME >>> remove
-    int attemptsToWindowRendering();
 
     int windowRenderingTimeout();
 
@@ -74,4 +67,8 @@ public interface TargetLauncherSettings {
     int confirmQuitDialogRenderingDelay();
 
     PointFloat closeQuitConfirmPopupButtonPoint();
+
+    int networkErrorDialogTimeout();
+
+    int networkErrorDialogDelay();
 }

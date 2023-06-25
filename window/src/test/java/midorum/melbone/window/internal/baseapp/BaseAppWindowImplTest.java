@@ -19,6 +19,7 @@ import midorum.melbone.model.settings.setting.TargetBaseAppSettings;
 import midorum.melbone.window.internal.common.CommonWindowService;
 import midorum.melbone.window.internal.common.ForegroundWindow;
 import midorum.melbone.window.internal.common.Mouse;
+import midorum.melbone.window.internal.util.ForegroundWindowMocked;
 import midorum.melbone.window.internal.util.MockitoUtil;
 import org.junit.jupiter.api.*;
 import org.mockito.InOrder;
@@ -52,8 +53,6 @@ class BaseAppWindowImplTest {
     private final IWindow window = mock(IWindow.class);
     private final IMouse mouse = mock(IMouse.class);
     private final IProcess process = mock(IProcess.class);
-    private final CommonWindowService.ForegroundWindowSupplier foregroundWindowSupplier = mock(CommonWindowService.ForegroundWindowSupplier.class);
-    private final ForegroundWindow foregroundWindow = mock(ForegroundWindow.class);
     //points
     private final PointFloat manaIndicatorPoint = new PointFloat(-1f, -1f);
     private final PointFloat menuExitOptionPoint = new PointFloat(-1f, -1f);
@@ -112,17 +111,6 @@ class BaseAppWindowImplTest {
     public void beforeEach() throws InterruptedException, CannotGetUserInputException {
         //system
         when(commonWindowService.getUID(window)).thenReturn(RESOURCE_ID);
-        //foreground window
-        when(commonWindowService.bringForeground(window)).thenReturn(foregroundWindowSupplier);
-        doAnswer(invocation -> {
-            final CommonWindowService.ForegroundWindowSupplier.ForegroundWindowConsumer consumer = invocation.getArgument(0);
-            consumer.accept(foregroundWindow);
-            return null;
-        }).when(foregroundWindowSupplier).andDo(any(CommonWindowService.ForegroundWindowSupplier.ForegroundWindowConsumer.class));
-        when(foregroundWindowSupplier.andDo(any(CommonWindowService.ForegroundWindowSupplier.ForegroundWindowFunction.class))).thenAnswer(invocation -> {
-            final CommonWindowService.ForegroundWindowSupplier.ForegroundWindowFunction<ForegroundWindow> function = invocation.getArgument(0);
-            return function.apply(foregroundWindow);
-        });
         //settings
         when(settings.application()).thenReturn(applicationSettings);
         when(settings.targetBaseAppSettings()).thenReturn(targetBaseAppSettings);
@@ -290,8 +278,8 @@ class BaseAppWindowImplTest {
                 .thenReturn(true) // confirm dialog
                 .thenReturn(false); // window closed
         windowIsHealthy();
-        windowStateIs(found(disconnectedPopupStamp));
-        windowReturnsMouse(mouse);
+        baseWindowMocked().stateIs(found(disconnectedPopupStamp))
+                .returnsMouse(mouse);
         //when
         getBaseAppWindowInstance().restoreAndDo(restoredBaseAppWindow -> {/*any operation*/});
         //then
@@ -312,8 +300,8 @@ class BaseAppWindowImplTest {
                 .thenReturn(true) // window hasn't closed yet
                 .thenReturn(false); // window closed
         windowIsHealthy();
-        windowStatesAre(notFound(disconnectedPopupStamp), notFound(menuExitOptionStamp));
-        windowReturnsMouse(mouse);
+        baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), notFound(menuExitOptionStamp))
+                .returnsMouse(mouse);
         getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::close);
         //then
         verifyWindowCloseButtonClicked();
@@ -331,17 +319,13 @@ class BaseAppWindowImplTest {
                 .thenReturn(true) // waiting window disappearing
                 .thenReturn(false); // window closed
         windowIsHealthy();
-        windowStatesAre(notFound(disconnectedPopupStamp), found(menuExitOptionStamp));
-        windowReturnsMouse(mouse);
+        baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), found(menuExitOptionStamp))
+                .returnsMouse(mouse);
         getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::close);
         //then
         verifyMenuCloseItemClicked(mouse);
         verifyWindowDisappeared();
         verifyDidNotAttemptsTerminateWindowProcess();
-    }
-
-    private void windowReturnsMouse(final Mouse mouse) throws InterruptedException, CannotGetUserInputException {
-        when(foregroundWindow.getMouse()).thenReturn(mouse);
     }
 
     @Test
@@ -351,12 +335,12 @@ class BaseAppWindowImplTest {
         //when
         windowIsExists();
         windowIsHealthy();
-        windowStatesAre(notFound(disconnectedPopupStamp),
+        baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp),
                 foundFrom(stampsToCheckServerPageRendering, optionsButtonBaseScaleStamp),
                 notFound(disconnectedPopupStamp),
                 foundFrom(stampsToCheckServerLineRendering, serverLineUnselectedStamp),
-                notFound(disconnectedPopupStamp));
-        windowReturnsMouse(mouse);
+                notFound(disconnectedPopupStamp))
+                .returnsMouse(mouse);
         getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::selectServer);
         //then
         verifyServerWasSelectedAndConnected(mouse);
@@ -369,8 +353,8 @@ class BaseAppWindowImplTest {
         //when
         windowIsExists();
         windowIsHealthy();
-        windowStatesAre(notFound(disconnectedPopupStamp), found(startButtonStamp), notFound(disconnectedPopupStamp));
-        windowReturnsMouse(mouse);
+        baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), found(startButtonStamp), notFound(disconnectedPopupStamp))
+                .returnsMouse(mouse);
         getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::chooseCharacter);
         //then
         verifyGameStarted(mouse);
@@ -388,8 +372,8 @@ class BaseAppWindowImplTest {
                 .thenReturn(true) // window hasn't closed yet
                 .thenReturn(false); // window closed
         windowIsHealthy();
-        windowStatesAre(notFound(disconnectedPopupStamp), notFound(accountInfoPopupCaptionStamp));
-        windowReturnsMouse(mouse);
+        baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), notFound(accountInfoPopupCaptionStamp))
+                .returnsMouse(mouse);
         getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::checkInGameWindowRendered);
         //then
         verifyWindowCloseButtonClicked();
@@ -404,8 +388,8 @@ class BaseAppWindowImplTest {
         //when
         windowIsExists();
         windowIsHealthy();
-        windowStatesAre(notFound(disconnectedPopupStamp), found(accountInfoPopupCaptionStamp));
-        windowReturnsMouse(mouse);
+        baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), found(accountInfoPopupCaptionStamp))
+                .returnsMouse(mouse);
         getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::checkInGameWindowRendered);
         //then
         verifyWindowHasNotDisappeared();
@@ -424,8 +408,8 @@ class BaseAppWindowImplTest {
                 .thenReturn(true) // window hasn't closed yet
                 .thenReturn(false); // window closed
         windowIsHealthy();
-        windowStatesAre(notFound(disconnectedPopupStamp), notFound(accountInfoPopupCaptionStamp));
-        windowReturnsMouse(mouse);
+        baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), notFound(accountInfoPopupCaptionStamp))
+                .returnsMouse(mouse);
         getBaseAppWindowInstance().doInGameWindow(InGameBaseAppWindow::checkInLoginTracker);
         //then
         verifyWindowCloseButtonClicked();
@@ -439,8 +423,8 @@ class BaseAppWindowImplTest {
         //when
         windowIsExists();
         windowIsHealthy();
-        windowStatesAre(notFound(disconnectedPopupStamp), found(accountInfoPopupCaptionStamp), found(dailyTrackerPopupCaptionStamp));
-        windowReturnsMouse(mouse);
+        baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), found(accountInfoPopupCaptionStamp), found(dailyTrackerPopupCaptionStamp))
+                .returnsMouse(mouse);
         getBaseAppWindowInstance().doInGameWindow(InGameBaseAppWindow::checkInLoginTracker);
         //then
         verifyLoginTrackerWasCheckedIn(mouse);
@@ -483,24 +467,21 @@ class BaseAppWindowImplTest {
         windowIsExists();
         windowIsHealthy();
         setActionsCount(actionsCount);
-        windowReturnsMouse(mouse);
-        windowStatesAre(notFound(disconnectedPopupStamp), found(accountInfoPopupCaptionStamp));
+        baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), found(accountInfoPopupCaptionStamp))
+                .returnsMouse(mouse);
         getBaseAppWindowInstance().doInGameWindow(InGameBaseAppWindow::checkInAction);
         //then
         verifyActionWasCheckedIn(mouse, actionsCount);
     }
 
+    private ForegroundWindowMocked baseWindowMocked() throws InterruptedException, CannotGetUserInputException {
+        return new ForegroundWindowMocked.Builder()
+                .withCommonWindowService(commonWindowService)
+                .getForegroundWindowFor(window);
+    }
+
     private Mouse getMouseMock() {
         return mock(Mouse.class);
-    }
-
-    private void windowStateIs(final ForegroundWindow.StateWaiting state) {
-        when(foregroundWindow.waiting())
-                .thenReturn(state);
-    }
-
-    private void windowStatesAre(final ForegroundWindow.StateWaiting... states) {
-        MockitoUtil.INSTANCE.mockReturnVararg(foregroundWindow.waiting(), List.of(states));
     }
 
     private void accountBoundWithWindow() {
@@ -521,8 +502,8 @@ class BaseAppWindowImplTest {
 
     private void windowIsCorrupted() throws InterruptedException, CannotGetUserInputException {
         when(window.isVisible()).thenReturn(false);
-        when(foregroundWindow.getMouse()).thenThrow(new CannotGetUserInputException());
-        windowStateIs(throwFor(disconnectedPopupStamp, new CannotGetUserInputException()));
+        baseWindowMocked().stateIs(throwFor(disconnectedPopupStamp, new CannotGetUserInputException()))
+                        .throwsWhenAskedMouse(new CannotGetUserInputException());
     }
 
     private void windowIsHealthy() {

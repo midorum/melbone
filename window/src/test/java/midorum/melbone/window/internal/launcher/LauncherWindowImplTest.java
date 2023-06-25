@@ -17,7 +17,7 @@ import midorum.melbone.model.settings.setting.TargetLauncherSettings;
 import midorum.melbone.window.internal.common.CommonWindowService;
 import midorum.melbone.window.internal.common.ForegroundWindow;
 import midorum.melbone.window.internal.common.Mouse;
-import midorum.melbone.window.internal.util.MockitoUtil;
+import midorum.melbone.window.internal.util.ForegroundWindowMocked;
 import org.junit.jupiter.api.*;
 import org.mockito.invocation.InvocationOnMock;
 
@@ -43,7 +43,6 @@ class LauncherWindowImplTest {
     private final TargetLauncherSettings targetLauncherSettings = mock(TargetLauncherSettings.class);
     private final IWindow window = mock(IWindow.class);
     private final IMouse mouse = mock(IMouse.class);
-    private final IKeyboard keyboard = mock(IKeyboard.class);
     private final IProcess process = mock(IProcess.class);
     private final Account account = mock(Account.class);
     //stamps
@@ -104,8 +103,6 @@ class LauncherWindowImplTest {
         when(window.getWindowMouse(SPEED_FACTOR)).thenReturn(mouse);
         when(mouse.move(any(PointInt.class))).thenReturn(mouse);
         when(mouse.move(any(PointFloat.class))).thenReturn(mouse);
-        when(window.getKeyboard()).thenReturn(keyboard);
-        when(keyboard.enterHotKey(any(HotKey.class))).thenReturn(keyboard);
         when(window.getProcess()).thenReturn(process);
         //launcher normal metrics
         when(window.isVisible()).thenReturn(true);
@@ -175,9 +172,12 @@ class LauncherWindowImplTest {
     void loginSuccessfully() throws InterruptedException, CannotGetUserInputException {
         System.out.println("loginSuccessfully");
         final Mouse launcherMouse = getMouseMock();
+        final IKeyboard keyboard = getKeyboardMock();
         //given
         windowIsAlive();
-        launcherWindowMocked().stateIs(foundFrom(stampsToCheckLauncherRendering, loginButtonNoErrorInactiveStamp)).returnsMouse(launcherMouse);
+        launcherWindowMocked().stateIs(foundFrom(stampsToCheckLauncherRendering, loginButtonNoErrorInactiveStamp))
+                .returnsMouse(launcherMouse)
+                .returnsKeyboard(keyboard);
         //when
         getLauncherWindowInstance().restoreAndDo(restoredLauncherWindow -> restoredLauncherWindow.login(account));
         //then
@@ -249,16 +249,24 @@ class LauncherWindowImplTest {
         return mock(Mouse.class);
     }
 
+    private IKeyboard getKeyboardMock() {
+        final IKeyboard keyboard = mock(IKeyboard.class);
+        when(keyboard.enterHotKey(any(HotKey.class))).thenReturn(keyboard);
+        return keyboard;
+    }
+
     private ForegroundWindowMocked launcherWindowMocked() throws InterruptedException, CannotGetUserInputException {
-        return getForegroundWindowFor(window);
+        return new ForegroundWindowMocked.Builder()
+                .withCommonWindowService(commonWindowService)
+                .getForegroundWindowFor(window);
     }
 
     private ForegroundWindowMocked confirmCloseDialogWindowMocked() throws InterruptedException, CannotGetUserInputException {
         final IWindow confirmDialogWindowMock = getConfirmDialogWindowMock();
-        final ForegroundWindowMocked foregroundWindow = getForegroundWindowFor(confirmDialogWindowMock);
-        final List<IWindow> foundConfirmDialogWindow = List.of(confirmDialogWindowMock);
-        when(win32System.findAllWindows(CONFIRM_DIALOG_TITLE, null, true)).thenReturn(foundConfirmDialogWindow);
-        return foregroundWindow;
+        when(win32System.findAllWindows(CONFIRM_DIALOG_TITLE, null, true)).thenReturn(List.of(confirmDialogWindowMock));
+        return new ForegroundWindowMocked.Builder()
+                .withCommonWindowService(commonWindowService)
+                .getForegroundWindowFor(confirmDialogWindowMock);
     }
 
     private IWindow getConfirmDialogWindowMock() {
@@ -266,24 +274,6 @@ class LauncherWindowImplTest {
         when(mock.getSystemId()).thenReturn("0xa8d5");
         when(mock.getWindowRectangle()).thenReturn(new Rectangle(0, 0, CONFIRM_QUIT_DIALOG_WINDOW_WIDTH, CONFIRM_QUIT_DIALOG_WINDOW_HEIGHT));
         return mock;
-    }
-
-    @SuppressWarnings("unchecked")
-    private ForegroundWindowMocked getForegroundWindowFor(final IWindow window) throws CannotGetUserInputException, InterruptedException {
-        final ForegroundWindow foregroundWindow = mock(ForegroundWindow.class);
-        when(foregroundWindow.getKeyboard()).thenReturn(keyboard);
-        final CommonWindowService.ForegroundWindowSupplier foregroundWindowSupplier = mock(CommonWindowService.ForegroundWindowSupplier.class);
-        when(commonWindowService.bringForeground(window)).thenReturn(foregroundWindowSupplier);
-        doAnswer(invocation -> {
-            final CommonWindowService.ForegroundWindowSupplier.ForegroundWindowConsumer consumer = invocation.getArgument(0);
-            consumer.accept(foregroundWindow);
-            return null;
-        }).when(foregroundWindowSupplier).andDo(any(CommonWindowService.ForegroundWindowSupplier.ForegroundWindowConsumer.class));
-        when(foregroundWindowSupplier.andDo(any(CommonWindowService.ForegroundWindowSupplier.ForegroundWindowFunction.class))).thenAnswer(invocation -> {
-            final CommonWindowService.ForegroundWindowSupplier.ForegroundWindowFunction<ForegroundWindow> function = invocation.getArgument(0);
-            return function.apply(foregroundWindow);
-        });
-        return new ForegroundWindowMocked(foregroundWindow);
     }
 
     private ForegroundWindow.StateWaiting getStateWaitingMock() {
@@ -337,30 +327,5 @@ class LauncherWindowImplTest {
                 .collect(Collectors.toSet());
         assertTrue(passedStamps.containsAll(stampsToCheck));
         assertTrue(stampsToCheck.containsAll(passedStamps));
-    }
-
-    @SuppressWarnings("ClassCanBeRecord")
-    private static class ForegroundWindowMocked {
-
-        private final ForegroundWindow foregroundWindow;
-
-        ForegroundWindowMocked(final ForegroundWindow foregroundWindow) {
-            this.foregroundWindow = foregroundWindow;
-        }
-
-        private ForegroundWindowMocked returnsMouse(final Mouse mouse) throws InterruptedException, CannotGetUserInputException {
-            when(foregroundWindow.getMouse()).thenReturn(mouse);
-            return this;
-        }
-
-        private ForegroundWindowMocked stateIs(final ForegroundWindow.StateWaiting state) {
-            when(foregroundWindow.waiting()).thenReturn(state);
-            return this;
-        }
-
-        private ForegroundWindowMocked windowStatesAre(final ForegroundWindow.StateWaiting... states) {
-            MockitoUtil.INSTANCE.mockReturnVararg(foregroundWindow.waiting(), List.of(states));
-            return this;
-        }
     }
 }
