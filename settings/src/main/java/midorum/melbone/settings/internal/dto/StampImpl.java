@@ -81,19 +81,22 @@ public class StampImpl implements Stamp, Serializable {
             throw new CriticalErrorException("Could not find " + enumClassName + " in StampKeys");
         final Class<?> enumClass = maybeEnumClass.get();
         if (enumClass.isAssignableFrom(StampKeys.TargetLauncher.class)) {
-            @SuppressWarnings("unchecked") final Class<StampKeys.TargetLauncher> targetLauncherClass = (Class<StampKeys.TargetLauncher>) enumClass;
-            final StampKeys.TargetLauncher[] enumConstants = targetLauncherClass.getEnumConstants();
-            final Optional<StampKeys.TargetLauncher> maybeEnumConstant = Arrays.stream(enumConstants).filter(targetLauncher -> targetLauncher.name().equals(enumValue)).findFirst();
-            this.key = maybeEnumConstant.map(StampKey.class::cast).orElse(StampKeys.Noop.noop);
+            this.key = extractKeyForType(StampKeys.TargetLauncher.class, enumValue);
         } else if (enumClass.isAssignableFrom(StampKeys.TargetBaseApp.class)) {
-            @SuppressWarnings("unchecked") final Class<StampKeys.TargetBaseApp> targetBaseAppClass = (Class<StampKeys.TargetBaseApp>) enumClass;
-            final StampKeys.TargetBaseApp[] enumConstants = targetBaseAppClass.getEnumConstants();
-            final Optional<StampKeys.TargetBaseApp> maybeEnumConstant = Arrays.stream(enumConstants).filter(targetBaseApp -> targetBaseApp.name().equals(enumValue)).findFirst();
-            this.key = maybeEnumConstant.map(StampKey.class::cast).orElse(StampKeys.Noop.noop);
+            this.key = extractKeyForType(StampKeys.TargetBaseApp.class, enumValue);
+        } else if (enumClass.isAssignableFrom(StampKeys.Noop.class)) {
+            this.key = extractKeyForType(StampKeys.Noop.class, enumValue);
         } else {
             throw new CriticalErrorException("Could not find " + enumClassName + "." + enumValue + " in StampKeys");
         }
+    }
 
+    private <T extends StampKey> StampKey extractKeyForType(final Class<T> type, final String enumValue) {
+        return Arrays.stream(type.getEnumConstants())
+                .filter(constant -> constant.name().equals(enumValue))
+                .findFirst()
+                .map(StampKey.class::cast)
+                .orElse(StampKeys.Noop.noop);
     }
 
     @Override
