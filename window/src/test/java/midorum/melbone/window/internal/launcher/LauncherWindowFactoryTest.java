@@ -6,13 +6,16 @@ import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.Win32System;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
+import midorum.melbone.model.exception.CannotGetUserInputException;
 import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.model.settings.setting.TargetLauncherSettings;
 import midorum.melbone.model.settings.stamp.Stamps;
 import midorum.melbone.model.window.launcher.LauncherWindow;
 import midorum.melbone.window.internal.common.CommonWindowService;
+import midorum.melbone.window.internal.common.Mouse;
 import midorum.melbone.window.internal.uac.UacWindowFactory;
+import midorum.melbone.window.internal.util.ForegroundWindowMocked;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,12 +36,12 @@ class LauncherWindowFactoryTest {
     private static final int DESKTOP_ICON_LOCATION_X = 35;
     private static final int DESKTOP_ICON_LOCATION_Y = 25;
     private static final PointInt DESKTOP_ICON_LOCATION_POINT_INT = new PointInt(DESKTOP_ICON_LOCATION_X, DESKTOP_ICON_LOCATION_Y);
-    private static final String INITIALIZATION_ERROR_DIALOG_TITLE = "LauncherTitle";
-    private static final int INITIALIZATION_ERROR_DIALOG_WIDTH = 75;
-    private static final int INITIALIZATION_ERROR_DIALOG_HEIGHT = 55;
-    private static final float INITIALIZATION_ERROR_DIALOG_CONFIRM_X = 0.5F;
-    private static final float INITIALIZATION_ERROR_DIALOG_CONFIRM_Y = 0.75F;
-    private final PointFloat INITIALIZATION_ERROR_DIALOG_CONFIRM_POINT_FLOAT = new PointFloat(INITIALIZATION_ERROR_DIALOG_CONFIRM_X, INITIALIZATION_ERROR_DIALOG_CONFIRM_Y);
+    private static final String NETWORK_ERROR_DIALOG_TITLE = "LauncherTitle";
+    private static final int NETWORK_ERROR_DIALOG_WIDTH = 75;
+    private static final int NETWORK_ERROR_DIALOG_HEIGHT = 55;
+    private static final float NETWORK_ERROR_DIALOG_CONFIRM_X = 0.5F;
+    private static final float NETWORK_ERROR_DIALOG_CONFIRM_Y = 0.75F;
+    private final PointFloat NETWORK_ERROR_DIALOG_CONFIRM_POINT_FLOAT = new PointFloat(NETWORK_ERROR_DIALOG_CONFIRM_X, NETWORK_ERROR_DIALOG_CONFIRM_Y);
 
     private final CommonWindowService commonWindowService = mock(CommonWindowService.class);
     private final Win32System win32System = mock(Win32System.class);
@@ -72,10 +75,10 @@ class LauncherWindowFactoryTest {
         // launcher window
         when(settings.targetLauncher().windowTitle()).thenReturn(LAUNCHER_WINDOW_TITLE);
         when(targetLauncherSettings.windowDimensions()).thenReturn(new Rectangle(0, 0, LAUNCHER_WINDOW_WIDTH, LAUNCHER_WINDOW_HEIGHT));
-        // initialization dialog window
-        when(settings.targetLauncher().initializationErrorDialogTitle()).thenReturn(INITIALIZATION_ERROR_DIALOG_TITLE);
-        when(targetLauncherSettings.initializationErrorDialogDimensions()).thenReturn(new Rectangle(0, 0, INITIALIZATION_ERROR_DIALOG_WIDTH, INITIALIZATION_ERROR_DIALOG_HEIGHT));
-        when(targetLauncherSettings.closeInitializationErrorDialogButtonPoint()).thenReturn(INITIALIZATION_ERROR_DIALOG_CONFIRM_POINT_FLOAT);
+        // network dialog window
+        when(settings.targetLauncher().networkErrorDialogTitle()).thenReturn(NETWORK_ERROR_DIALOG_TITLE);
+        when(targetLauncherSettings.networkErrorDialogDimensions()).thenReturn(new Rectangle(0, 0, NETWORK_ERROR_DIALOG_WIDTH, NETWORK_ERROR_DIALOG_HEIGHT));
+        when(targetLauncherSettings.closeNetworkErrorDialogButtonPoint()).thenReturn(NETWORK_ERROR_DIALOG_CONFIRM_POINT_FLOAT);
     }
 
     @AfterEach
@@ -92,16 +95,20 @@ class LauncherWindowFactoryTest {
     }
 
     @Test
-    void closeInitializationErrorDialog() throws InterruptedException {
-        System.out.println("closeInitializationErrorDialog");
-        final List<IWindow> initializationDialogWindows = getInitializationDialogWindows();
-        when(win32System.findAllWindows(INITIALIZATION_ERROR_DIALOG_TITLE, null, true)).thenReturn(initializationDialogWindows);
+    void closeNetworkErrorDialog() throws InterruptedException, CannotGetUserInputException {
+        System.out.println("closeNetworkErrorDialog");
+        final Mouse mouse = mock(Mouse.class);
+        final IWindow networkErrorDialogWindow = createNetworkDialogWindowMock();
+        new ForegroundWindowMocked.Builder()
+                .withCommonWindowService(commonWindowService)
+                .getForegroundWindowFor(networkErrorDialogWindow)
+                .returnsMouse(mouse);
+        when(win32System.findAllWindows(NETWORK_ERROR_DIALOG_TITLE, null, true)).thenReturn(List.of(networkErrorDialogWindow));
         final LauncherWindowFactory instance = new LauncherWindowFactory(commonWindowService, settings, uacWindowFactory, stamps);
         final Optional<LauncherWindow> maybeLauncher = instance.findWindowOrTryStartLauncher();
         assertTrue(maybeLauncher.isEmpty());
-        verify(targetLauncherSettings, atLeast(1)).closeInitializationErrorDialogButtonPoint();
-        verify(mouse, atLeast(1)).move(INITIALIZATION_ERROR_DIALOG_CONFIRM_POINT_FLOAT);
-        verify(mouse, atLeast(1)).leftClick();
+        verify(targetLauncherSettings, atLeast(1)).closeNetworkErrorDialogButtonPoint();
+        verify(mouse, atLeast(1)).clickAtPoint(NETWORK_ERROR_DIALOG_CONFIRM_POINT_FLOAT);
     }
 
     @SuppressWarnings("unchecked")
@@ -141,13 +148,9 @@ class LauncherWindowFactoryTest {
         return mock;
     }
 
-    private List<IWindow> getInitializationDialogWindows() {
-        return List.of(createInitializationDialogWindowMock());
-    }
-
-    private IWindow createInitializationDialogWindowMock() {
+    private IWindow createNetworkDialogWindowMock() {
         final IWindow mock = mock(IWindow.class);
-        when(mock.getWindowRectangle()).thenReturn(new Rectangle(0, 0, INITIALIZATION_ERROR_DIALOG_WIDTH, INITIALIZATION_ERROR_DIALOG_HEIGHT));
+        when(mock.getWindowRectangle()).thenReturn(new Rectangle(0, 0, NETWORK_ERROR_DIALOG_WIDTH, NETWORK_ERROR_DIALOG_HEIGHT));
         when(mock.getSystemId()).thenReturn("0xff06");
         when(mock.getWindowMouse(SPEED_FACTOR)).thenReturn(mouse);
         return mock;

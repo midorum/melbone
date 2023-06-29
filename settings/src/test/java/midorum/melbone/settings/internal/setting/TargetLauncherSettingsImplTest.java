@@ -95,10 +95,10 @@ class TargetLauncherSettingsImplTest {
     }
 
     @Test
-    void initializationErrorDialogTitle() {
+    void networkErrorDialogTitle() {
         when(window.getText()).thenReturn(Optional.of("window title"));
-        new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.initializationErrorDialogTitle)
-                .settingGetter(targetLauncherSettings::initializationErrorDialogTitle)
+        new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.networkErrorDialogTitle)
+                .settingGetter(targetLauncherSettings::networkErrorDialogTitle)
                 .normalValues("string", "")
                 .invalidValues()
                 .wrongTypeValues()
@@ -108,10 +108,10 @@ class TargetLauncherSettingsImplTest {
     }
 
     @Test
-    void initializationErrorDialogDimensions() {
+    void networkErrorDialogDimensions() {
         when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 3, 4));
-        new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.initializationErrorDialogDimensions)
-                .settingGetter(targetLauncherSettings::initializationErrorDialogDimensions)
+        new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.networkErrorDialogDimensions)
+                .settingGetter(targetLauncherSettings::networkErrorDialogDimensions)
                 .normalValues(new Rectangle(0, 0, 0, 0), new Rectangle(0, 0, 100, 50))
                 .invalidValues(new Rectangle(-1, -1, -1, -1), new Rectangle(0, 0, -1, -1))
                 .wrongTypeValues("string")
@@ -160,10 +160,10 @@ class TargetLauncherSettingsImplTest {
     }
 
     @Test
-    void closeInitializationErrorDialogButtonPoint() {
+    void closeNetworkErrorDialogButtonPoint() {
         when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 4, 5));
-        new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.closeInitializationErrorDialogButtonPoint)
-                .settingGetter(targetLauncherSettings::closeInitializationErrorDialogButtonPoint)
+        new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.closeNetworkErrorDialogButtonPoint)
+                .settingGetter(targetLauncherSettings::closeNetworkErrorDialogButtonPoint)
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
                 .invalidValues(new PointFloat(-.7f, -.3f), new PointFloat(1.1f, 1.7f))
                 .wrongTypeValues("string")
