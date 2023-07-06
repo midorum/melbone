@@ -1,5 +1,6 @@
 package midorum.melbone.window.internal.uac;
 
+import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.Win32System;
@@ -71,16 +72,16 @@ class UacWindowFactoryTest {
 
     private IWindow getUacWindowMock() {
         final IWindow mock = mock(IWindow.class);
-        when(mock.getClassName()).thenReturn(Optional.of(UAC_CLASSNAME));
-        when(mock.getWindowRectangle()).thenReturn(new Rectangle(0, 0, UAC_WINDOW_WIDTH, UAC_WINDOW_HEIGHT));
+        when(mock.getClassName()).thenReturn(Either.resultOf(() -> UAC_CLASSNAME));
+        when(mock.getWindowRectangle()).thenReturn(Either.resultOf(() -> new Rectangle(0, 0, UAC_WINDOW_WIDTH, UAC_WINDOW_HEIGHT)));
         when(mock.getSystemId()).thenReturn("0x7f34");
         return mock;
     }
 
     private IWindow getAnotherWindowMock() {
         final IWindow mock = mock(IWindow.class);
-        when(mock.getClassName()).thenReturn(Optional.of("another_classname"));
-        when(mock.getWindowRectangle()).thenReturn(new Rectangle(0, 0, UAC_WINDOW_WIDTH + 1, UAC_WINDOW_HEIGHT + 1));
+        when(mock.getClassName()).thenReturn(Either.resultOf(() -> "another_classname"));
+        when(mock.getWindowRectangle()).thenReturn(Either.resultOf(() -> new Rectangle(0, 0, UAC_WINDOW_WIDTH + 1, UAC_WINDOW_HEIGHT + 1)));
         when(mock.getSystemId()).thenReturn("0xac54");
         return mock;
     }

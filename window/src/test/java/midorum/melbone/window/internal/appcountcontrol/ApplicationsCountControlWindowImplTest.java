@@ -1,13 +1,13 @@
 package midorum.melbone.window.internal.appcountcontrol;
 
 import com.midorum.win32api.facade.IWindow;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointFloat;
 import midorum.melbone.model.exception.CannotGetUserInputException;
 import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.model.settings.setting.TargetCountControlSettings;
 import midorum.melbone.window.internal.common.CommonWindowService;
-import midorum.melbone.window.internal.common.ForegroundWindow;
 import midorum.melbone.window.internal.common.Mouse;
 import midorum.melbone.window.internal.util.ForegroundWindowMocked;
 import org.junit.jupiter.api.AfterEach;
@@ -46,7 +46,7 @@ class ApplicationsCountControlWindowImplTest {
     }
 
     @Test
-    void clickConfirmButton() throws InterruptedException, CannotGetUserInputException {
+    void clickConfirmButton() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("clickConfirmButton");
         final IWindow window = mock(IWindow.class);
         final Mouse mouse = mock(Mouse.class);

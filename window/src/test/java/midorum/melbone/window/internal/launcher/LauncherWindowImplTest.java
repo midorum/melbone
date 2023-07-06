@@ -1,6 +1,7 @@
 package midorum.melbone.window.internal.launcher;
 
 import com.midorum.win32api.facade.*;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
 import midorum.melbone.model.dto.Account;
@@ -78,7 +79,7 @@ class LauncherWindowImplTest {
     }
 
     @BeforeEach
-    public void beforeEach() throws InterruptedException {
+    public void beforeEach() throws InterruptedException, Win32ApiException {
         //system
         when(commonWindowService.getWin32System()).thenReturn(win32System);
         //settings
@@ -107,7 +108,7 @@ class LauncherWindowImplTest {
         //launcher normal metrics
         when(window.isVisible()).thenReturn(true);
         when(window.getSystemId()).thenReturn("0x435f");
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(0, 0, LAUNCHER_WINDOW_WIDTH, LAUNCHER_WINDOW_HEIGHT));
+        when(window.getWindowRectangle()).thenReturn(Either.resultOf(() -> new Rectangle(0, 0, LAUNCHER_WINDOW_WIDTH, LAUNCHER_WINDOW_HEIGHT)));
         //account
         when(account.name()).thenReturn("account_name");
         when(account.login()).thenReturn("account_login");
@@ -169,7 +170,7 @@ class LauncherWindowImplTest {
     }
 
     @Test
-    void loginSuccessfully() throws InterruptedException, CannotGetUserInputException {
+    void loginSuccessfully() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("loginSuccessfully");
         final Mouse launcherMouse = getMouseMock();
         final IKeyboard keyboard = getKeyboardMock();
@@ -187,7 +188,7 @@ class LauncherWindowImplTest {
     }
 
     @Test
-    void startGameWhenGetReady() throws InterruptedException, CannotGetUserInputException {
+    void startGameWhenGetReady() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("startGameWhenGetReady");
         final Mouse launcherMouse = getMouseMock();
         //given
@@ -200,7 +201,7 @@ class LauncherWindowImplTest {
     }
 
     @Test
-    void startGameNotReady_windowClosedNormally() throws InterruptedException, CannotGetUserInputException {
+    void startGameNotReady_windowClosedNormally() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("startGameNotReady_windowClosedNormally");
         final Mouse launcherMouse = getMouseMock();
         final Mouse confirmDialogMouse = getMouseMock();
@@ -219,7 +220,7 @@ class LauncherWindowImplTest {
     }
 
     @Test
-    void startGameNotReady_windowProcessTerminated() throws InterruptedException, CannotGetUserInputException {
+    void startGameNotReady_windowProcessTerminated() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("startGameNotReady_windowProcessTerminated");
         //given
         windowIsCorrupted();
@@ -272,7 +273,7 @@ class LauncherWindowImplTest {
     private IWindow getConfirmDialogWindowMock() {
         final IWindow mock = mock(IWindow.class);
         when(mock.getSystemId()).thenReturn("0xa8d5");
-        when(mock.getWindowRectangle()).thenReturn(new Rectangle(0, 0, CONFIRM_QUIT_DIALOG_WINDOW_WIDTH, CONFIRM_QUIT_DIALOG_WINDOW_HEIGHT));
+        when(mock.getWindowRectangle()).thenReturn(Either.resultOf(() -> new Rectangle(0, 0, CONFIRM_QUIT_DIALOG_WINDOW_WIDTH, CONFIRM_QUIT_DIALOG_WINDOW_HEIGHT)));
         return mock;
     }
 

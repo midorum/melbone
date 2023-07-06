@@ -1,6 +1,7 @@
 package midorum.melbone.window.internal.baseapp;
 
 import com.midorum.win32api.facade.*;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
 import midorum.melbone.model.dto.KeyShortcut;
@@ -108,7 +109,7 @@ class BaseAppWindowImplTest {
 
     @BeforeEach
     @SuppressWarnings("unchecked")
-    public void beforeEach() throws InterruptedException, CannotGetUserInputException {
+    public void beforeEach() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         //system
         when(commonWindowService.getUID(window)).thenReturn(RESOURCE_ID);
         //settings
@@ -269,7 +270,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void closeDisconnectedWindow() throws InterruptedException, CannotGetUserInputException {
+    void closeDisconnectedWindow() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("closeDisconnectedWindow");
         //given
         final Mouse mouse = getMouseMock();
@@ -289,7 +290,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void closeWindowViaFrame() throws InterruptedException, CannotGetUserInputException {
+    void closeWindowViaFrame() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("closeWindowViaFrame");
         final Mouse mouse = getMouseMock();
         //when
@@ -310,7 +311,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void closeWindowViaMenu() throws InterruptedException, CannotGetUserInputException {
+    void closeWindowViaMenu() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("closeWindowViaMenu");
         final Mouse mouse = getMouseMock();
         //when
@@ -329,7 +330,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void selectServer() throws InterruptedException, CannotGetUserInputException {
+    void selectServer() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("selectServer");
         final Mouse mouse = getMouseMock();
         //when
@@ -347,7 +348,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void chooseCharacter() throws InterruptedException, CannotGetUserInputException {
+    void chooseCharacter() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("chooseCharacter");
         final Mouse mouse = getMouseMock();
         //when
@@ -361,7 +362,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInGameWindowRenderedButFail() throws InterruptedException, CannotGetUserInputException {
+    void checkInGameWindowRenderedButFail() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInGameWindowRenderedButFail");
         final Mouse mouse = getMouseMock();
         //when
@@ -397,7 +398,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void inGameWindowNotRenderedProperly() throws InterruptedException, CannotGetUserInputException {
+    void inGameWindowNotRenderedProperly() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("inGameWindowNotRenderedProperly");
         final Mouse mouse = getMouseMock();
         //when
@@ -417,7 +418,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInLoginTracker() throws InterruptedException, CannotGetUserInputException {
+    void checkInLoginTracker() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInLoginTracker");
         final Mouse mouse = getMouseMock();
         //when
@@ -431,7 +432,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInZeroAction() throws InterruptedException, CannotGetUserInputException {
+    void checkInZeroAction() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInZeroAction");
         //when
         final int actionsCount = 0;
@@ -439,7 +440,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInOneAction() throws InterruptedException, CannotGetUserInputException {
+    void checkInOneAction() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInOneAction");
         //when
         final int actionsCount = 1;
@@ -447,7 +448,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInTwoActions() throws InterruptedException, CannotGetUserInputException {
+    void checkInTwoActions() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInTwoActions");
         //when
         final int actionsCount = 2;
@@ -455,14 +456,14 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInThreeActions() throws InterruptedException, CannotGetUserInputException {
+    void checkInThreeActions() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInThreeActions");
         //when
         final int actionsCount = 3;
         checkInActionsTest(actionsCount);
     }
 
-    private void checkInActionsTest(final int actionsCount) throws InterruptedException, CannotGetUserInputException {
+    private void checkInActionsTest(final int actionsCount) throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         final Mouse mouse = getMouseMock();
         windowIsExists();
         windowIsHealthy();
@@ -573,17 +574,17 @@ class BaseAppWindowImplTest {
         when(applicationSettings.actionsCount()).thenReturn(count);
     }
 
-    private void verifyDisconnectedPopupConfirmed(final Mouse mouse) throws InterruptedException {
+    private void verifyDisconnectedPopupConfirmed(final Mouse mouse) throws InterruptedException, Win32ApiException {
         verify(mouse).clickAtPoint(disconnectedPopupCloseButtonPoint);
     }
 
-    private void verifyWindowCloseButtonClicked() throws InterruptedException {
+    private void verifyWindowCloseButtonClicked() throws InterruptedException, Win32ApiException {
         final InOrder inOrderMouse = inOrder(mouse);
         inOrderMouse.verify(mouse).move(windowCloseButtonPoint);
         inOrderMouse.verify(mouse, atLeastOnce()).leftClick();
     }
 
-    private void verifyMenuCloseItemClicked(final Mouse mouse) throws InterruptedException {
+    private void verifyMenuCloseItemClicked(final Mouse mouse) throws InterruptedException, Win32ApiException {
         verify(mouse).clickAtPoint(menuExitOptionPoint);
     }
 
@@ -603,23 +604,23 @@ class BaseAppWindowImplTest {
         verify(process, never()).terminate();
     }
 
-    private void verifyServerWasSelectedAndConnected(final Mouse mouse) throws InterruptedException {
+    private void verifyServerWasSelectedAndConnected(final Mouse mouse) throws InterruptedException, Win32ApiException {
         final InOrder inOrderMouse = inOrder(mouse);
         inOrderMouse.verify(mouse).clickAtPoint(selectServerButtonPoint);
         inOrderMouse.verify(mouse).clickAtPoint(connectServerButtonPoint);
     }
 
-    private void verifyGameStarted(final Mouse mouse) throws InterruptedException {
+    private void verifyGameStarted(final Mouse mouse) throws InterruptedException, Win32ApiException {
         final InOrder inOrderMouse = inOrder(mouse);
         inOrderMouse.verify(mouse).clickAtPoint(selectCharacterButtonPoint);
         inOrderMouse.verify(mouse).clickAtPoint(startButtonPoint);
     }
 
-    private void verifyLoginTrackerWasCheckedIn(final Mouse mouse) throws InterruptedException {
+    private void verifyLoginTrackerWasCheckedIn(final Mouse mouse) throws InterruptedException, Win32ApiException {
         verify(mouse).clickAtPoint(trackLoginButtonPointer);
     }
 
-    private void verifyActionWasCheckedIn(final Mouse mouse, final int actionsCount) throws InterruptedException {
+    private void verifyActionWasCheckedIn(final Mouse mouse, final int actionsCount) throws InterruptedException, Win32ApiException {
         final InOrder inOrderMouse = inOrder(mouse);
         if (actionsCount <= 0) {
             inOrderMouse.verify(mouse, never()).clickAtPoint(ACTION_BUTTON_POINT_X, ACTION_BUTTON_POINT_Y);

@@ -1,5 +1,6 @@
 package midorum.melbone.settings.internal.setting;
 
+import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.WindowPoint;
@@ -22,10 +23,12 @@ class UacSettingsImplTest {
     private final UacSettings uacSettings = settingsFactoryInternal.settingsProvider().settings().uacSettings();
 
     private final IWindow window = mock(IWindow.class);
+    private final Either<String> eitherWindowClassName = Either.value(() -> "window class name").whenReturnsTrue(true);
+    private final Either<Rectangle> eitherWindowRectangle = Either.value(() -> new Rectangle(1, 2, 3, 4)).whenReturnsTrue(true);
 
     @Test
     void windowClassName() {
-        when(window.getClassName()).thenReturn(Optional.of("window class name"));
+        when(window.getClassName()).thenReturn(eitherWindowClassName);
         new SettingTester(settingsFactoryInternal, SettingKeys.Uac.windowClassName)
                 .settingGetter(uacSettings::windowClassName)
                 .normalValues("string", "")
@@ -38,7 +41,7 @@ class UacSettingsImplTest {
 
     @Test
     void windowDimensions() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 3, 4));
+        when(window.getWindowRectangle()).thenReturn(eitherWindowRectangle);
         new SettingTester(settingsFactoryInternal, SettingKeys.Uac.windowDimensions)
                 .settingGetter(uacSettings::windowDimensions)
                 .normalValues(new Rectangle(0, 0, 0, 0), new Rectangle(0, 0, 100, 50))

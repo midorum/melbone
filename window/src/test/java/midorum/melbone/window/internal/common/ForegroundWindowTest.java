@@ -2,6 +2,7 @@ package midorum.melbone.window.internal.common;
 
 import com.midorum.win32api.facade.*;
 import com.midorum.win32api.facade.Rectangle;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.win32.IWinUser;
 import midorum.melbone.model.exception.CannotGetUserInputException;
@@ -37,7 +38,7 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void getMouse_cannotGetUserInput() {
+    void getMouse_cannotGetUserInput() throws Win32ApiException {
         final IWindow nativeWindow = mock(IWindow.class);
 
         windowHasNotUserInput(nativeWindow);
@@ -47,14 +48,16 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void getMouse() throws CannotGetUserInputException, InterruptedException {
+    void getMouse() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final float speedFactor = 1f;
         when(applicationSettings.speedFactor()).thenReturn(speedFactor);
         final PointFloat point = new PointFloat(-1, -1);
-        final IWindow nativeWindow = mock(IWindow.class);
+        final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final IMouse nativeMouse = mock(IMouse.class);
-        when(nativeWindow.getWindowMouse(speedFactor)).thenReturn(nativeMouse);
         when(nativeMouse.move(any(PointFloat.class))).thenReturn(nativeMouse);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
+        when(nativeWindow.getWindowMouse(speedFactor)).thenReturn(nativeMouse);
 
         windowHasUserInput(nativeWindow);
         final Mouse mouse = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).getMouse();
@@ -67,7 +70,7 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void getKeyboard_cannotGetUserInput() {
+    void getKeyboard_cannotGetUserInput() throws Win32ApiException {
         final IWindow nativeWindow = mock(IWindow.class);
 
         windowHasNotUserInput(nativeWindow);
@@ -77,9 +80,11 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void getKeyboard() throws CannotGetUserInputException, InterruptedException {
-        final IWindow nativeWindow = mock(IWindow.class);
+    void getKeyboard() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
+        final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
+        final IMouse nativeMouse = mock(IMouse.class);
         final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
         when(nativeWindow.getKeyboard()).thenReturn(nativeKeyboard);
 
         windowHasUserInput(nativeWindow);
@@ -88,14 +93,15 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void waiting_cannotGetUserInput_noAnyOverlay() {
+    void waiting_cannotGetUserInput_noAnyOverlay() throws Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
         final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final int[] stampWholeData = {};
         final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
-        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
 
         windowHasNotUserInput(nativeWindow);
         noAnyForegroundWindowFound();
@@ -109,15 +115,16 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void waiting_cannotGetUserInput_foundOverlay() {
+    void waiting_cannotGetUserInput_foundOverlay() throws Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
         final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final int[] stampWholeData = {};
         final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
-        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse);
-        final IWindow overlay = mock(IWindow.class);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
+        final IWindow overlay = getOverlayWindowMock();
 
         windowHasNotUserInput(nativeWindow);
         foundForegroundWindow(overlay);
@@ -130,14 +137,15 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void waiting_rectanglesDoNotMatch_withoutLogging() throws CannotGetUserInputException, InterruptedException {
+    void waiting_rectanglesDoNotMatch_withoutLogging() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
         final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 301, 200);
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
         final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
-        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
 
         windowHasUserInput(nativeWindow);
         final Optional<Stamp> result = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).waiting()
@@ -151,14 +159,15 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void waiting_stampNotFound_withLogging() throws CannotGetUserInputException, InterruptedException {
+    void waiting_stampNotFound_withLogging() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
         final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
         final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
-        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
 
         windowHasUserInput(nativeWindow);
         when(stampValidator.validateStamp(stamp)).thenReturn(Optional.empty());
@@ -174,14 +183,15 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void waiting_stampNotFound_withMarkedLogging() throws CannotGetUserInputException, InterruptedException {
+    void waiting_stampNotFound_withMarkedLogging() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
         final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
         final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
-        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
         final String logMarker = "test-marker";
 
         windowHasUserInput(nativeWindow);
@@ -198,7 +208,7 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void waiting_foundButNotCloseOverlapTopmost() throws CannotGetUserInputException, InterruptedException {
+    void waiting_foundButNotCloseOverlapTopmost() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
         final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
@@ -206,7 +216,8 @@ class ForegroundWindowTest {
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
         final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
-        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
         final IWindow topmost = getTopmostWindowMock(topmostRectangle);
 
         windowHasUserInput(nativeWindow);
@@ -223,7 +234,7 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void waiting_foundNotOverlapTopmost() throws CannotGetUserInputException, InterruptedException {
+    void waiting_foundNotOverlapTopmost() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
         final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
@@ -231,7 +242,8 @@ class ForegroundWindowTest {
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
         final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
-        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
         final IWindow topmost = getTopmostWindowMock(topmostRectangle);
 
         windowHasUserInput(nativeWindow);
@@ -249,7 +261,7 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void waiting_foundAndCloseOverlapTopmost() throws CannotGetUserInputException, InterruptedException {
+    void waiting_foundAndCloseOverlapTopmost() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
         final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
@@ -257,7 +269,8 @@ class ForegroundWindowTest {
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
         final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
-        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
         final IWindow topmost = getTopmostWindowMock(topmostRectangle);
 
         windowHasUserInput(nativeWindow);
@@ -275,14 +288,15 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void waitingWindowStateWithSuccess() throws CannotGetUserInputException, InterruptedException {
+    void waitingWindowStateWithSuccess() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
         final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
         final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
-        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
 
         windowHasUserInput(nativeWindow);
         when(applicationSettings.closeOverlappingWindows()).thenReturn(true);
@@ -306,12 +320,13 @@ class ForegroundWindowTest {
         return stamp;
     }
 
-    private IWindow getWindowMock(final Rectangle windowRectangle, final IMouse mouse) {
+    private IWindow getWindowMock(final Rectangle windowRectangle, final IMouse mouse, final IKeyboard keyboard) {
         final IWindow window = mock(IWindow.class);
         when(window.getSystemId()).thenReturn("0xdf67");
         when(window.getProcessId()).thenReturn(window.hashCode());
         when(window.getWindowMouse(anyFloat())).thenReturn(mouse);
-        when(window.getWindowRectangle()).thenReturn(windowRectangle);
+        when(window.getKeyboard()).thenReturn(keyboard);
+        when(window.getWindowRectangle()).thenReturn(Either.resultOf(() -> windowRectangle));
         return window;
     }
 
@@ -319,20 +334,30 @@ class ForegroundWindowTest {
         final IWindow window = mock(IWindow.class);
         when(window.getSystemId()).thenReturn("0xca83");
         when(window.getProcessId()).thenReturn(window.hashCode());
-        when(window.getStyle()).thenReturn(IWinUser.WS_VISIBLE);
-        when(window.hasStyles(IWinUser.WS_VISIBLE)).thenReturn(true);
-        when(window.getExtendedStyle()).thenReturn(IWinUser.WS_EX_TOPMOST);
-        when(window.hasExtendedStyles(IWinUser.WS_EX_TOPMOST)).thenReturn(true);
-        when(window.getWindowRectangle()).thenReturn(windowRectangle);
+        when(window.getStyle()).thenReturn(Either.resultOf(() -> IWinUser.WS_VISIBLE));
+        when(window.hasStyles(IWinUser.WS_VISIBLE)).thenReturn(Either.resultOf(() -> true));
+        when(window.getExtendedStyle()).thenReturn(Either.resultOf(() -> IWinUser.WS_EX_TOPMOST));
+        when(window.hasExtendedStyles(IWinUser.WS_EX_TOPMOST)).thenReturn(Either.resultOf(() -> true));
+        when(window.getWindowRectangle()).thenReturn(Either.resultOf(() -> windowRectangle));
         return window;
     }
 
-    private void windowHasNotUserInput(final IWindow nativeWindow) {
+    private IWindow getOverlayWindowMock() {
+        final IWindow window = mock(IWindow.class);
+        when(window.getSystemId()).thenReturn("0xd4e7");
+        when(window.getProcessId()).thenReturn(window.hashCode());
+        when(window.getStyle()).thenReturn(Either.resultOf(() -> IWinUser.WS_VISIBLE));
+        when(window.getExtendedStyle()).thenReturn(Either.resultOf(() -> IWinUser.WS_EX_OVERLAPPEDWINDOW));
+        when(window.getWindowRectangle()).thenReturn(Either.resultOf(() -> new Rectangle(0, 0, 100, 50)));
+        return window;
+    }
+
+    private void windowHasNotUserInput(final IWindow nativeWindow) throws Win32ApiException {
         when(nativeWindow.bringForeground()).thenReturn(false);
         when(nativeWindow.isForeground()).thenReturn(false);
     }
 
-    private void windowHasUserInput(final IWindow nativeWindow) {
+    private void windowHasUserInput(final IWindow nativeWindow) throws Win32ApiException {
         when(nativeWindow.bringForeground()).thenReturn(true);
         when(nativeWindow.isForeground()).thenReturn(true);
     }

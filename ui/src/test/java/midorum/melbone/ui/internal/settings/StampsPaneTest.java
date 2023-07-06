@@ -2,6 +2,7 @@ package midorum.melbone.ui.internal.settings;
 
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Rectangle;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.win32.IWinUser;
 import midorum.melbone.model.settings.stamp.Stamp;
 import midorum.melbone.model.settings.key.StampKey;
@@ -40,7 +41,7 @@ class StampsPaneTest extends MockedContext {
 
     @Test
     @DisplayName("Select stamp and capture it")
-    void selectStampAndCaptureIt() {
+    void selectStampAndCaptureIt() throws Win32ApiException {
         final StampKey stampKey = StampKeys.TargetLauncher.playButtonActive;
         final StampKey stampKey2 = StampKeys.TargetLauncher.playButtonInactive;
         final IWindow capturedNativeWindow = createNativeWindowMock(new Rectangle(0, 0, 1000, 500));
@@ -187,7 +188,7 @@ class StampsPaneTest extends MockedContext {
 
         /* actions */
 
-        public StampsPaneInteraction makeFakeStampToCapture(final StampKey stampKey, final IWindow capturedNativeWindow, final Rectangle capturedRectangle) {
+        public StampsPaneInteraction makeFakeStampToCapture(final StampKey stampKey, final IWindow capturedNativeWindow, final Rectangle capturedRectangle) throws Win32ApiException {
             interaction.whenTryGetWindowByAnyPoint().thenReturnPointForWindow(capturedNativeWindow)
                     .whenTryCaptureScreenRectangleThenReturn(capturedRectangle)
                     .whenTryTakeRectangleShotThenReturnStandardImage();

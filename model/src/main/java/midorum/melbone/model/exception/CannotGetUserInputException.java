@@ -9,4 +9,7 @@ public class CannotGetUserInputException extends Exception {
         super(message);
     }
 
+    public CannotGetUserInputException(final String message, final Throwable cause) {
+        super(message, cause);
+    }
 }

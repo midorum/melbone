@@ -1,6 +1,7 @@
 package midorum.melbone.window.internal.launcher;
 
 import com.midorum.win32api.facade.*;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import dma.flow.Waiting;
 import dma.util.Delay;
 import dma.util.DurationFormatter;
@@ -136,14 +137,16 @@ public class LauncherWindowFactory {
 
     public Optional<LauncherWindow> findWindow() {
         //TODO need regexp based search
+        final Rectangle requiredDimensions = settings.targetLauncher().windowDimensions();
         final List<IWindow> allWindows = win32System.findAllWindows(settings.targetLauncher().windowTitle(), null, true);
         return allWindows.stream()
-                .filter(window -> {
-                    final Rectangle requiredDimensions = settings.targetLauncher().windowDimensions();
-                    final Rectangle windowRectangle = window.getWindowRectangle();
-                    return requiredDimensions.width() == windowRectangle.width()
-                            && requiredDimensions.height() == windowRectangle.height();
-                })
+                .filter(window -> window.getWindowRectangle()
+                        .map(r -> requiredDimensions.width() == r.width()
+                                && requiredDimensions.height() == r.height())
+                        .getOrHandleError(e -> {
+                            logger.warn("cannot check window attributes (" + window.getSystemId() + ") - skip", e);
+                            return false;
+                        }))
                 .peek(window -> logger.info("found launcher window {}", window.getSystemId()))
                 .map(window -> new LauncherWindowImpl(window, commonWindowService, settings, stamps))
                 .map(LauncherWindow.class::cast)
@@ -192,14 +195,16 @@ public class LauncherWindowFactory {
     }
 
     private Optional<NetworkErrorAlertWindow> findNetworkErrorAlertWindow() {
+        final Rectangle requiredDimensions = settings.targetLauncher().networkErrorDialogDimensions();
         final List<IWindow> allWindows = win32System.findAllWindows(settings.targetLauncher().networkErrorDialogTitle(), null, true);
         return allWindows.stream()
-                .filter(w -> {
-                    final Rectangle requiredDimensions = settings.targetLauncher().networkErrorDialogDimensions();
-                    final Rectangle windowRect = w.getWindowRectangle();
-                    return requiredDimensions.width() == windowRect.width()
-                            && requiredDimensions.height() == windowRect.height();
-                })
+                .filter(w -> w.getWindowRectangle()
+                        .map(r -> requiredDimensions.width() == r.width()
+                                && requiredDimensions.height() == r.height())
+                        .getOrHandleError(e -> {
+                            logger.warn("cannot check window attributes (" + w.getSystemId() + ") - skip", e);
+                            return false;
+                        }))
                 //FIXME проблема с получением снимков для topmost-окон: неправильные координаты снимка, соответственно валидация не проходит
                 //TODO после исправления включить
 //                    .filter(w -> {
@@ -232,7 +237,11 @@ public class LauncherWindowFactory {
         public void clickConfirmButton() throws InterruptedException, CannotGetUserInputException {
             log.debug("close network error alert");
             commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
-                foregroundWindow.getMouse().clickAtPoint(settings.targetLauncher().closeNetworkErrorDialogButtonPoint());
+                try {
+                    foregroundWindow.getMouse().clickAtPoint(settings.targetLauncher().closeNetworkErrorDialogButtonPoint());
+                } catch (Win32ApiException e) {
+                    throw new CannotGetUserInputException(e.getMessage(), e);
+                }
             });
         }
 

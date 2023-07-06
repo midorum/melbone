@@ -1,6 +1,7 @@
 package midorum.melbone.window.internal.appcountcontrol;
 
 import com.midorum.win32api.facade.IWindow;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.model.window.appcountcontrol.ApplicationsCountControlWindow;
 import midorum.melbone.model.exception.CannotGetUserInputException;
@@ -27,8 +28,12 @@ public class ApplicationsCountControlWindowImpl implements ApplicationsCountCont
         log.info("confirm dialog");
         try {
             commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
-                foregroundWindow.getMouse().clickAtPoint(settings.targetCountControl().confirmButtonPoint());
-                log.info("dialog confirmed");
+                try {
+                    foregroundWindow.getMouse().clickAtPoint(settings.targetCountControl().confirmButtonPoint());
+                    log.info("dialog confirmed");
+                } catch (Win32ApiException e) {
+                    throw new CannotGetUserInputException(e.getMessage(), e);
+                }
             });
         } catch (CannotGetUserInputException e) {
             final String marker = Long.toString(System.currentTimeMillis());

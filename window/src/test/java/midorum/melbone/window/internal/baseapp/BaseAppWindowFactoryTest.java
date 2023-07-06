@@ -1,5 +1,6 @@
 package midorum.melbone.window.internal.baseapp;
 
+import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Win32System;
 import midorum.melbone.model.settings.account.AccountBinding;
@@ -121,7 +122,7 @@ class BaseAppWindowFactoryTest {
         final IWindow mock = mock(IWindow.class);
         when(mock.getSystemId()).thenReturn(id);
         when(commonWindowService.getUID(mock)).thenReturn(processId + "_" + PROCESS_CREATION_TIME);
-        when(commonWindowService.checkIfWindowRendered(mock)).thenReturn(true);
+        when(commonWindowService.checkIfWindowRendered(mock)).thenReturn(getWindowRenderedState(true));
         return mock;
     }
 
@@ -131,7 +132,11 @@ class BaseAppWindowFactoryTest {
         final IWindow mock = mock(IWindow.class);
         when(mock.getSystemId()).thenReturn(id);
         when(commonWindowService.getUID(mock)).thenReturn(resourceUid);
-        when(commonWindowService.checkIfWindowRendered(mock)).thenReturn(true);
+        when(commonWindowService.checkIfWindowRendered(mock)).thenReturn(getWindowRenderedState(true));
         return mock;
+    }
+
+    private Either<Boolean> getWindowRenderedState(final boolean state) {
+        return Either.value(() -> state).whenReturnsTrue(true);
     }
 }

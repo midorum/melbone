@@ -1,5 +1,6 @@
 package midorum.melbone.window.internal.common;
 
+import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.Win32System;
@@ -34,13 +35,16 @@ public class CommonWindowService {
         return window.getProcessId() + "_" + window.getProcess().getCreationTime();
     }
 
-    public boolean checkIfWindowRendered(final IWindow window) {
-        final boolean s = window.hasAndHasNotStyles(IWinUser.WS_VISIBLE, IWinUser.WS_DISABLED);
-        final boolean m = window.hasStyles(IWinUser.WS_MINIMIZE);
-        final Rectangle clientRect = window.getClientRectangle();
-        final boolean r = clientRect.height() > 0 && clientRect.width() > 0;
-        logger.debug("window {} attributes are:\n\t> window is visible and not disabled - {};\n\t> window has properly client rect - {}", window.getSystemId(), s, r);
-        return s && (m || r);
+    public Either<Boolean> checkIfWindowRendered(final IWindow window) {
+        record Result(boolean s, boolean m, boolean r){}
+        return window.hasAndHasNotStyles(IWinUser.WS_VISIBLE, IWinUser.WS_DISABLED)
+                .flatMap(s -> window.hasStyles(IWinUser.WS_MINIMIZE)
+                        .flatMap(m -> window.getClientRectangle().map(rectangle -> rectangle.height() > 0 && rectangle.width() > 0)
+                                .map(r -> new Result(s, m, r))))
+                .map(result -> {
+                    logger.debug("window {} attributes are:\n\t> window is visible and not disabled - {};\n\t> window has properly client rect - {}", window.getSystemId(), result.s, result.r);
+                    return result.s && (result.m || result.r);
+                });
     }
 
     public void fixResult(final Result result) {

@@ -70,7 +70,10 @@ public class BaseAppWindowFactory {
         logger.info("searching base window with title - [{}] and class name - [{}]", windowTitle, windowClassName);
         return win32System.findAllWindows(windowTitle, windowClassName, false).stream()
                 .filter(w -> accountBinding.getBoundAccount(commonWindowService.getUID(w)).isEmpty())
-                .filter(commonWindowService::checkIfWindowRendered)
+                .filter(window -> commonWindowService.checkIfWindowRendered(window).getOrHandleError(exception -> {
+                    logger.warn("cannot check window attributes (" + window.getSystemId() + ") - skip", exception);
+                    return false;
+                }))
                 .findFirst();
     }
 }

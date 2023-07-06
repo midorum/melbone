@@ -1,6 +1,7 @@
 package midorum.melbone.window.internal.common;
 
 import com.midorum.win32api.facade.*;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.win32.IWinUser;
 import dma.flow.Waiting;
@@ -16,12 +17,14 @@ import org.apache.logging.log4j.Logger;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class ForegroundWindow {
 
     private static final String WIN_32_LONG_FORMAT = "0x%08x";
+    private static final Function<Integer, String> WIN_32_LONG_FORMATTER = i -> String.format(WIN_32_LONG_FORMAT, i);
     private final Logger logger = StaticResources.LOGGER;
     private final IWindow window;
     private final Settings settings;
@@ -65,7 +68,10 @@ public class ForegroundWindow {
         final boolean windowIsForeground = new Waiting()
                 .timeout(bringWindowForegroundTimeout, TimeUnit.MILLISECONDS)
                 .withDelay(bringWindowForegroundDelay, TimeUnit.MILLISECONDS)
-                .waitForBoolean(window::bringForeground);
+                .waitForBoolean(() -> Either.resultOf(window::bringForeground).getOrHandleError(exception -> {
+                    logger.warn("cannot bring window (" + windowId + ") to foreground", exception);
+                    return false;
+                }));
         if (windowIsForeground) {
             findPossibleTopmostAndCloseIfNecessary(marker);
         } else {
@@ -81,16 +87,33 @@ public class ForegroundWindow {
 
     private void findPossibleTopmostAndCloseIfNecessary(final String marker) {
         final String topmostMarker = "topmost_" + marker;
-        final Rectangle windowRectangle = window.getWindowRectangle();
+        System.out.println(">>> window: "+window);
+        System.out.println(">>> window.getWindowRectangle(): "+window.getWindowRectangle());
+        final Function<Rectangle, Boolean> rectangleChecker = window.getWindowRectangle()
+                .map(wr -> (Function<Rectangle, Boolean>) r -> areRectanglesOverlay(wr, r))
+                .getOrHandleError(exception -> {
+                    logger.warn("cannot get window attributes (" + windowId + ") - skip", exception);
+                    return r -> false;
+                });
         win32System.listAllWindows().stream()
                 .filter(found -> found.getProcessId() != window.getProcessId())
-                .filter(w -> w.hasStyles(IWinUser.WS_VISIBLE) && w.hasExtendedStyles(IWinUser.WS_EX_TOPMOST) && areRectanglesOverlay(windowRectangle, w.getWindowRectangle()))
+                .filter(w -> {
+                    try {
+                        return w.hasStyles(IWinUser.WS_VISIBLE).getOrThrow()
+                                && w.hasExtendedStyles(IWinUser.WS_EX_TOPMOST).getOrThrow()
+                                && w.getWindowRectangle().map(rectangleChecker).getOrThrow();
+                    } catch (Win32ApiException e) {
+                        logger.warn("cannot get window attributes (" + w.getSystemId() + ") - skip", e);
+                        return false;
+                    }
+                })
                 .forEach(topmost -> {
                     final String topmostId = topmost.getSystemId();
                     logger.warn("Target window was brought to the foreground and has user input. But there is topmost window which may overlap it: marker={}, id={}, title={}, className={}, style={}, extendedStyle={}, windowRect={}",
                             topmostMarker, topmostId,
                             topmost.getText(), topmost.getClassName(),
-                            String.format(WIN_32_LONG_FORMAT, topmost.getStyle()), String.format(WIN_32_LONG_FORMAT, topmost.getExtendedStyle()),
+                            topmost.getStyle().map(WIN_32_LONG_FORMATTER),
+                            topmost.getExtendedStyle().map(WIN_32_LONG_FORMATTER),
                             topmost.getWindowRectangle());
                     if (closeOverlappingWindows) {
                         logger.warn("setting \"closeOverlappingWindows\" is on - close topmost window {}", topmostId);
@@ -108,7 +131,8 @@ public class ForegroundWindow {
             logger.warn("found overlay window: marker={}, title={}, className={}, style={}, extendedStyle={}, windowRect={}",
                     overlayMarker,
                     window.getText(), window.getClassName(),
-                    String.format(WIN_32_LONG_FORMAT, window.getStyle()), String.format(WIN_32_LONG_FORMAT, window.getExtendedStyle()),
+                    window.getStyle().map(WIN_32_LONG_FORMATTER),
+                    window.getExtendedStyle().map(WIN_32_LONG_FORMATTER),
                     window.getWindowRectangle());
             stampValidator.takeAndSaveWholeScreenShot(overlayMarker);
         }, () -> win32System.listAllWindows().forEach(window -> {
@@ -116,7 +140,8 @@ public class ForegroundWindow {
                 logger.debug("found non-foreground but visible window: marker={}, title={}, className={}, style={}, extendedStyle={}, windowRect={}",
                         overlayMarker,
                         window.getText(), window.getClassName(),
-                        String.format(WIN_32_LONG_FORMAT, window.getStyle()), String.format(WIN_32_LONG_FORMAT, window.getExtendedStyle()),
+                        window.getStyle().map(WIN_32_LONG_FORMATTER),
+                        window.getExtendedStyle().map(WIN_32_LONG_FORMATTER),
                         window.getWindowRectangle());
             }
         }));
@@ -285,68 +310,103 @@ public class ForegroundWindow {
             private Optional<Stamp> waitForStamp(final String stampsString, final Rectangle windowRectShouldBe, final Supplier<Optional<Stamp>> stampSupplier, final VoidAction stampsMismatchingLogger) throws InterruptedException, CannotGetUserInputException {
                 logger.debug("[{}] wait for stamp(s) {}", windowId, stampsString);
                 final IKeyboard keyboard = window.getKeyboard();
-                final Optional<Stamp> foundStamp = new Waiting()
-                        .timeout(timeout, TimeUnit.MILLISECONDS)
-                        .withDelay(delay, TimeUnit.MILLISECONDS)
-                        .startFrom(Validator.checkNotNull(startFromConsumer).orDefault(() -> {
-                        }))
-                        .latency(latency, TimeUnit.MILLISECONDS)
-                        .doOnEveryFailedIteration(i -> {
-                            logger.debug("[{}] {}: stamp(s) {} not found yet", windowId, new DurationFormatter(i.fromStart()).toStringWithoutZeroParts(), stampsString);
-                            if (failedIterationConsumer != null) failedIterationConsumer.accept(i);
-                            if (hotKey != null) keyboard.enterHotKey(hotKey);
-                            if (mouseClickPoint != null) mouse.clickAtPoint(mouseClickPoint);
-                        })
-                        .waitFor(() -> {
-                            if (!adjustWindow(windowRectShouldBe.left(), windowRectShouldBe.top()))
-                                return Optional.empty();
-                            if (!rectanglesAreEquals(window.getWindowRectangle(), windowRectShouldBe))
-                                return Optional.empty();
-                            mouse.adjust();
-                            return stampSupplier.get();
-                        });
-                if (!window.isForeground()) throw getCannotGetUserInputException(logMarker);
-                foundStamp.ifPresentOrElse(s -> {
-                            logger.debug("[{}] found stamp {}", windowId, stringifyStamp(s));
-                            if (encloseWithHotKey) keyboard.enterHotKey(hotKey);
-                        },
-                        () -> {
-                            if (logFailedStamps) {
-                                mouse.adjust();
-                                stampsMismatchingLogger.perform();
-                                logger.warn("[{}] stamp(s) {} not found (marker={})", windowId, stampsString, logMarker);
-                            } else
-                                logger.debug("[{}] stamp(s) {} not found", windowId, stampsString);
-                        });
-                return foundStamp;
+                try {
+                    final Optional<Stamp> foundStamp = new Waiting()
+                            .timeout(timeout, TimeUnit.MILLISECONDS)
+                            .withDelay(delay, TimeUnit.MILLISECONDS)
+                            .startFrom(Validator.checkNotNull(startFromConsumer).orDefault(() -> {
+                            }))
+                            .latency(latency, TimeUnit.MILLISECONDS)
+                            .doOnEveryFailedIteration(i -> {
+                                logger.debug("[{}] {}: stamp(s) {} not found yet", windowId, new DurationFormatter(i.fromStart()).toStringWithoutZeroParts(), stampsString);
+                                if (failedIterationConsumer != null) failedIterationConsumer.accept(i);
+                                if (hotKey != null) keyboard.enterHotKey(hotKey);
+                                if (mouseClickPoint != null) {
+                                    try {
+                                        mouse.clickAtPoint(mouseClickPoint);
+                                    } catch (Win32ApiException e) {
+                                        throw new Win32ControlledException(e.getMessage(), e);
+                                    }
+                                }
+                            })
+                            .waitFor(() -> {
+                                try {
+                                    if (!adjustWindow(windowRectShouldBe.left(), windowRectShouldBe.top()))
+                                        return Optional.empty();
+                                    if (!window.getWindowRectangle().map(r -> rectanglesAreEquals(r, windowRectShouldBe)).getOrThrow())
+                                        return Optional.empty();
+                                    mouse.adjust();
+                                    return stampSupplier.get();
+                                } catch (Win32ApiException e) {
+                                    logger.warn("cannot get attributes or adjust window (" + windowId + ") - skip", e);
+                                    return Optional.empty();
+                                }
+                            });
+                    if (!window.isForeground()) throw getCannotGetUserInputException(logMarker);
+                    foundStamp.ifPresentOrElse(s -> {
+                                logger.debug("[{}] found stamp {}", windowId, stringifyStamp(s));
+                                if (encloseWithHotKey) keyboard.enterHotKey(hotKey);
+                            },
+                            () -> {
+                                try {
+                                    if (logFailedStamps) {
+                                        mouse.adjust();
+                                        stampsMismatchingLogger.perform();
+                                        logger.warn("[{}] stamp(s) {} not found (marker={})", windowId, stampsString, logMarker);
+                                    } else
+                                        logger.debug("[{}] stamp(s) {} not found", windowId, stampsString);
+                                } catch (Win32ApiException e) {
+                                    throw new Win32ControlledException(e.getMessage(), e);
+                                }
+                            });
+                    return foundStamp;
+                } catch (Win32ControlledException e) {
+                    throw new CannotGetUserInputException(e.getMessage(), e);
+                }
             }
 
             private boolean waitForStampDisappearing(final String stampsString, final Rectangle windowRectShouldBe, final Supplier<Optional<Stamp>> stampSupplier) throws InterruptedException, CannotGetUserInputException {
                 logger.debug("[{}] wait for stamp(s) {}", windowId, stampsString);
                 final IKeyboard keyboard = window.getKeyboard();
-                final boolean result = new Waiting()
-                        .timeout(timeout, TimeUnit.MILLISECONDS)
-                        .withDelay(delay, TimeUnit.MILLISECONDS)
-                        .startFrom(Validator.checkNotNull(startFromConsumer).orDefault(() -> {
-                        }))
-                        .latency(latency, TimeUnit.MILLISECONDS)
-                        .doOnEveryFailedIteration(i -> {
-                            logger.debug("[{}] {}: stamp(s) {} still present", windowId, new DurationFormatter(i.fromStart()).toStringWithoutZeroParts(), stampsString);
-                            if (failedIterationConsumer != null) failedIterationConsumer.accept(i);
-                            if (hotKey != null) keyboard.enterHotKey(hotKey);
-                            if (mouseClickPoint != null) mouse.clickAtPoint(mouseClickPoint);
-                        })
-                        .waitForBoolean(() -> {
-                            if (!adjustWindow(windowRectShouldBe.left(), windowRectShouldBe.top())) return false;
-                            if (!rectanglesAreEquals(window.getWindowRectangle(), windowRectShouldBe))
-                                return false;
-                            mouse.adjust();
-                            return stampSupplier.get().isEmpty();
-                        });
-                if (!window.isForeground()) throw getCannotGetUserInputException(logMarker);
-                if (result) logger.debug("[{}] stamp has disappeared {}", windowId, stampsString);
-                else logger.warn("[{}] stamp has not disappeared {}", windowId, stampsString);
-                return result;
+                try {
+                    final boolean result = new Waiting()
+                            .timeout(timeout, TimeUnit.MILLISECONDS)
+                            .withDelay(delay, TimeUnit.MILLISECONDS)
+                            .startFrom(Validator.checkNotNull(startFromConsumer).orDefault(() -> {
+                            }))
+                            .latency(latency, TimeUnit.MILLISECONDS)
+                            .doOnEveryFailedIteration(i -> {
+                                logger.debug("[{}] {}: stamp(s) {} still present", windowId, new DurationFormatter(i.fromStart()).toStringWithoutZeroParts(), stampsString);
+                                if (failedIterationConsumer != null) failedIterationConsumer.accept(i);
+                                if (hotKey != null) keyboard.enterHotKey(hotKey);
+                                if (mouseClickPoint != null) {
+                                    try {
+                                        mouse.clickAtPoint(mouseClickPoint);
+                                    } catch (Win32ApiException e) {
+                                        throw new Win32ControlledException(e.getMessage(), e);
+                                    }
+                                }
+                            })
+                            .waitForBoolean(() -> {
+                                try {
+                                    if (!adjustWindow(windowRectShouldBe.left(), windowRectShouldBe.top()))
+                                        return false;
+                                    if (!window.getWindowRectangle().map(r -> rectanglesAreEquals(r, windowRectShouldBe)).getOrThrow())
+                                        return false;
+                                    mouse.adjust();
+                                    return stampSupplier.get().isEmpty();
+                                } catch (Win32ApiException e) {
+                                    logger.warn("cannot get attributes or adjust window (" + windowId + ") - skip", e);
+                                    return false;
+                                }
+                            });
+                    if (!window.isForeground()) throw getCannotGetUserInputException(logMarker);
+                    if (result) logger.debug("[{}] stamp has disappeared {}", windowId, stampsString);
+                    else logger.warn("[{}] stamp has not disappeared {}", windowId, stampsString);
+                    return result;
+                } catch (Win32ControlledException e) {
+                    throw new CannotGetUserInputException(e.getMessage(), e);
+                }
             }
 
             private String stringifyStamp(final Stamp stamp) {
@@ -363,13 +423,20 @@ public class ForegroundWindow {
                         .orThrow("window rectangle is null");
             }
 
-            private boolean adjustWindow(final int x, final int y) throws InterruptedException {
+            private boolean adjustWindow(final int x, final int y) throws InterruptedException, Win32ApiException {
                 if (!bringWindowForeground(logMarker)) return false;
                 window.moveWindow(x, y);
                 return true;
             }
         }
 
+    }
+
+    private final static class Win32ControlledException extends RuntimeException {
+
+        public Win32ControlledException(final String message, final Throwable cause) {
+            super(message, cause);
+        }
     }
 
 }

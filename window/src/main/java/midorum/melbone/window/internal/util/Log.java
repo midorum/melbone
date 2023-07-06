@@ -15,6 +15,11 @@ public record Log(Logger logger, Supplier<String> markerSupplier) {
         logger.error("(" + markerSupplier.get() + ") " + message, params);
     }
 
+    public void error(final String message, Throwable t) {
+        if (!logger.isErrorEnabled()) return;
+        logger.error("(" + markerSupplier.get() + ") " + message, t);
+    }
+
     public void warn(final String message, Object... params) {
         if (!logger.isWarnEnabled()) return;
         logger.warn("(" + markerSupplier.get() + ") " + message, params);

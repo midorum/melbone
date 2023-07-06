@@ -1,9 +1,7 @@
 package midorum.melbone.window.internal.launcher;
 
-import com.midorum.win32api.facade.IMouse;
-import com.midorum.win32api.facade.IWindow;
-import com.midorum.win32api.facade.Rectangle;
-import com.midorum.win32api.facade.Win32System;
+import com.midorum.win32api.facade.*;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
 import midorum.melbone.model.exception.CannotGetUserInputException;
@@ -58,7 +56,7 @@ class LauncherWindowFactoryTest {
     }
 
     @BeforeEach
-    public void beforeEach() throws InterruptedException {
+    public void beforeEach() throws InterruptedException, Win32ApiException {
         // system
         when(settings.application()).thenReturn(applicationSettings);
         when(settings.targetLauncher()).thenReturn(targetLauncherSettings);
@@ -95,7 +93,7 @@ class LauncherWindowFactoryTest {
     }
 
     @Test
-    void closeNetworkErrorDialog() throws InterruptedException, CannotGetUserInputException {
+    void closeNetworkErrorDialog() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("closeNetworkErrorDialog");
         final Mouse mouse = mock(Mouse.class);
         final IWindow networkErrorDialogWindow = createNetworkDialogWindowMock();
@@ -143,14 +141,14 @@ class LauncherWindowFactoryTest {
 
     private IWindow createLauncherWindowMock() {
         final IWindow mock = mock(IWindow.class);
-        when(mock.getWindowRectangle()).thenReturn(new Rectangle(0, 0, LAUNCHER_WINDOW_WIDTH, LAUNCHER_WINDOW_HEIGHT));
+        when(mock.getWindowRectangle()).thenReturn(Either.resultOf(() -> new Rectangle(0, 0, LAUNCHER_WINDOW_WIDTH, LAUNCHER_WINDOW_HEIGHT)));
         when(mock.getSystemId()).thenReturn("0x7f34");
         return mock;
     }
 
     private IWindow createNetworkDialogWindowMock() {
         final IWindow mock = mock(IWindow.class);
-        when(mock.getWindowRectangle()).thenReturn(new Rectangle(0, 0, NETWORK_ERROR_DIALOG_WIDTH, NETWORK_ERROR_DIALOG_HEIGHT));
+        when(mock.getWindowRectangle()).thenReturn(Either.resultOf(() -> new Rectangle(0, 0, NETWORK_ERROR_DIALOG_WIDTH, NETWORK_ERROR_DIALOG_HEIGHT)));
         when(mock.getSystemId()).thenReturn("0xff06");
         when(mock.getWindowMouse(SPEED_FACTOR)).thenReturn(mouse);
         return mock;

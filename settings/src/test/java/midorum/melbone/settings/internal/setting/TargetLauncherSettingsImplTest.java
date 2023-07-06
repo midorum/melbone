@@ -1,5 +1,6 @@
 package midorum.melbone.settings.internal.setting;
 
+import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.WindowPoint;
@@ -25,10 +26,17 @@ class TargetLauncherSettingsImplTest {
     private final TargetLauncherSettings targetLauncherSettings = settingsFactoryInternal.settingsProvider().settings().targetLauncher();
 
     private final IWindow window = mock(IWindow.class);
+    private final Either<Optional<String>> eitherWindowTitle = Either.value(() -> Optional.of("window title")).whenReturnsTrue(true);
+    private final Either<Optional<String>> eitherNoWindowTitle = Either.value(() -> Optional.ofNullable((String) null)).whenReturnsTrue(true);
+    private final Either<String> eitherWindowClassName = Either.value(() -> "window class name").whenReturnsTrue(true);
+
+    private Either<Rectangle> getEitherWindowRectangle(final Rectangle rectangle) {
+        return Either.value(() -> new Rectangle(1, 2, 3, 4)).whenReturnsTrue(true);
+    }
 
     @Test
     void windowTitle() {
-        when(window.getText()).thenReturn(Optional.of("window title"));
+        when(window.getText()).thenReturn(eitherWindowTitle);
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.windowTitle)
                 .settingGetter(targetLauncherSettings::windowTitle)
                 .normalValues("string", "")
@@ -44,7 +52,7 @@ class TargetLauncherSettingsImplTest {
         //FIXME на данный момент в Windows окно всегда имеет заголовок, хотя бы пустой, но гарантий нет
         // что делать если заголовка у окна нет в принципе (даже пустого) пока непонятно, потому что сразу ломается поиск окон по заголовку
         // на данный момент программа падает с ошибкой в таком случае
-        when(window.getText()).thenReturn(Optional.empty());
+        when(window.getText()).thenReturn(eitherNoWindowTitle);
         assertThrows(CriticalErrorException.class, () -> new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.windowTitle)
                 .settingGetter(targetLauncherSettings::windowTitle)
                 .normalValues("string", "")
@@ -57,7 +65,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void windowDimensions() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 3, 4));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 3, 4)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.windowDimensions)
                 .settingGetter(targetLauncherSettings::windowDimensions)
                 .normalValues(new Rectangle(0, 0, 0, 0), new Rectangle(0, 0, 100, 50))
@@ -70,7 +78,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void confirmQuitDialogTitle() {
-        when(window.getText()).thenReturn(Optional.of("window title"));
+        when(window.getText()).thenReturn(eitherWindowTitle);
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.confirmQuitDialogTitle)
                 .settingGetter(targetLauncherSettings::confirmQuitDialogTitle)
                 .normalValues("string", "")
@@ -83,7 +91,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void confirmQuitDialogDimensions() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 3, 4));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 3, 4)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.confirmQuitDialogDimensions)
                 .settingGetter(targetLauncherSettings::confirmQuitDialogDimensions)
                 .normalValues(new Rectangle(0, 0, 0, 0), new Rectangle(0, 0, 100, 50))
@@ -96,7 +104,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void networkErrorDialogTitle() {
-        when(window.getText()).thenReturn(Optional.of("window title"));
+        when(window.getText()).thenReturn(eitherWindowTitle);
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.networkErrorDialogTitle)
                 .settingGetter(targetLauncherSettings::networkErrorDialogTitle)
                 .normalValues("string", "")
@@ -109,7 +117,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void networkErrorDialogDimensions() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 3, 4));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 3, 4)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.networkErrorDialogDimensions)
                 .settingGetter(targetLauncherSettings::networkErrorDialogDimensions)
                 .normalValues(new Rectangle(0, 0, 0, 0), new Rectangle(0, 0, 100, 50))
@@ -122,7 +130,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void windowCloseButtonPoint() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 3, 4));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 3, 4)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.windowCloseButtonPoint)
                 .settingGetter(targetLauncherSettings::windowCloseButtonPoint)
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.5f, .3f), new PointFloat(1f, 1f))
@@ -135,7 +143,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void desktopShortcutLocationPoint() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 4, 4));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 4, 4)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.desktopShortcutLocationPoint)
                 .settingGetter(targetLauncherSettings::desktopShortcutLocationPoint)
                 .normalValues(new PointInt(0, 0), new PointInt(100, 50))
@@ -148,7 +156,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void closeQuitConfirmPopupButtonPoint() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 4, 4));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 4, 4)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.closeQuitConfirmPopupButtonPoint)
                 .settingGetter(targetLauncherSettings::closeQuitConfirmPopupButtonPoint)
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.53f, .35f), new PointFloat(1f, 1f))
@@ -161,7 +169,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void closeNetworkErrorDialogButtonPoint() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 4, 5));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 4, 5)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.closeNetworkErrorDialogButtonPoint)
                 .settingGetter(targetLauncherSettings::closeNetworkErrorDialogButtonPoint)
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
@@ -174,7 +182,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void startButtonPoint() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 5, 5));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 5, 5)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.startButtonPoint)
                 .settingGetter(targetLauncherSettings::startButtonPoint)
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
@@ -187,7 +195,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void accountDropListPoint() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 6, 5));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 6, 5)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.accountDropListPoint)
                 .settingGetter(targetLauncherSettings::accountDropListPoint)
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
@@ -200,7 +208,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void accountLogoutPoint() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 6, 10));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 6, 10)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.accountLogoutPoint)
                 .settingGetter(targetLauncherSettings::accountLogoutPoint)
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
@@ -213,7 +221,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void loginInputPoint() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 6, 10));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 6, 10)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.loginInputPoint)
                 .settingGetter(targetLauncherSettings::loginInputPoint)
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
@@ -226,7 +234,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void passwordInputPoint() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 15, 10));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 15, 10)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.passwordInputPoint)
                 .settingGetter(targetLauncherSettings::passwordInputPoint)
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
@@ -239,7 +247,7 @@ class TargetLauncherSettingsImplTest {
 
     @Test
     void loginButtonPoint() {
-        when(window.getWindowRectangle()).thenReturn(new Rectangle(1, 2, 15, 10));
+        when(window.getWindowRectangle()).thenReturn(getEitherWindowRectangle(new Rectangle(1, 2, 15, 10)));
         new SettingTester(settingsFactoryInternal, SettingKeys.TargetLauncher.loginButtonPoint)
                 .settingGetter(targetLauncherSettings::loginButtonPoint)
                 .normalValues(new PointFloat(0f, 0f), new PointFloat(.55f, .35f), new PointFloat(1f, 1f))
