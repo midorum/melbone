@@ -20,8 +20,7 @@ import java.util.*;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class LaunchAccountActionTest {
 
@@ -136,9 +135,13 @@ class LaunchAccountActionTest {
         final Account[] testAccountsToLaunch = getTestAccountsToLaunch();
         mockTestBaseAppWindows(getEmptyTestWindows());
         mockLauncherWindowForLoginAccounts(testAccountsToLaunch);
-        mockNewUnboundBaseAppWindow();
+        final BaseAppWindow newBaseAppWindow = getBaseAppWindow(null);
+        mockFindUnboundBaseAppWindowAndBindWithAccount(newBaseAppWindow);
+        verifyBaseAppWindowChoosingCharacter(newBaseAppWindow);
+        mockTargetProcessesLimitNotReached();
         final LaunchAccountAction instance = new LaunchAccountAction(testAccountsToLaunch, windowFactory, settings);
         instance.perform();
+        verify(newBaseAppWindow, atLeastOnce()).restoreAndDo(any(WindowConsumer.class));
     }
 
     @Test
@@ -149,9 +152,12 @@ class LaunchAccountActionTest {
         when(windowFactory.getAllBaseAppWindows()).thenReturn(testUnboundWindowsForClose).thenReturn(List.of());
         mockLauncherWindowForLoginAccounts(testAccountsToLaunch);
         mockTargetProcessesLimitNotReached();
-        mockNewUnboundBaseAppWindow();
+        final BaseAppWindow newBaseAppWindow = getBaseAppWindow(null);
+        mockFindUnboundBaseAppWindowAndBindWithAccount(newBaseAppWindow);
+        verifyBaseAppWindowChoosingCharacter(newBaseAppWindow);
         final LaunchAccountAction instance = new LaunchAccountAction(testAccountsToLaunch, windowFactory, settings);
         instance.perform();
+        verify(newBaseAppWindow, atLeastOnce()).restoreAndDo(any(WindowConsumer.class));
     }
 
     @Test
@@ -217,10 +223,12 @@ class LaunchAccountActionTest {
         return testWindows;
     }
 
+    private void mockFindUnboundBaseAppWindowAndBindWithAccount(final BaseAppWindow window) {
+        when(windowFactory.findUnboundBaseAppWindowAndBindWithAccount(Mockito.anyString())).thenReturn(Optional.of(window));
+    }
+
     @SuppressWarnings("unchecked")
-    private void mockNewUnboundBaseAppWindow() throws InterruptedException {
-        final BaseAppWindow mock = getBaseAppWindow(null);
-        when(windowFactory.findUnboundBaseAppWindowAndBindWithAccount(Mockito.anyString())).thenReturn(Optional.of(mock));
+    private void verifyBaseAppWindowChoosingCharacter(final BaseAppWindow window) throws InterruptedException {
         doAnswer(invocation -> {
             Assertions.assertEquals(1, invocation.getArguments().length);
             final WindowConsumer<RestoredBaseAppWindow> consumer = invocation.getArgument(0);
@@ -229,7 +237,7 @@ class LaunchAccountActionTest {
             Mockito.verify(restoredBaseAppWindowMock, Mockito.times(1)).selectServer();
             Mockito.verify(restoredBaseAppWindowMock, Mockito.times(1)).chooseCharacter();
             return null;
-        }).when(mock).restoreAndDo(Mockito.any(WindowConsumer.class));
+        }).when(window).restoreAndDo(Mockito.any(WindowConsumer.class));
     }
 
     private void mockLauncherWindowForNotFoundCase() throws InterruptedException {

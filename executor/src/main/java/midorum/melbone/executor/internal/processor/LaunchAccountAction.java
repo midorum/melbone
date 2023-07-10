@@ -150,7 +150,7 @@ public class LaunchAccountAction implements VoidActionThrowing<InterruptedExcept
         //FIXME после логина лаунчер может долго обновляться, поэтому нужна настраиваемая задержка.
         // Это повторение сделано для обхода случая с обновлением после профилактики.
         //TODO сделать по человечески, когда научимся различать обновление и запуск игры.
-        // Запуск игры (до появления окна) можно попробовать контролировать по запуску процесса.
+        // Запуск целевого окна (до его появления) можно попробовать контролировать по запуску процесса.
         final Waiting.EmptyConsumer startAction = () -> {
             checkLauncherIsReadyAndStartGame();
             waitForApplicationCountControlWindowAndCloseIt(delay);

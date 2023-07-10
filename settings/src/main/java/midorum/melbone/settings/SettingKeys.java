@@ -209,7 +209,7 @@ public interface SettingKeys {
                 SettingObtainWays.touchWindowAndGetRelativePoint),
         windowTimeout(Long.class,
                 "window appearing timeout in seconds",
-                10L,
+                1L,
                 LONG_POSITIVE_PREDICATE.predicate());
 
         private final SettingData settingData;
