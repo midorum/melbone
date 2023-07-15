@@ -1,8 +1,10 @@
 package midorum.melbone.window;
 
+import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.IScreenShotMaker;
 import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.WindowPoint;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointInt;
 import dma.validation.Validator;
 import midorum.melbone.model.settings.PropertiesProvider;
@@ -36,7 +38,7 @@ public class WindowFactory {
         this.baseAppWindowFactory = new BaseAppWindowFactory(commonWindowService, settings, accountBinding, stamps);
     }
 
-    public Optional<LauncherWindow> findOrTryStartLauncherWindow() throws InterruptedException {
+    public Optional<LauncherWindow> findOrTryStartLauncherWindow() throws InterruptedException, Win32ApiException {
         return launcherWindowFactory.findWindowOrTryStartLauncher();
     }
 
@@ -76,8 +78,8 @@ public class WindowFactory {
         return commonWindowService.getWin32System().getScreenResolution();
     }
 
-    public int countAllTargetProcesses() {
-        return baseAppWindowFactory.listAllTargetProcesses().size();
+    public Either<Integer> countAllTargetProcesses() {
+        return baseAppWindowFactory.listAllTargetProcesses().map(List::size);
     }
 
     public static class Builder {

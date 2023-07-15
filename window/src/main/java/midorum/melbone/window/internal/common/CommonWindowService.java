@@ -1,9 +1,6 @@
 package midorum.melbone.window.internal.common;
 
-import com.midorum.win32api.facade.Either;
-import com.midorum.win32api.facade.IWindow;
-import com.midorum.win32api.facade.Rectangle;
-import com.midorum.win32api.facade.Win32System;
+import com.midorum.win32api.facade.*;
 import com.midorum.win32api.win32.IWinUser;
 import midorum.melbone.model.exception.CannotGetUserInputException;
 import midorum.melbone.model.settings.PropertiesProvider;
@@ -32,11 +29,15 @@ public class CommonWindowService {
     }
 
     public String getUID(final IWindow window) {
-        return window.getProcessId() + "_" + window.getProcess().getCreationTime();
+        return window.getProcessId() + "_" + window.getProcess().flatMap(IProcess::getCreationTime).getOrHandleError(e -> {
+            logger.error("cannot get window process info (window " + window.getSystemId() + ")");
+            return System.currentTimeMillis();
+        });
     }
 
     public Either<Boolean> checkIfWindowRendered(final IWindow window) {
-        record Result(boolean s, boolean m, boolean r){}
+        record Result(boolean s, boolean m, boolean r) {
+        }
         return window.hasAndHasNotStyles(IWinUser.WS_VISIBLE, IWinUser.WS_DISABLED)
                 .flatMap(s -> window.hasStyles(IWinUser.WS_MINIMIZE)
                         .flatMap(m -> window.getClientRectangle().map(rectangle -> rectangle.height() > 0 && rectangle.width() > 0)

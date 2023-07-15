@@ -44,7 +44,7 @@ public class LauncherWindowImpl implements LauncherWindow {
     }
 
     @Override
-    public void restoreAndDo(final WindowConsumer<RestoredLauncherWindow> consumer) throws InterruptedException {
+    public void restoreAndDo(final WindowConsumer<RestoredLauncherWindow> consumer) throws InterruptedException, Win32ApiException {
         if (!this.window.isExists()) {
             log.warn("window not found - skip");
             return;
@@ -219,9 +219,9 @@ public class LauncherWindowImpl implements LauncherWindow {
         checkConfirmQuitDialogRenderedAndAcceptIt();
     }
 
-    private void killProcess() {
+    private void killProcess() throws Win32ApiException {
         log.info("terminating launcher window process");
-        this.window.getProcess().terminate();
+        this.window.getProcess().getOrThrow().terminate();
     }
 
     private void checkConfirmQuitDialogRenderedAndAcceptIt() throws InterruptedException {

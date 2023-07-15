@@ -11,7 +11,7 @@ public enum SettingObtainWays implements SettingObtainWay {
     insertManually(SettingsManagerAction.noAction, Function.identity()),
     touchWindowAndGetTitle(SettingsManagerAction.touchWindow, o -> ((WindowPoint) o).window().getText().getOrThrow(() -> new CriticalErrorException("Cannot get window title")).orElseThrow(() -> new CriticalErrorException("Window hasn't title"))),
     touchWindowAndGetClassName(SettingsManagerAction.touchWindow, o -> ((WindowPoint) o).window().getClassName().getOrThrow(() -> new CriticalErrorException("Cannot get Window class name"))),
-    touchWindowAndGetProcessName(SettingsManagerAction.touchWindow, o -> ((WindowPoint) o).window().getProcess().name().orElseThrow(() -> new CriticalErrorException("Window process hasn't name"))),
+    touchWindowAndGetProcessName(SettingsManagerAction.touchWindow, o -> ((WindowPoint) o).window().getProcess().getOrThrow(() -> new CriticalErrorException("Cannot get Window process")).name().orElseThrow(() -> new CriticalErrorException("Window process hasn't name"))),
     touchWindowAndGetDimensions(SettingsManagerAction.touchWindow, o -> ((WindowPoint) o).window().getWindowRectangle().getOrThrow(() -> new CriticalErrorException("Cannot get window dimensions"))),
     touchWindowAndGetRelativePoint(SettingsManagerAction.touchWindowElement, o -> ((WindowPoint) o).point()),
     touchScreenElementAndGetPoint(SettingsManagerAction.touchScreenElement, Function.identity()),

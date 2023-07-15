@@ -48,13 +48,11 @@ public class LauncherWindowFactory {
         this.stamps = stamps;
     }
 
-    public Optional<LauncherWindow> findWindowOrTryStartLauncher() throws InterruptedException {
+    public Optional<LauncherWindow> findWindowOrTryStartLauncher() throws InterruptedException, Win32ApiException {
         logger.info("find or start launcher");
         final String marker = Long.toString(System.currentTimeMillis());
-        logger.info("look for exist launcher window");
         final Optional<LauncherWindow> maybeExistLauncherWindow = searchExistLauncherWindow(marker);
         if (maybeExistLauncherWindow.isPresent()) return maybeExistLauncherWindow;
-        logger.info("exist launcher window not found");
         //TODO check network accessibility before start launcher
         final Optional<LauncherWindow> maybeNewLauncherWindow = tryStartNewLauncherWindow();
         if (maybeNewLauncherWindow.isPresent()) return maybeNewLauncherWindow;
@@ -68,36 +66,46 @@ public class LauncherWindowFactory {
         return Optional.empty();
     }
 
-    private Optional<LauncherWindow> searchExistLauncherWindow(final String marker) throws InterruptedException {
+    private Optional<LauncherWindow> searchExistLauncherWindow(final String marker) throws InterruptedException, Win32ApiException {
+        logger.info("look for exist launcher window");
         final Optional<LauncherWindow> maybeExistLauncherWindow = findWindow();
         if (maybeExistLauncherWindow.isPresent()) return maybeExistLauncherWindow;
+        logger.info("exist launcher window not found");
         detectNetworkErrorAlert(marker);
         detectBrokenLauncherProcess();
         return Optional.empty();
     }
 
-    private void detectBrokenLauncherProcess() throws InterruptedException {
-        final List<IProcess> processes = win32System.listProcessesWithName(settings.targetLauncher().processName());
+    private void detectBrokenLauncherProcess() throws InterruptedException, Win32ApiException {
+        final List<IProcess> processes = win32System.listProcessesWithName(settings.targetLauncher().processName()).getOrThrow();
         if (processes.isEmpty()) return;
         final Delay delay = new Delay(settings.application().speedFactor());
-        processes.forEach(process -> {
-            final String processInfo = processInfo(process);
-            logger.warn("found broken launcher process: {}", processInfo);
-            if (System.currentTimeMillis() - process.getCreationTime() > settings.targetLauncher().brokenProcessTimeout()) {
-                logger.warn("try terminate broken launcher process: {}", processInfo);
-                process.terminate();
-            }
-        });
+        try {
+            processes.forEach(process -> {
+                final String processInfo;
+                try {
+                    processInfo = processInfo(process).getOrThrow();
+                    logger.warn("found broken launcher process: {}", processInfo);
+                    if (System.currentTimeMillis() - process.getCreationTime().getOrThrow() > settings.targetLauncher().brokenProcessTimeout()) {
+                        logger.warn("try terminate broken launcher process: {}", processInfo);
+                        process.terminate();
+                    }
+                } catch (Win32ApiException e) {
+                    throw new Win32ControlledException(e);
+                }
+            });
+        } catch (Win32ControlledException e) {
+            throw (Win32ApiException) e.getCause();
+        }
         delay.sleep(10, TimeUnit.SECONDS);
-        final List<IProcess> processesAfter = win32System.listProcessesWithName(settings.targetLauncher().processName());
+        final List<IProcess> processesAfter = win32System.listProcessesWithName(settings.targetLauncher().processName()).getOrThrow();
         if (processesAfter.isEmpty()) return;
         throw new NeedRetryException("Found broken launcher process and it isn't closed - need retry");
     }
 
-    private String processInfo(final IProcess process) {
-        final long creationTime = process.getCreationTime();
-        return process.pid() + " - [" + process.name().orElse("no name")
-                + "] created at " + dateTimeFormatter.format(LocalDateTime.ofInstant(Instant.ofEpochMilli(creationTime), ZoneId.systemDefault()));
+    private Either<String> processInfo(final IProcess process) {
+        return process.getCreationTime().map(creationTime -> process.pid() + " - [" + process.name().orElse("no name")
+                + "] created at " + dateTimeFormatter.format(LocalDateTime.ofInstant(Instant.ofEpochMilli(creationTime), ZoneId.systemDefault())));
     }
 
     private Optional<LauncherWindow> tryStartNewLauncherWindow() throws InterruptedException {
@@ -116,12 +124,16 @@ public class LauncherWindowFactory {
                 .doOnEveryFailedIteration(i -> {
                     final String lastsFromStart = new DurationFormatter(i.fromStart()).toStringWithoutZeroParts();
                     if (i.fromLastCheckEnds().toMillis() > windowAppearingDelay) {
-                        final List<IProcess> processes = win32System.listProcessesWithName(processName);
-                        if (processes.isEmpty()) {
-                            logger.warn("{}: launcher window and process not found yet - try start again", lastsFromStart);
-                            clickDesktopIcon();
-                        } else {
-                            logger.info("{}: launcher window not found yet but process has started", lastsFromStart);
+                        try {
+                            final List<IProcess> processes = win32System.listProcessesWithName(processName).getOrThrow();
+                            if (processes.isEmpty()) {
+                                logger.warn("{}: launcher window and process not found yet - try start again", lastsFromStart);
+                                clickDesktopIcon();
+                            } else {
+                                logger.info("{}: launcher window not found yet but process has started", lastsFromStart);
+                            }
+                        } catch (Win32ApiException e) {
+                            logger.error("cannot get process with name " + processName + " - skip", e);
                         }
                     } else {
                         logger.debug("{}: launcher window not found yet", lastsFromStart);
@@ -245,6 +257,13 @@ public class LauncherWindowFactory {
             });
         }
 
+    }
+
+    private final static class Win32ControlledException extends RuntimeException {
+
+        public Win32ControlledException(final Win32ApiException exception) {
+            super(exception);
+        }
     }
 
 }

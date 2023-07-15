@@ -19,6 +19,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +31,7 @@ class LauncherWindowFactoryTest {
 
     private static final float SPEED_FACTOR = 0.1F;
     private static final String LAUNCHER_WINDOW_TITLE = "LauncherTitle";
+    private static final String LAUNCHER_PROCESS_NAME = "launcher.exe";
     private static final int LAUNCHER_WINDOW_WIDTH = 150;
     private static final int LAUNCHER_WINDOW_HEIGHT = 100;
     private static final int DESKTOP_ICON_LOCATION_X = 35;
@@ -72,6 +75,7 @@ class LauncherWindowFactoryTest {
         when(targetLauncherSettings.desktopShortcutLocationPoint()).thenReturn(DESKTOP_ICON_LOCATION_POINT_INT);
         // launcher window
         when(settings.targetLauncher().windowTitle()).thenReturn(LAUNCHER_WINDOW_TITLE);
+        when(settings.targetLauncher().processName()).thenReturn(LAUNCHER_PROCESS_NAME);
         when(targetLauncherSettings.windowDimensions()).thenReturn(new Rectangle(0, 0, LAUNCHER_WINDOW_WIDTH, LAUNCHER_WINDOW_HEIGHT));
         // network dialog window
         when(settings.targetLauncher().networkErrorDialogTitle()).thenReturn(NETWORK_ERROR_DIALOG_TITLE);
@@ -85,14 +89,16 @@ class LauncherWindowFactoryTest {
     }
 
     @Test
-    void launcherNotFoundAndNotStarted() throws InterruptedException {
+    void launcherNotFoundAndNotStarted() throws InterruptedException, Win32ApiException {
         System.out.println("launcherNotFoundAndNotStarted");
+        when(win32System.listProcessesWithName(LAUNCHER_PROCESS_NAME)).thenReturn(Either.value(() -> (List<IProcess>) Collections.EMPTY_LIST).whenReturnsTrue(true));
         final LauncherWindowFactory instance = new LauncherWindowFactory(commonWindowService, settings, uacWindowFactory, stamps);
         final Optional<LauncherWindow> maybeLauncher = instance.findWindowOrTryStartLauncher();
         assertTrue(maybeLauncher.isEmpty());
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void closeNetworkErrorDialog() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("closeNetworkErrorDialog");
         final Mouse mouse = mock(Mouse.class);
@@ -101,6 +107,7 @@ class LauncherWindowFactoryTest {
                 .withCommonWindowService(commonWindowService)
                 .getForegroundWindowFor(networkErrorDialogWindow)
                 .returnsMouse(mouse);
+        when(win32System.listProcessesWithName(LAUNCHER_PROCESS_NAME)).thenReturn(Either.value(() -> (List<IProcess>) Collections.EMPTY_LIST).whenReturnsTrue(true));
         when(win32System.findAllWindows(NETWORK_ERROR_DIALOG_TITLE, null, true)).thenReturn(List.of(networkErrorDialogWindow));
         final LauncherWindowFactory instance = new LauncherWindowFactory(commonWindowService, settings, uacWindowFactory, stamps);
         final Optional<LauncherWindow> maybeLauncher = instance.findWindowOrTryStartLauncher();
@@ -111,10 +118,11 @@ class LauncherWindowFactoryTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    void findOrTryStartLauncherWindow() throws InterruptedException {
+    void findOrTryStartLauncherWindow() throws InterruptedException, Win32ApiException {
         System.out.println("findOrTryStartLauncherWindow");
         final List<IWindow> emptyList = List.of();
         final List<IWindow> launcherWindows = getLauncherWindows();
+        when(win32System.listProcessesWithName(LAUNCHER_PROCESS_NAME)).thenReturn(Either.value(() -> (List<IProcess>) Collections.EMPTY_LIST).whenReturnsTrue(true));
         when(win32System.findAllWindows(LAUNCHER_WINDOW_TITLE, null, true)).thenReturn(emptyList, launcherWindows);
         final LauncherWindowFactory instance = new LauncherWindowFactory(commonWindowService, settings, uacWindowFactory, stamps);
         final Optional<LauncherWindow> maybeLauncher = instance.findWindowOrTryStartLauncher();

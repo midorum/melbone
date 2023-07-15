@@ -73,7 +73,7 @@ public class BaseAppWindowImpl implements BaseAppWindow {
     }
 
     @Override
-    public void restoreAndDo(final WindowConsumer<RestoredBaseAppWindow> consumer) throws InterruptedException {
+    public void restoreAndDo(final WindowConsumer<RestoredBaseAppWindow> consumer) throws InterruptedException, Win32ApiException {
         if (!this.window.isExists()) {
             log.warn("window not found - skip");
             return;
@@ -81,28 +81,28 @@ public class BaseAppWindowImpl implements BaseAppWindow {
         try {
             commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
                 try {
-                    checkWindowIsDisconnected(foregroundWindow);
-                    consumer.accept(new RestoredBaseAppWindowImpl(foregroundWindow));
-                    minimizeOpenedWindow(foregroundWindow);
-                } catch (DisconnectedWindowException e) {
                     try {
+                        checkWindowIsDisconnected(foregroundWindow);
+                        consumer.accept(new RestoredBaseAppWindowImpl(foregroundWindow));
+                        minimizeOpenedWindow(foregroundWindow);
+                    } catch (DisconnectedWindowException e) {
                         log.warn("widow is disconnected: " + e.getMessage() + " - close:", e);
                         closeDisconnectedWindow(foregroundWindow);
-                    } catch (Win32ApiException ex) {
-                        throw new CannotGetUserInputException(e.getMessage(), e);
                     }
                 } catch (Win32ApiException e) {
-                    throw new CannotGetUserInputException(e.getMessage(), e);
+                    throw new ControlledWin32ApiException(e);
                 }
             });
         } catch (BrokenWindowException | CannotGetUserInputException e) {
             log.warn("widow is broken: " + e.getMessage() + " - close:", e);
             closeOrKillBrokenWindow();
+        } catch (ControlledWin32ApiException e) {
+            throw (Win32ApiException) e.getCause();
         }
     }
 
     @Override
-    public void doInGameWindow(final WindowConsumer<InGameBaseAppWindow> consumer) throws InterruptedException {
+    public void doInGameWindow(final WindowConsumer<InGameBaseAppWindow> consumer) throws InterruptedException, Win32ApiException {
         if (!this.window.isExists()) {
             log.warn("window not found - skip");
             return;
@@ -110,24 +110,24 @@ public class BaseAppWindowImpl implements BaseAppWindow {
         try {
             commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
                 try {
-                    checkWindowIsDisconnected(foregroundWindow);
-                    checkIfInGameWindowRendered(foregroundWindow);
-                    consumer.accept(new InGameBaseAppWindowImpl(foregroundWindow));
-                    minimizeOpenedWindow(foregroundWindow);
-                } catch (DisconnectedWindowException e) {
                     try {
+                        checkWindowIsDisconnected(foregroundWindow);
+                        checkIfInGameWindowRendered(foregroundWindow);
+                        consumer.accept(new InGameBaseAppWindowImpl(foregroundWindow));
+                        minimizeOpenedWindow(foregroundWindow);
+                    } catch (DisconnectedWindowException e) {
                         log.warn("widow is disconnected: " + e.getMessage() + " - close", e);
                         closeDisconnectedWindow(foregroundWindow);
-                    } catch (Win32ApiException ex) {
-                        throw new CannotGetUserInputException(e.getMessage(), e);
                     }
                 } catch (Win32ApiException e) {
-                    throw new CannotGetUserInputException(e.getMessage(), e);
+                    throw new ControlledWin32ApiException(e);
                 }
             });
         } catch (BrokenWindowException | CannotGetUserInputException e) {
             log.warn("widow has broken: " + e.getMessage() + " - close:", e);
             closeOrKillBrokenWindow();
+        } catch (ControlledWin32ApiException e) {
+            throw (Win32ApiException) e.getCause();
         }
     }
 
@@ -186,14 +186,9 @@ public class BaseAppWindowImpl implements BaseAppWindow {
         })) throw getBrokenWindowException("Cannot close disconnected window", getLogMarker());
     }
 
-    private void closeOrKillBrokenWindow() throws InterruptedException {
+    private void closeOrKillBrokenWindow() throws InterruptedException, Win32ApiException {
         if (!this.window.isExists()) return;
-        try {
-            if (!tryCloseBrokenWindowAndCheckIfClosedNormally()) killWindowProcess();
-        } catch (Win32ApiException e) {
-            log.error("cannot close window normally - kill process", e);
-            killWindowProcess();
-        }
+        if (!tryCloseBrokenWindowAndCheckIfClosedNormally()) killWindowProcess();
     }
 
     private boolean tryCloseBrokenWindowAndCheckIfClosedNormally() throws InterruptedException, Win32ApiException {
@@ -221,10 +216,10 @@ public class BaseAppWindowImpl implements BaseAppWindow {
         getMouse().move(targetBaseAppSettings.windowCloseButtonPoint()).leftClick();
     }
 
-    private void killWindowProcess() throws InterruptedException {
+    private void killWindowProcess() throws InterruptedException, Win32ApiException {
         if (!this.window.isExists()) return;
         log.info("terminating window process");
-        this.window.getProcess().terminate();
+        this.window.getProcess().getOrThrow().terminate();
         if (!waitWindowDisappearing(() -> {
         })) throw new CriticalErrorException("cannot terminate window process");
     }
@@ -519,5 +514,11 @@ public class BaseAppWindowImpl implements BaseAppWindow {
             super(message);
         }
 
+    }
+
+    private static class ControlledWin32ApiException extends RuntimeException {
+        public ControlledWin32ApiException(final Throwable cause) {
+            super(cause);
+        }
     }
 }

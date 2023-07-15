@@ -87,8 +87,6 @@ public class ForegroundWindow {
 
     private void findPossibleTopmostAndCloseIfNecessary(final String marker) {
         final String topmostMarker = "topmost_" + marker;
-        System.out.println(">>> window: "+window);
-        System.out.println(">>> window.getWindowRectangle(): "+window.getWindowRectangle());
         final Function<Rectangle, Boolean> rectangleChecker = window.getWindowRectangle()
                 .map(wr -> (Function<Rectangle, Boolean>) r -> areRectanglesOverlay(wr, r))
                 .getOrHandleError(exception -> {

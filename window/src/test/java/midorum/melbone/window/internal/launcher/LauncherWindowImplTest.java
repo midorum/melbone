@@ -104,7 +104,7 @@ class LauncherWindowImplTest {
         when(window.getWindowMouse(SPEED_FACTOR)).thenReturn(mouse);
         when(mouse.move(any(PointInt.class))).thenReturn(mouse);
         when(mouse.move(any(PointFloat.class))).thenReturn(mouse);
-        when(window.getProcess()).thenReturn(process);
+        when(window.getProcess()).thenReturn(Either.value(() -> process).whenReturnsTrue(true));
         //launcher normal metrics
         when(window.isVisible()).thenReturn(true);
         when(window.getSystemId()).thenReturn("0x435f");
@@ -134,7 +134,7 @@ class LauncherWindowImplTest {
 
     @Test
     @DisplayName("\"Client is already running\" window rendered")
-    void clientIsAlreadyRunningWindowRendered() throws InterruptedException, CannotGetUserInputException {
+    void clientIsAlreadyRunningWindowRendered() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("clientIsAlreadyRunningWindowRendered");
         //given
         windowIsAlive();
@@ -146,7 +146,7 @@ class LauncherWindowImplTest {
     }
 
     @Test
-    void clientIsAlreadyRunningWindowNotRendered() throws InterruptedException, CannotGetUserInputException {
+    void clientIsAlreadyRunningWindowNotRendered() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("clientIsAlreadyRunningWindowNotRendered");
         //given
         windowIsAlive();

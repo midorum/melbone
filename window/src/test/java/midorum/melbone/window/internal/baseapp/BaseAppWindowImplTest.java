@@ -173,7 +173,7 @@ class BaseAppWindowImplTest {
         when(mouse.move(any(PointFloat.class))).thenReturn(mouse);
         when(mouse.move(anyFloat(), anyFloat())).thenReturn(mouse);
         when(mouse.leftClick()).thenReturn(mouse);
-        when(window.getProcess()).thenReturn(process);
+        when(window.getProcess()).thenReturn(Either.value(() -> process).whenReturnsTrue(true));
         //stamps
         when(stamps.targetBaseApp()).thenReturn(targetBaseAppStamps);
         when(targetBaseAppStamps.menuExitOption()).thenReturn(menuExitOptionStamp);
@@ -238,7 +238,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void terminatingWindowProcess() throws InterruptedException, CannotGetUserInputException {
+    void terminatingWindowProcess() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("terminatingWindowProcess");
         //when
         when(window.isExists())
@@ -254,7 +254,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void cannotTerminateWindowProcess() throws InterruptedException, CannotGetUserInputException {
+    void cannotTerminateWindowProcess() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("cannotTerminateWindowProcess");
         //when
         when(window.isExists())
@@ -337,10 +337,10 @@ class BaseAppWindowImplTest {
         windowIsExists();
         windowIsHealthy();
         baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp),
-                foundFrom(stampsToCheckServerPageRendering, optionsButtonBaseScaleStamp),
-                notFound(disconnectedPopupStamp),
-                foundFrom(stampsToCheckServerLineRendering, serverLineUnselectedStamp),
-                notFound(disconnectedPopupStamp))
+                        foundFrom(stampsToCheckServerPageRendering, optionsButtonBaseScaleStamp),
+                        notFound(disconnectedPopupStamp),
+                        foundFrom(stampsToCheckServerLineRendering, serverLineUnselectedStamp),
+                        notFound(disconnectedPopupStamp))
                 .returnsMouse(mouse);
         getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::selectServer);
         //then
@@ -383,7 +383,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInGameWindowRendered() throws InterruptedException, CannotGetUserInputException {
+    void checkInGameWindowRendered() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInGameWindowRendered");
         final Mouse mouse = getMouseMock();
         //when
@@ -504,7 +504,7 @@ class BaseAppWindowImplTest {
     private void windowIsCorrupted() throws InterruptedException, CannotGetUserInputException {
         when(window.isVisible()).thenReturn(false);
         baseWindowMocked().stateIs(throwFor(disconnectedPopupStamp, new CannotGetUserInputException()))
-                        .throwsWhenAskedMouse(new CannotGetUserInputException());
+                .throwsWhenAskedMouse(new CannotGetUserInputException());
     }
 
     private void windowIsHealthy() {
@@ -596,11 +596,11 @@ class BaseAppWindowImplTest {
         verify(commonWindowService, never()).fixResult(CommonWindowService.Result.baseAppWindowDisappeared);
     }
 
-    private void verifyWasAttemptTerminateWindowProcess() {
+    private void verifyWasAttemptTerminateWindowProcess() throws Win32ApiException {
         verify(process).terminate();
     }
 
-    private void verifyDidNotAttemptsTerminateWindowProcess() {
+    private void verifyDidNotAttemptsTerminateWindowProcess() throws Win32ApiException {
         verify(process, never()).terminate();
     }
 
