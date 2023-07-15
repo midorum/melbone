@@ -50,49 +50,61 @@ public class ForegroundWindow {
 
     public Mouse getMouse() throws InterruptedException, CannotGetUserInputException {
         final String logMarker = getLogMarker();
-        if (!bringWindowForeground(logMarker)) throw getCannotGetUserInputException(logMarker);
-        return mouse;
+        try {
+            if (!bringWindowForeground(logMarker)) throw getCannotGetUserInputException(logMarker);
+            return mouse;
+        } catch (Win32ApiException e) {
+            throw new CannotGetUserInputException(e.getMessage(), e);
+        }
     }
 
     public IKeyboard getKeyboard() throws InterruptedException, CannotGetUserInputException {
         final String logMarker = getLogMarker();
-        if (!bringWindowForeground(logMarker)) throw getCannotGetUserInputException(logMarker);
-        return window.getKeyboard();
+        try {
+            if (!bringWindowForeground(logMarker)) throw getCannotGetUserInputException(logMarker);
+            return window.getKeyboard();
+        } catch (Win32ApiException e) {
+            throw new CannotGetUserInputException(e.getMessage(), e);
+        }
     }
 
     public StateWaiting waiting() {
         return new StateWaiting();
     }
 
-    private boolean bringWindowForeground(final String marker) throws InterruptedException {
-        final boolean windowIsForeground = new Waiting()
-                .timeout(bringWindowForegroundTimeout, TimeUnit.MILLISECONDS)
-                .withDelay(bringWindowForegroundDelay, TimeUnit.MILLISECONDS)
-                .waitForBoolean(() -> Either.resultOf(window::bringForeground).getOrHandleError(exception -> {
-                    logger.warn("cannot bring window (" + windowId + ") to foreground", exception);
-                    return false;
-                }));
-        if (windowIsForeground) {
-            findPossibleTopmostAndCloseIfNecessary(marker);
-        } else {
-            logger.warn("Can not bring window {} foreground. Maybe another window lays over and has user input.", windowId);
-            findPossibleOverlay(marker).ifPresent(IWindow::close);
+    private boolean bringWindowForeground(final String marker) throws InterruptedException, Win32ApiException {
+        try {
+            final boolean windowIsForeground = new Waiting()
+                    .timeout(bringWindowForegroundTimeout, TimeUnit.MILLISECONDS)
+                    .withDelay(bringWindowForegroundDelay, TimeUnit.MILLISECONDS)
+                    .waitForBoolean(() -> {
+                        try {
+                            return window.bringForeground();
+                        } catch (Win32ApiException e) {
+                            throw new ControlledWin32ApiException(e);
+                        }
+                    });
+            if (windowIsForeground) {
+                findPossibleTopmostAndCloseIfNecessary(marker);
+            } else {
+                logger.warn("Can not bring window {} foreground. Maybe another window lays over and has user input.", windowId);
+                findPossibleOverlay(marker).ifPresent(IWindow::close);
+            }
+            return windowIsForeground;
+        } catch (ControlledWin32ApiException e) {
+            throw (Win32ApiException) e.getCause();
         }
-        return windowIsForeground;
     }
 
     private boolean areRectanglesOverlay(final Rectangle r1, final Rectangle r2) {
         return r1.left() <= r2.right() && r2.left() <= r1.right() && r1.top() <= r2.bottom() && r2.top() <= r1.bottom();
     }
 
-    private void findPossibleTopmostAndCloseIfNecessary(final String marker) {
+    private void findPossibleTopmostAndCloseIfNecessary(final String marker) throws Win32ApiException {
         final String topmostMarker = "topmost_" + marker;
         final Function<Rectangle, Boolean> rectangleChecker = window.getWindowRectangle()
                 .map(wr -> (Function<Rectangle, Boolean>) r -> areRectanglesOverlay(wr, r))
-                .getOrHandleError(exception -> {
-                    logger.warn("cannot get window attributes (" + windowId + ") - skip", exception);
-                    return r -> false;
-                });
+                .getOrThrow();
         win32System.listAllWindows().stream()
                 .filter(found -> found.getProcessId() != window.getProcessId())
                 .filter(w -> {
@@ -323,7 +335,7 @@ public class ForegroundWindow {
                                     try {
                                         mouse.clickAtPoint(mouseClickPoint);
                                     } catch (Win32ApiException e) {
-                                        throw new Win32ControlledException(e.getMessage(), e);
+                                        throw new ControlledWin32ApiException(e);
                                     }
                                 }
                             })
@@ -336,8 +348,7 @@ public class ForegroundWindow {
                                     mouse.adjust();
                                     return stampSupplier.get();
                                 } catch (Win32ApiException e) {
-                                    logger.warn("cannot get attributes or adjust window (" + windowId + ") - skip", e);
-                                    return Optional.empty();
+                                    throw new ControlledWin32ApiException(e);
                                 }
                             });
                     if (!window.isForeground()) throw getCannotGetUserInputException(logMarker);
@@ -354,12 +365,13 @@ public class ForegroundWindow {
                                     } else
                                         logger.debug("[{}] stamp(s) {} not found", windowId, stampsString);
                                 } catch (Win32ApiException e) {
-                                    throw new Win32ControlledException(e.getMessage(), e);
+                                    throw new ControlledWin32ApiException(e);
                                 }
                             });
                     return foundStamp;
-                } catch (Win32ControlledException e) {
-                    throw new CannotGetUserInputException(e.getMessage(), e);
+                } catch (ControlledWin32ApiException e) {
+                    final Throwable cause = e.getCause();
+                    throw new CannotGetUserInputException(cause.getMessage(), cause);
                 }
             }
 
@@ -381,7 +393,7 @@ public class ForegroundWindow {
                                     try {
                                         mouse.clickAtPoint(mouseClickPoint);
                                     } catch (Win32ApiException e) {
-                                        throw new Win32ControlledException(e.getMessage(), e);
+                                        throw new ControlledWin32ApiException(e);
                                     }
                                 }
                             })
@@ -394,16 +406,16 @@ public class ForegroundWindow {
                                     mouse.adjust();
                                     return stampSupplier.get().isEmpty();
                                 } catch (Win32ApiException e) {
-                                    logger.warn("cannot get attributes or adjust window (" + windowId + ") - skip", e);
-                                    return false;
+                                    throw new ControlledWin32ApiException(e);
                                 }
                             });
                     if (!window.isForeground()) throw getCannotGetUserInputException(logMarker);
                     if (result) logger.debug("[{}] stamp has disappeared {}", windowId, stampsString);
                     else logger.warn("[{}] stamp has not disappeared {}", windowId, stampsString);
                     return result;
-                } catch (Win32ControlledException e) {
-                    throw new CannotGetUserInputException(e.getMessage(), e);
+                } catch (ControlledWin32ApiException e) {
+                    final Throwable cause = e.getCause();
+                    throw new CannotGetUserInputException(cause.getMessage(), cause);
                 }
             }
 
@@ -430,10 +442,10 @@ public class ForegroundWindow {
 
     }
 
-    private final static class Win32ControlledException extends RuntimeException {
+    private static class ControlledWin32ApiException extends RuntimeException {
 
-        public Win32ControlledException(final String message, final Throwable cause) {
-            super(message, cause);
+        public ControlledWin32ApiException(final Win32ApiException cause) {
+            super(cause);
         }
     }
 

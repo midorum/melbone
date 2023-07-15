@@ -224,7 +224,7 @@ public class LaunchAccountAction implements VoidActionThrowing<InterruptedExcept
     }
 
     private static class ControlledWin32ApiException extends RuntimeException {
-        public ControlledWin32ApiException(final Throwable cause) {
+        public ControlledWin32ApiException(final Win32ApiException cause) {
             super(cause);
         }
     }

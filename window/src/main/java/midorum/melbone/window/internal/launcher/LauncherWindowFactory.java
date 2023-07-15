@@ -91,10 +91,10 @@ public class LauncherWindowFactory {
                         process.terminate();
                     }
                 } catch (Win32ApiException e) {
-                    throw new Win32ControlledException(e);
+                    throw new ControlledWin32ApiException(e);
                 }
             });
-        } catch (Win32ControlledException e) {
+        } catch (ControlledWin32ApiException e) {
             throw (Win32ApiException) e.getCause();
         }
         delay.sleep(10, TimeUnit.SECONDS);
@@ -259,9 +259,9 @@ public class LauncherWindowFactory {
 
     }
 
-    private final static class Win32ControlledException extends RuntimeException {
+    private static class ControlledWin32ApiException extends RuntimeException {
 
-        public Win32ControlledException(final Win32ApiException exception) {
+        public ControlledWin32ApiException(final Win32ApiException exception) {
             super(exception);
         }
     }
