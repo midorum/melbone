@@ -137,8 +137,8 @@ public class MockedContext {
                 bindWithAccountInvocationConsumer.accept(invocation.getArgument(0), mock);
                 return null;
             }).when(mock).bindWithAccount(anyString());
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (InterruptedException | Win32ApiException e) {
+            throw new IllegalStateException(e);
         }
         when(mock.getCharacterName()).thenReturn(boundCharacterNameSupplier.get());
         return mock;

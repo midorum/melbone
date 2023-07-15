@@ -1,5 +1,6 @@
 package midorum.melbone.executor.internal.processor;
 
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import dma.function.VoidActionThrowing;
 import midorum.melbone.executor.internal.StaticResources;
 import midorum.melbone.model.exception.ControlledInterruptedException;
@@ -34,6 +35,8 @@ public class OnRunningAccountAction implements VoidActionThrowing<InterruptedExc
                 });
             } catch (InterruptedException e) {
                 throw new ControlledInterruptedException(e);
+            } catch (Win32ApiException e) {
+                logger.error(e);
             }
         });
         logger.info("on-running task done");

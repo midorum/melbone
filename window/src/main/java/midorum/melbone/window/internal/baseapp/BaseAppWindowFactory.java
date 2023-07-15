@@ -1,5 +1,6 @@
 package midorum.melbone.window.internal.baseapp;
 
+import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.IProcess;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Win32System;
@@ -60,7 +61,7 @@ public class BaseAppWindowFactory {
         return unboundWindow.map(window -> new BaseAppWindowImpl(window, commonWindowService, settings, accountBinding, stamps));
     }
 
-    public List<IProcess> listAllTargetProcesses() {
+    public Either<List<IProcess>> listAllTargetProcesses() {
         return win32System.listProcessesWithName(settings.targetBaseAppSettings().processName());
     }
 
