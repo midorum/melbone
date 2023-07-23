@@ -28,11 +28,11 @@ public class CommonWindowService {
         return win32System;
     }
 
-    public String getUID(final IWindow window) {
-        return window.getProcessId() + "_" + window.getProcess().flatMap(IProcess::getCreationTime).getOrHandleError(e -> {
-            logger.error("cannot get window process info (window " + window.getSystemId() + ")");
-            return System.currentTimeMillis();
-        });
+    public Either<String> getUID(final IWindow window) {
+        // Window handle or process id are unique in their context during window or process lifetime.
+        // But they are reusable and not unique in the whole system time context.
+        // So we have to add timestamp to them to get real unique id.
+        return window.getProcess().flatMap(process -> process.getCreationTime().map(time -> process.pid() + "_" + time));
     }
 
     public Either<Boolean> checkIfWindowRendered(final IWindow window) {

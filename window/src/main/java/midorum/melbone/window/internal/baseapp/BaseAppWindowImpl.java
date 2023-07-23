@@ -1,10 +1,12 @@
 package midorum.melbone.window.internal.baseapp;
 
+import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.IMouse;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointFloat;
 import dma.flow.Waiting;
+import dma.function.EmptyPredicateThrowing;
 import dma.function.VoidActionThrowing;
 import dma.util.Delay;
 import dma.util.DurationFormatter;
@@ -52,33 +54,39 @@ public class BaseAppWindowImpl implements BaseAppWindow {
         this.accountBinding = accountBinding;
         this.commonWindowService = commonWindowService;
         this.stamps = stamps;
-        final String windowName = getCharacterNameInternal().orElse(window.getSystemId());
+        final String windowName = getEitherCharacterNameOrError().map(name -> name.orElse(window.getSystemId())).getOrHandleError(e -> {
+            StaticResources.LOGGER.error("cannot obtain window attributes (" + window.getSystemId() + ")", e);
+            return window.getSystemId() + "_err";
+        });
         this.logMarkerSupplier = () -> "base window [" + windowName + "]";
         this.log = new Log(StaticResources.LOGGER, logMarkerSupplier);
     }
 
     @Override
-    public Optional<String> getCharacterName() {
-        log.debug("get window {} account name", window.getSystemId());
-        final Optional<String> maybeName = getCharacterNameInternal();
-        log.debug("window {}{} bound with account {}", window.getSystemId(), maybeName.isPresent() ? "" : " not", maybeName.orElse(""));
+    public Either<Optional<String>> getCharacterName() {
+        log.debug("get window {} bound account name", window.getSystemId());
+        final Either<Optional<String>> maybeName = getEitherCharacterNameOrError();
+        log.debug("window {} {}", window::getSystemId, () -> maybeName.getOrHandleError(e -> {
+            log.error("cannot obtain window attributes (" + window.getSystemId() + ")", e);
+            return Optional.empty();
+        }).map(name -> "bound with account " + name).orElse("not bound with account"));
         return maybeName;
     }
 
     @Override
-    public void bindWithAccount(final String accountId) {
-        accountBinding.bindResource(accountId, commonWindowService.getUID(window));
+    public void bindWithAccount(final String accountId) throws Win32ApiException {
+        accountBinding.bindResource(accountId, commonWindowService.getUID(window).getOrThrow());
         setLogMarker(accountId);
         log.info("window has bound with account {}", accountId);
     }
 
     @Override
     public void restoreAndDo(final WindowConsumer<RestoredBaseAppWindow> consumer) throws InterruptedException, Win32ApiException {
-        if (!this.window.isExists()) {
-            log.warn("window not found - skip");
-            return;
-        }
         try {
+            if (!this.window.isExists().getOrThrow()) {
+                log.warn("window not found - skip");
+                return;
+            }
             commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
                 try {
                     try {
@@ -90,24 +98,22 @@ public class BaseAppWindowImpl implements BaseAppWindow {
                         closeDisconnectedWindow(foregroundWindow);
                     }
                 } catch (Win32ApiException e) {
-                    throw new ControlledWin32ApiException(e);
+                    throw new BrokenWindowException(e.getMessage(), e);
                 }
             });
-        } catch (BrokenWindowException | CannotGetUserInputException e) {
+        } catch (BrokenWindowException | CannotGetUserInputException | Win32ApiException e) {
             log.warn("widow is broken: " + e.getMessage() + " - close:", e);
             closeOrKillBrokenWindow();
-        } catch (ControlledWin32ApiException e) {
-            throw (Win32ApiException) e.getCause();
         }
     }
 
     @Override
     public void doInGameWindow(final WindowConsumer<InGameBaseAppWindow> consumer) throws InterruptedException, Win32ApiException {
-        if (!this.window.isExists()) {
-            log.warn("window not found - skip");
-            return;
-        }
         try {
+            if (!this.window.isExists().getOrThrow()) {
+                log.warn("window not found - skip");
+                return;
+            }
             commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
                 try {
                     try {
@@ -120,19 +126,17 @@ public class BaseAppWindowImpl implements BaseAppWindow {
                         closeDisconnectedWindow(foregroundWindow);
                     }
                 } catch (Win32ApiException e) {
-                    throw new ControlledWin32ApiException(e);
+                    throw new BrokenWindowException(e.getMessage(), e);
                 }
             });
-        } catch (BrokenWindowException | CannotGetUserInputException e) {
+        } catch (BrokenWindowException | CannotGetUserInputException | Win32ApiException e) {
             log.warn("widow has broken: " + e.getMessage() + " - close:", e);
             closeOrKillBrokenWindow();
-        } catch (ControlledWin32ApiException e) {
-            throw (Win32ApiException) e.getCause();
         }
     }
 
-    private Optional<String> getCharacterNameInternal() {
-        return accountBinding.getBoundAccount(commonWindowService.getUID(window));
+    private Either<Optional<String>> getEitherCharacterNameOrError() {
+        return commonWindowService.getUID(window).map(accountBinding::getBoundAccount);
     }
 
     private synchronized void setLogMarker(final String name) {
@@ -174,7 +178,7 @@ public class BaseAppWindowImpl implements BaseAppWindow {
     }
 
     private void minimizeOpenedWindow(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException, Win32ApiException {
-        if (!this.window.isExists()) return;
+        if (!this.window.isExists().getOrThrow()) return;
         log.info("minimizing window");
         foregroundWindow.getMouse().clickAtPoint(targetBaseAppSettings.windowMinimizeButtonPoint());
     }
@@ -187,7 +191,7 @@ public class BaseAppWindowImpl implements BaseAppWindow {
     }
 
     private void closeOrKillBrokenWindow() throws InterruptedException, Win32ApiException {
-        if (!this.window.isExists()) return;
+        if (!this.window.isExists().getOrThrow()) return;
         if (!tryCloseBrokenWindowAndCheckIfClosedNormally()) killWindowProcess();
     }
 
@@ -210,14 +214,14 @@ public class BaseAppWindowImpl implements BaseAppWindow {
     }
 
     private void closeWindowFrame() throws InterruptedException, Win32ApiException {
-        if (!this.window.isExists()) return;
+        if (!this.window.isExists().getOrThrow()) return;
         log.info("close window frame");
         //press Close frame button
         getMouse().move(targetBaseAppSettings.windowCloseButtonPoint()).leftClick();
     }
 
     private void killWindowProcess() throws InterruptedException, Win32ApiException {
-        if (!this.window.isExists()) return;
+        if (!this.window.isExists().getOrThrow()) return;
         log.info("terminating window process");
         this.window.getProcess().getOrThrow().terminate();
         if (!waitWindowDisappearing(() -> {
@@ -227,6 +231,13 @@ public class BaseAppWindowImpl implements BaseAppWindow {
     private boolean waitWindowDisappearing(final VoidActionThrowing<? extends Throwable> closeWindowAction) throws InterruptedException {
         assert closeWindowAction != null;
         log.info("wait for window disappearing");
+        final EmptyPredicateThrowing<InterruptedException> windowExistingChecker = () -> {
+            try {
+                return !this.window.isExists().getOrThrow();
+            } catch (Win32ApiException e) {
+                throw new BrokenWindowException("Cannot check existing window", e);
+            }
+        };
         final boolean result = new Waiting()
                 .timeout(targetBaseAppSettings.windowDisappearingTimeout(), TimeUnit.MILLISECONDS)
                 .withDelay(targetBaseAppSettings.checkWindowDisappearingDelay(), TimeUnit.MILLISECONDS)
@@ -238,7 +249,7 @@ public class BaseAppWindowImpl implements BaseAppWindow {
                         log.error("cannot perform close window action - skip", e);
                     }
                 })
-                .waitForBoolean(() -> !window.isExists());
+                .waitForBoolean(windowExistingChecker);
         if (result) {
             log.info("window has disappeared");
             commonWindowService.fixResult(CommonWindowService.Result.baseAppWindowDisappeared);
@@ -516,9 +527,4 @@ public class BaseAppWindowImpl implements BaseAppWindow {
 
     }
 
-    private static class ControlledWin32ApiException extends RuntimeException {
-        public ControlledWin32ApiException(final Win32ApiException cause) {
-            super(cause);
-        }
-    }
 }

@@ -207,8 +207,8 @@ class LauncherWindowImplTest {
         final Mouse confirmDialogMouse = getMouseMock();
         //given
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(false); // confirm quit dialog accepted
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> false)); // confirm quit dialog accepted
         launcherWindowMocked().stateIs(notFound(startButtonActiveStamp)).returnsMouse(launcherMouse);
         confirmCloseDialogWindowMocked().stateIs(found(quitConfirmPopupStamp)).returnsMouse(confirmDialogMouse);
         //when and then
@@ -237,12 +237,12 @@ class LauncherWindowImplTest {
     }
 
     private void windowIsAlive() {
-        when(window.isExists()).thenReturn(true);
+        when(window.isExists()).thenReturn(Either.resultOf(() -> true));
         when(window.isVisible()).thenReturn(true);
     }
 
     private void windowIsCorrupted() {
-        when(window.isExists()).thenReturn(true);
+        when(window.isExists()).thenReturn(Either.resultOf(() -> true));
         when(window.isVisible()).thenReturn(false);
     }
 
@@ -250,7 +250,7 @@ class LauncherWindowImplTest {
         return mock(Mouse.class);
     }
 
-    private IKeyboard getKeyboardMock() {
+    private IKeyboard getKeyboardMock() throws Win32ApiException {
         final IKeyboard keyboard = mock(IKeyboard.class);
         when(keyboard.enterHotKey(any(HotKey.class))).thenReturn(keyboard);
         return keyboard;

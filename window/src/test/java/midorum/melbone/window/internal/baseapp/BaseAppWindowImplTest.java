@@ -1,32 +1,40 @@
 package midorum.melbone.window.internal.baseapp;
 
-import com.midorum.win32api.facade.*;
+import com.midorum.win32api.facade.Either;
+import com.midorum.win32api.facade.IMouse;
+import com.midorum.win32api.facade.IProcess;
+import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
 import midorum.melbone.model.dto.KeyShortcut;
 import midorum.melbone.model.exception.CannotGetUserInputException;
-import midorum.melbone.model.settings.account.AccountBinding;
-import midorum.melbone.model.settings.stamp.Stamp;
-import midorum.melbone.settings.StampKeys;
 import midorum.melbone.model.exception.CriticalErrorException;
+import midorum.melbone.model.settings.account.AccountBinding;
+import midorum.melbone.model.settings.setting.ApplicationSettings;
+import midorum.melbone.model.settings.setting.Settings;
+import midorum.melbone.model.settings.setting.TargetBaseAppSettings;
+import midorum.melbone.model.settings.stamp.Stamp;
 import midorum.melbone.model.settings.stamp.Stamps;
 import midorum.melbone.model.settings.stamp.TargetBaseAppStamps;
 import midorum.melbone.model.window.baseapp.InGameBaseAppWindow;
 import midorum.melbone.model.window.baseapp.RestoredBaseAppWindow;
-import midorum.melbone.model.settings.setting.ApplicationSettings;
-import midorum.melbone.model.settings.setting.Settings;
-import midorum.melbone.model.settings.setting.TargetBaseAppSettings;
+import midorum.melbone.settings.StampKeys;
 import midorum.melbone.window.internal.common.CommonWindowService;
 import midorum.melbone.window.internal.common.ForegroundWindow;
 import midorum.melbone.window.internal.common.Mouse;
 import midorum.melbone.window.internal.util.ForegroundWindowMocked;
-import midorum.melbone.window.internal.util.MockitoUtil;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.invocation.InvocationOnMock;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -108,10 +116,9 @@ class BaseAppWindowImplTest {
     }
 
     @BeforeEach
-    @SuppressWarnings("unchecked")
     public void beforeEach() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         //system
-        when(commonWindowService.getUID(window)).thenReturn(RESOURCE_ID);
+        when(commonWindowService.getUID(window)).thenReturn(Either.resultOf(() -> RESOURCE_ID));
         //settings
         when(settings.application()).thenReturn(applicationSettings);
         when(settings.targetBaseAppSettings()).thenReturn(targetBaseAppSettings);
@@ -206,30 +213,30 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void getCharacterNameForBoundWindow() {
+    void getCharacterNameForBoundWindow() throws Win32ApiException {
         System.out.println("getCharacterNameForBoundWindow");
         //given
         accountBoundWithWindow();
         //when
-        final Optional<String> maybeCharacterName = getBaseAppWindowInstance().getCharacterName();
+        final Optional<String> maybeCharacterName = getBaseAppWindowInstance().getCharacterName().getOrThrow();
         //then
         assertTrue(maybeCharacterName.isPresent());
         assertEquals(ACCOUNT_NAME, maybeCharacterName.get());
     }
 
     @Test
-    void getCharacterNameForUnboundWindow() {
+    void getCharacterNameForUnboundWindow() throws Win32ApiException {
         System.out.println("getCharacterNameForUnboundWindow");
         //given
         accountNotBoundWithWindow();
         //when
-        final Optional<String> maybeCharacterName = getBaseAppWindowInstance().getCharacterName();
+        final Optional<String> maybeCharacterName = getBaseAppWindowInstance().getCharacterName().getOrThrow();
         //then
         assertTrue(maybeCharacterName.isEmpty());
     }
 
     @Test
-    void bindWithAccount() {
+    void bindWithAccount() throws Win32ApiException {
         System.out.println("bindWithAccount");
         //when
         getBaseAppWindowInstance().bindWithAccount(ACCOUNT_NAME);
@@ -242,10 +249,10 @@ class BaseAppWindowImplTest {
         System.out.println("terminatingWindowProcess");
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // trying close normally
-                .thenReturn(true) // killing window process
-                .thenReturn(false); // window disappeared
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // trying close normally
+                .thenReturn(Either.resultOf(() -> true)) // killing window process
+                .thenReturn(Either.resultOf(() -> false)); // window disappeared
         windowIsCorrupted();
         getBaseAppWindowInstance().restoreAndDo(restoredBaseAppWindow -> {/*any operation*/});
         //then
@@ -258,10 +265,10 @@ class BaseAppWindowImplTest {
         System.out.println("cannotTerminateWindowProcess");
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // trying close normally
-                .thenReturn(true) // killing window process
-                .thenReturn(true); // cannot terminate window process
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // trying close normally
+                .thenReturn(Either.resultOf(() -> true)) // killing window process
+                .thenReturn(Either.resultOf(() -> true)); // cannot terminate window process
         windowIsCorrupted();
         assertThrows(CriticalErrorException.class, () -> getBaseAppWindowInstance().restoreAndDo(restoredBaseAppWindow -> {/*any operation*/}));
         //then
@@ -275,9 +282,9 @@ class BaseAppWindowImplTest {
         //given
         final Mouse mouse = getMouseMock();
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // confirm dialog
-                .thenReturn(false); // window closed
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // confirm dialog
+                .thenReturn(Either.resultOf(() -> false)); // window closed
         windowIsHealthy();
         baseWindowMocked().stateIs(found(disconnectedPopupStamp))
                 .returnsMouse(mouse);
@@ -295,11 +302,11 @@ class BaseAppWindowImplTest {
         final Mouse mouse = getMouseMock();
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // trying close normally
-                .thenReturn(true) // closing window frame
-                .thenReturn(true) // window hasn't closed yet
-                .thenReturn(false); // window closed
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // trying close normally
+                .thenReturn(Either.resultOf(() -> true)) // closing window frame
+                .thenReturn(Either.resultOf(() -> true)) // window hasn't closed yet
+                .thenReturn(Either.resultOf(() -> false)); // window closed
         windowIsHealthy();
         baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), notFound(menuExitOptionStamp))
                 .returnsMouse(mouse);
@@ -316,9 +323,9 @@ class BaseAppWindowImplTest {
         final Mouse mouse = getMouseMock();
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // waiting window disappearing
-                .thenReturn(false); // window closed
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // waiting window disappearing
+                .thenReturn(Either.resultOf(() -> false)); // window closed
         windowIsHealthy();
         baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), found(menuExitOptionStamp))
                 .returnsMouse(mouse);
@@ -367,11 +374,11 @@ class BaseAppWindowImplTest {
         final Mouse mouse = getMouseMock();
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // trying close normally
-                .thenReturn(true) // closing window frame
-                .thenReturn(true) // window hasn't closed yet
-                .thenReturn(false); // window closed
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // trying close normally
+                .thenReturn(Either.resultOf(() -> true)) // closing window frame
+                .thenReturn(Either.resultOf(() -> true)) // window hasn't closed yet
+                .thenReturn(Either.resultOf(() -> false)); // window closed
         windowIsHealthy();
         baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), notFound(accountInfoPopupCaptionStamp))
                 .returnsMouse(mouse);
@@ -403,11 +410,11 @@ class BaseAppWindowImplTest {
         final Mouse mouse = getMouseMock();
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // trying close normally
-                .thenReturn(true) // closing window frame
-                .thenReturn(true) // window hasn't closed yet
-                .thenReturn(false); // window closed
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // trying close normally
+                .thenReturn(Either.resultOf(() -> true)) // closing window frame
+                .thenReturn(Either.resultOf(() -> true)) // window hasn't closed yet
+                .thenReturn(Either.resultOf(() -> false)); // window closed
         windowIsHealthy();
         baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), notFound(accountInfoPopupCaptionStamp))
                 .returnsMouse(mouse);
@@ -498,7 +505,7 @@ class BaseAppWindowImplTest {
     }
 
     private void windowIsExists() {
-        when(window.isExists()).thenReturn(true);
+        when(window.isExists()).thenReturn(Either.resultOf(() -> true));
     }
 
     private void windowIsCorrupted() throws InterruptedException, CannotGetUserInputException {

@@ -1,7 +1,7 @@
 package midorum.melbone.window.internal.common;
 
-import com.midorum.win32api.facade.*;
 import com.midorum.win32api.facade.Rectangle;
+import com.midorum.win32api.facade.*;
 import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.win32.IWinUser;
@@ -24,6 +24,8 @@ import static org.mockito.Mockito.*;
 
 class ForegroundWindowTest {
 
+    public static final String SKIPPED_TOPMOST_PROCESS_NAME = "skipped_topmost.exe";
+    public static final String TOPMOST_PROCESS_NAME = "topmost.exe";
     private final Settings settings = mock(Settings.class);
     private final ApplicationSettings applicationSettings = mock(ApplicationSettings.class);
     private final Win32System win32System = mock(Win32System.class);
@@ -35,11 +37,16 @@ class ForegroundWindowTest {
         when(applicationSettings.bringWindowForegroundTimeout()).thenReturn(100);
         when(applicationSettings.bringWindowForegroundDelay()).thenReturn(10);
         when(applicationSettings.stampDeviation()).thenReturn(0);
+        when(applicationSettings.overlappingWindowsToSkip()).thenReturn(new String[]{});
+        when(applicationSettings.overlappingWindowsToClose()).thenReturn(new String[]{});
     }
 
     @Test
     void getMouse_cannotGetUserInput() throws Win32ApiException {
-        final IWindow nativeWindow = mock(IWindow.class);
+        final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
+        final IMouse nativeMouse = mock(IMouse.class);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
 
         windowHasNotUserInput(nativeWindow);
         assertThrows(CannotGetUserInputException.class, new ForegroundWindow(nativeWindow, settings, win32System, stampValidator)::getMouse);
@@ -71,7 +78,10 @@ class ForegroundWindowTest {
 
     @Test
     void getKeyboard_cannotGetUserInput() throws Win32ApiException {
-        final IWindow nativeWindow = mock(IWindow.class);
+        final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
+        final IMouse nativeMouse = mock(IMouse.class);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
 
         windowHasNotUserInput(nativeWindow);
         assertThrows(CannotGetUserInputException.class, new ForegroundWindow(nativeWindow, settings, win32System, stampValidator)::getKeyboard);
@@ -95,10 +105,10 @@ class ForegroundWindowTest {
     @Test
     void waiting_cannotGetUserInput_noAnyOverlay() throws Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
-        final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final int[] stampWholeData = {};
-        final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
         final IKeyboard nativeKeyboard = mock(IKeyboard.class);
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
@@ -117,10 +127,10 @@ class ForegroundWindowTest {
     @Test
     void waiting_cannotGetUserInput_foundOverlay() throws Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
-        final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final int[] stampWholeData = {};
-        final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
         final IKeyboard nativeKeyboard = mock(IKeyboard.class);
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
@@ -139,10 +149,10 @@ class ForegroundWindowTest {
     @Test
     void waiting_rectanglesDoNotMatch_withoutLogging() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
-        final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 301, 200);
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
-        final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
         final IKeyboard nativeKeyboard = mock(IKeyboard.class);
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
@@ -161,10 +171,10 @@ class ForegroundWindowTest {
     @Test
     void waiting_stampNotFound_withLogging() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
-        final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
-        final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
         final IKeyboard nativeKeyboard = mock(IKeyboard.class);
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
@@ -185,10 +195,10 @@ class ForegroundWindowTest {
     @Test
     void waiting_stampNotFound_withMarkedLogging() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
-        final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
-        final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
         final IKeyboard nativeKeyboard = mock(IKeyboard.class);
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
@@ -210,17 +220,45 @@ class ForegroundWindowTest {
     @Test
     void waiting_foundButNotCloseOverlapTopmost() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
-        final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle topmostRectangle = new Rectangle(280, 178, 299, 199);
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
-        final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
         final IKeyboard nativeKeyboard = mock(IKeyboard.class);
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
-        final IWindow topmost = getTopmostWindowMock(topmostRectangle);
+        final IWindow topmost = getTopmostWindowMock(topmostRectangle, TOPMOST_PROCESS_NAME);
 
         windowHasUserInput(nativeWindow);
+        when(applicationSettings.closeOverlappingWindows()).thenReturn(false);
+        when(win32System.listAllWindows()).thenReturn(List.of(nativeWindow, topmost));
+        when(stampValidator.validateStamp(stamp)).thenReturn(Optional.of(stamp));
+        final Optional<Stamp> result = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).waiting()
+                .withTimeout(100)
+                .withDelay(10)
+                .withMousePosition(new PointFloat(0.5f, 0.7f))
+                .logFailedStamps()
+                .forStamp(stamp);
+        assertEquals(Optional.of(stamp), result);
+        verify(topmost, never()).close();
+    }
+
+    @Test
+    void waiting_foundButNotAllowedToCloseOverlapTopmost() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
+        final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
+        final Rectangle topmostRectangle = new Rectangle(280, 178, 299, 199);
+        final int[] stampWholeData = imageToArray(createImage(stampRectangle));
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
+        final IMouse nativeMouse = mock(IMouse.class);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
+        final IWindow topmost = getTopmostWindowMock(topmostRectangle, TOPMOST_PROCESS_NAME);
+
+        windowHasUserInput(nativeWindow);
+        when(applicationSettings.closeOverlappingWindows()).thenReturn(true);
         when(win32System.listAllWindows()).thenReturn(List.of(nativeWindow, topmost));
         when(stampValidator.validateStamp(stamp)).thenReturn(Optional.of(stamp));
         final Optional<Stamp> result = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).waiting()
@@ -236,15 +274,15 @@ class ForegroundWindowTest {
     @Test
     void waiting_foundNotOverlapTopmost() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
-        final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle topmostRectangle = new Rectangle(301, 178, 311, 199);
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
-        final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
         final IKeyboard nativeKeyboard = mock(IKeyboard.class);
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
-        final IWindow topmost = getTopmostWindowMock(topmostRectangle);
+        final IWindow topmost = getTopmostWindowMock(topmostRectangle, TOPMOST_PROCESS_NAME);
 
         windowHasUserInput(nativeWindow);
         when(applicationSettings.closeOverlappingWindows()).thenReturn(true);
@@ -263,18 +301,19 @@ class ForegroundWindowTest {
     @Test
     void waiting_foundAndCloseOverlapTopmost() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
-        final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final Rectangle topmostRectangle = new Rectangle(280, 178, 299, 199);
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
-        final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
         final IKeyboard nativeKeyboard = mock(IKeyboard.class);
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
-        final IWindow topmost = getTopmostWindowMock(topmostRectangle);
+        final IWindow topmost = getTopmostWindowMock(topmostRectangle, TOPMOST_PROCESS_NAME);
 
         windowHasUserInput(nativeWindow);
         when(applicationSettings.closeOverlappingWindows()).thenReturn(true);
+        when(applicationSettings.overlappingWindowsToClose()).thenReturn(new String[]{TOPMOST_PROCESS_NAME});
         when(win32System.listAllWindows()).thenReturn(List.of(nativeWindow, topmost));
         when(stampValidator.validateStamp(stamp)).thenReturn(Optional.of(stamp));
         final Optional<Stamp> result = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).waiting()
@@ -288,12 +327,43 @@ class ForegroundWindowTest {
     }
 
     @Test
+    void waiting_foundAndSkipOrCloseOverlapTopmost() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
+        final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
+        final Rectangle topmostRectangle = new Rectangle(280, 178, 299, 199);
+        final int[] stampWholeData = imageToArray(createImage(stampRectangle));
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
+        final IMouse nativeMouse = mock(IMouse.class);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
+        final IWindow topmostToSkip = getTopmostWindowMock(topmostRectangle, SKIPPED_TOPMOST_PROCESS_NAME);
+        final IWindow topmostToClose = getTopmostWindowMock(topmostRectangle, TOPMOST_PROCESS_NAME);
+
+        windowHasUserInput(nativeWindow);
+        when(applicationSettings.closeOverlappingWindows()).thenReturn(true);
+        when(applicationSettings.overlappingWindowsToSkip()).thenReturn(new String[]{SKIPPED_TOPMOST_PROCESS_NAME});
+        when(applicationSettings.overlappingWindowsToClose()).thenReturn(new String[]{TOPMOST_PROCESS_NAME});
+        when(win32System.listAllWindows()).thenReturn(List.of(nativeWindow, topmostToSkip, topmostToClose));
+        when(stampValidator.validateStamp(stamp)).thenReturn(Optional.of(stamp));
+        final Optional<Stamp> result = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).waiting()
+                .withTimeout(100)
+                .withDelay(10)
+                .withMousePosition(new PointFloat(0.5f, 0.7f))
+                .logFailedStamps()
+                .forStamp(stamp);
+        assertEquals(Optional.of(stamp), result);
+        verify(topmostToSkip, never()).close();
+        verify(topmostToClose).close();
+    }
+
+    @Test
     void waitingWindowStateWithSuccess() throws CannotGetUserInputException, InterruptedException, Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
-        final Rectangle stampWindowRectangle = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
         final int[] stampWholeData = imageToArray(createImage(stampRectangle));
-        final Stamp stamp = getStampMock(stampRectangle, stampWindowRectangle, stampWholeData);
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
         final IMouse nativeMouse = mock(IMouse.class);
         final IKeyboard nativeKeyboard = mock(IKeyboard.class);
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
@@ -311,44 +381,53 @@ class ForegroundWindowTest {
         assertEquals(Optional.of(stamp), result);
     }
 
-    private Stamp getStampMock(final Rectangle stampRectangle, final Rectangle stampWindowRectangle, final int[] stampWholeData) {
+    private Stamp getStampMock(final Rectangle stampRectangle, final Rectangle windowRectangleInStamp, final int[] stampWholeData) {
         final Stamp stamp = mock(Stamp.class);
         when(stamp.key()).thenReturn(StampKeys.TargetBaseApp.dailyTrackerPopupCaption);
         when(stamp.location()).thenReturn(stampRectangle);
         when(stamp.wholeData()).thenReturn(stampWholeData);
-        when(stamp.windowRect()).thenReturn(stampWindowRectangle);
+        when(stamp.windowRect()).thenReturn(windowRectangleInStamp);
         return stamp;
     }
 
     private IWindow getWindowMock(final Rectangle windowRectangle, final IMouse mouse, final IKeyboard keyboard) {
         final IWindow window = mock(IWindow.class);
+        final IProcess process = mock(IProcess.class);
         when(window.getSystemId()).thenReturn("0xdf67");
-        when(window.getProcessId()).thenReturn(window.hashCode());
+        when(window.getProcessId()).thenReturn(Either.resultOf(window::hashCode));
         when(window.getWindowMouse(anyFloat())).thenReturn(mouse);
         when(window.getKeyboard()).thenReturn(keyboard);
         when(window.getWindowRectangle()).thenReturn(Either.resultOf(() -> windowRectangle));
+        when(window.getProcess()).thenReturn(Either.resultOf(() -> process));
+        when(process.name()).thenReturn(Optional.of("target.exe"));
         return window;
     }
 
-    private IWindow getTopmostWindowMock(final Rectangle windowRectangle) {
+    private IWindow getTopmostWindowMock(final Rectangle windowRectangle, final String processName) {
         final IWindow window = mock(IWindow.class);
+        final IProcess process = mock(IProcess.class);
         when(window.getSystemId()).thenReturn("0xca83");
-        when(window.getProcessId()).thenReturn(window.hashCode());
+        when(window.getProcessId()).thenReturn(Either.resultOf(window::hashCode));
         when(window.getStyle()).thenReturn(Either.resultOf(() -> IWinUser.WS_VISIBLE));
         when(window.hasStyles(IWinUser.WS_VISIBLE)).thenReturn(Either.resultOf(() -> true));
         when(window.getExtendedStyle()).thenReturn(Either.resultOf(() -> IWinUser.WS_EX_TOPMOST));
         when(window.hasExtendedStyles(IWinUser.WS_EX_TOPMOST)).thenReturn(Either.resultOf(() -> true));
         when(window.getWindowRectangle()).thenReturn(Either.resultOf(() -> windowRectangle));
+        when(window.getProcess()).thenReturn(Either.resultOf(() -> process));
+        when(process.name()).thenReturn(Optional.of(processName));
         return window;
     }
 
     private IWindow getOverlayWindowMock() {
         final IWindow window = mock(IWindow.class);
+        final IProcess process = mock(IProcess.class);
         when(window.getSystemId()).thenReturn("0xd4e7");
-        when(window.getProcessId()).thenReturn(window.hashCode());
+        when(window.getProcessId()).thenReturn(Either.resultOf(window::hashCode));
         when(window.getStyle()).thenReturn(Either.resultOf(() -> IWinUser.WS_VISIBLE));
         when(window.getExtendedStyle()).thenReturn(Either.resultOf(() -> IWinUser.WS_EX_OVERLAPPEDWINDOW));
         when(window.getWindowRectangle()).thenReturn(Either.resultOf(() -> new Rectangle(0, 0, 100, 50)));
+        when(window.getProcess()).thenReturn(Either.resultOf(() -> process));
+        when(process.name()).thenReturn(Optional.of("overlay.exe"));
         return window;
     }
 

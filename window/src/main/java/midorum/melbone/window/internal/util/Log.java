@@ -35,4 +35,9 @@ public record Log(Logger logger, Supplier<String> markerSupplier) {
         logger.debug("(" + markerSupplier.get() + ") " + message, params);
     }
 
+    public void debug(final String message, org.apache.logging.log4j.util.Supplier<?>... paramSuppliers) {
+        if (!logger.isDebugEnabled()) return;
+        logger.debug("(" + markerSupplier.get() + ") " + message, paramSuppliers);
+    }
+
 }

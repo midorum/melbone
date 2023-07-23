@@ -144,7 +144,11 @@ public class LauncherWindowFactory {
 
     private void clickDesktopIcon() throws InterruptedException {
         win32System.minimizeAllWindows();
-        clickLauncherDesktopIcon();
+        try {
+            clickLauncherDesktopIcon();
+        } catch (Win32ApiException e) {
+            throw new CriticalErrorException("Cannot click on desktop", e);
+        }
     }
 
     public Optional<LauncherWindow> findWindow() {
@@ -165,7 +169,7 @@ public class LauncherWindowFactory {
                 .findFirst();
     }
 
-    private void clickLauncherDesktopIcon() throws InterruptedException {
+    private void clickLauncherDesktopIcon() throws InterruptedException, Win32ApiException {
         win32System.getScreenMouse(settings.application().speedFactor())
                 .move(settings.targetLauncher().desktopShortcutLocationPoint())
                 .leftClick()

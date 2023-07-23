@@ -3,22 +3,24 @@ package midorum.melbone.executor.internal.processor;
 import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.exception.Win32ApiException;
 import midorum.melbone.model.dto.Account;
-import midorum.melbone.model.exception.CriticalErrorException;
 import midorum.melbone.model.exception.NeedRetryException;
-import midorum.melbone.model.settings.setting.TargetBaseAppSettings;
-import midorum.melbone.model.window.WindowConsumer;
-import midorum.melbone.model.window.baseapp.BaseAppWindow;
-import midorum.melbone.model.window.launcher.LauncherWindow;
-import midorum.melbone.model.window.baseapp.RestoredBaseAppWindow;
-import midorum.melbone.model.window.launcher.RestoredLauncherWindow;
 import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
+import midorum.melbone.model.settings.setting.TargetBaseAppSettings;
 import midorum.melbone.model.settings.setting.TargetCountControlSettings;
+import midorum.melbone.model.window.WindowConsumer;
+import midorum.melbone.model.window.baseapp.BaseAppWindow;
+import midorum.melbone.model.window.baseapp.RestoredBaseAppWindow;
+import midorum.melbone.model.window.launcher.LauncherWindow;
+import midorum.melbone.model.window.launcher.RestoredLauncherWindow;
 import midorum.melbone.window.WindowFactory;
 import org.junit.jupiter.api.*;
 import org.mockito.Mockito;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -113,9 +115,9 @@ class LaunchAccountActionTest {
         assertThrows(NeedRetryException.class, instance::perform);
         existWindows.forEach(baseAppWindow -> {
             try {
-                if (baseAppWindow.getCharacterName().isEmpty()) {
+                if (baseAppWindow.getCharacterName().getOrThrow().isEmpty()) {
                     Mockito.verify(baseAppWindow, Mockito.times(1)).restoreAndDo(Mockito.any(WindowConsumer.class));
-                } else if (TEST_ACCOUNT_FOR_CLOSE.equals(baseAppWindow.getCharacterName().get())) {
+                } else if (TEST_ACCOUNT_FOR_CLOSE.equals(baseAppWindow.getCharacterName().getOrThrow().get())) {
                     Mockito.verify(baseAppWindow, Mockito.times(1)).restoreAndDo(Mockito.any(WindowConsumer.class));
                 } else {
                     Mockito.verify(baseAppWindow, Mockito.never()).restoreAndDo(Mockito.any());
@@ -196,7 +198,7 @@ class LaunchAccountActionTest {
 
     private BaseAppWindow getBaseAppWindow(final String characterName) {
         final BaseAppWindow mock = Mockito.mock(BaseAppWindow.class);
-        when(mock.getCharacterName()).thenReturn(Optional.ofNullable(characterName));
+        when(mock.getCharacterName()).thenReturn(Either.resultOf(() -> Optional.ofNullable(characterName)));
         return mock;
     }
 
@@ -223,7 +225,7 @@ class LaunchAccountActionTest {
     @SuppressWarnings("unchecked")
     private void mockNewUnboundBaseAppWindow() throws InterruptedException, Win32ApiException {
         final BaseAppWindow mock = getBaseAppWindow(null);
-        when(windowFactory.findUnboundBaseAppWindowAndBindWithAccount(Mockito.anyString())).thenReturn(Optional.of(mock));
+        when(windowFactory.findUnboundBaseAppWindowAndBindWithAccount(Mockito.anyString())).thenReturn(Either.resultOf(() -> Optional.of(mock)));
         doAnswer(invocation -> {
             Assertions.assertEquals(1, invocation.getArguments().length);
             final WindowConsumer<RestoredBaseAppWindow> consumer = invocation.getArgument(0);

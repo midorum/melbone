@@ -58,8 +58,8 @@ public class WindowFactory {
         return baseAppWindowFactory.findFirstUnboundWindow();
     }
 
-    public Optional<BaseAppWindow> findUnboundBaseAppWindowAndBindWithAccount(String characterName) {
-        return baseAppWindowFactory.findUnboundWindowAndBindWithAccount(characterName);
+    public Either<Optional<BaseAppWindow>> findUnboundBaseAppWindowAndBindWithAccount(String characterName) {
+        return Either.resultOf(() -> baseAppWindowFactory.findUnboundWindowAndBindWithAccount(characterName));
     }
 
     public Optional<WindowPoint> getWindowByPoint(final PointInt screenPoint) {

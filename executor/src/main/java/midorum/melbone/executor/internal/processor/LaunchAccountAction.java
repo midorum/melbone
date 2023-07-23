@@ -1,5 +1,6 @@
 package midorum.melbone.executor.internal.processor;
 
+import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.util.Win32AccessDeniedException;
 import com.midorum.win32api.util.Win32RuntimeException;
@@ -94,12 +95,15 @@ public class LaunchAccountAction implements VoidActionThrowing<InterruptedExcept
             final Set<String> accountToLaunchSet = Arrays.stream(accountsToLaunch).map(Account::name).collect(Collectors.toSet());
             final Map<Boolean, List<BaseAppWindow>> windowsMap = windowFactory.getAllBaseAppWindows().stream()
                     .collect(Collectors.partitioningBy(w -> {
-                        final Optional<String> characterName = w.getCharacterName();
+                        final Optional<String> characterName = w.getCharacterName().getOrHandleError(e -> {
+                            logger.error("cannot obtain window attributes", e);
+                            return Optional.empty();
+                        });
                         return characterName.isEmpty() || !accountToLaunchSet.contains(characterName.get());
                     }));
             windowsMap.get(true).forEach(w -> {
                 try {
-                    logger.info("closing unnecessary window ({})", w.getCharacterName().orElse("unbound"));
+                    logger.info("closing unnecessary window ({})", w.getCharacterName().getOrHandleError(e -> Optional.of("error")).orElse("unbound"));
                     w.restoreAndDo(RestoredBaseAppWindow::close);
                 } catch (InterruptedException e) {
                     throw new ControlledInterruptedException(e);
@@ -110,7 +114,7 @@ public class LaunchAccountAction implements VoidActionThrowing<InterruptedExcept
             if (!settings.application().checkHealthBeforeLaunch()) return;
             windowsMap.get(false).forEach(w -> {
                 try {
-                    final String characterName = w.getCharacterName().orElse("unbound");
+                    final String characterName = w.getCharacterName().getOrHandleError(e -> Optional.of("error")).orElse("unbound");
                     logger.info("check window health ({})", characterName);
                     w.doInGameWindow(inGameBaseAppWindow -> logger.info("({}) health checked", characterName));
                 } catch (InterruptedException e) {
@@ -127,6 +131,10 @@ public class LaunchAccountAction implements VoidActionThrowing<InterruptedExcept
     private Set<String> getAlreadyLaunchedAccounts() {
         return windowFactory.getAllBaseAppWindows().stream()
                 .map(BaseAppWindow::getCharacterName)
+                .map(either -> either.getOrHandleError(e -> {
+                    logger.error("cannot obtain window attributes", e);
+                    return Optional.empty();
+                }))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(Collectors.toSet());
@@ -189,7 +197,7 @@ public class LaunchAccountAction implements VoidActionThrowing<InterruptedExcept
                     })
                     .waitFor(() -> {
                         logger.info("check base window is appeared for login {}", account.login());
-                        return windowFactory.findUnboundBaseAppWindowAndBindWithAccount(account.name());
+                        return windowFactory.findUnboundBaseAppWindowAndBindWithAccount(account.name()).getOrThrow(ControlledWin32ApiException::new);
                     });
         } catch (ControlledWin32ApiException e) {
             throw (Win32ApiException) e.getCause();

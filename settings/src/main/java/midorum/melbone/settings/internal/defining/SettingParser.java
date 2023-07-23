@@ -6,6 +6,7 @@ import com.midorum.win32api.struct.PointInt;
 import com.midorum.win32api.struct.PointLong;
 import midorum.melbone.model.dto.KeyShortcut;
 
+import java.util.Arrays;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -23,13 +24,15 @@ public enum SettingParser {
     POINT_LONG_PARSER(SettingParser::parsePointLong),
     POINT_FLOAT_PARSER(SettingParser::parsePointFloat),
     KEY_SHORTCUT_PARSER(KeyShortcut::valueOf),
-    RECTANGLE_PARSER(SettingParser::parseRectangle);
+    RECTANGLE_PARSER(SettingParser::parseRectangle),
+    STRING_ARRAY_PARSER(SettingParser::parseStringArray);
 
     static final Pattern PATTERN_POINT_FLOAT = Pattern.compile("^.*\\[x=(?<x>\\d+\\.\\d+),\\s*y=(?<y>\\d+\\.\\d+)]$");
+
     static final Pattern PATTERN_POINT_INTEGER = Pattern.compile("^.*\\[x=(?<x>\\d+),\\s*y=(?<y>\\d+)]$");
     static final Pattern PATTERN_RECTANGLE = Pattern.compile("^.*\\[\\((?<left>\\d+),\\s*(?<top>\\d+)\\)\\((?<right>\\d+),\\s*(?<bottom>\\d+)\\)-\\(\\d+:\\d+\\)]$");
+    static final Pattern PATTERN_STRING_ARRAY = Pattern.compile("^.*\\[\\s?(?<body>\"[^\"]*\"(\\s?,\\s?\"[^\"]*\")*)\\s?]|\\[]$");
     private final Function<String, Object> parser;
-
     SettingParser(final Function<String, Object> parser) {
         this.parser = parser;
     }
@@ -80,6 +83,22 @@ public enum SettingParser {
                 Integer.parseInt(matcher.group("bottom")));
     }
 
+    private static String[] parseStringArray(final String data) {
+        if(data.isBlank()) return new String[]{};
+        final Matcher matcher = PATTERN_STRING_ARRAY.matcher(data);
+        if (!matcher.matches()) {
+            throw new IllegalStateException("\"" + data + "\" does not match string array pattern");
+        }
+        final String body = matcher.group("body");
+        if(body == null) return new String[]{};
+        return Arrays.stream(body.split(","))
+                .map(String::strip)
+                .map(s -> s.substring(1, s.length()-1))
+                .map(String::strip)
+                .filter(s -> !s.isBlank())
+                .toArray(String[]::new);
+    }
+
     public static SettingParser forType(Class<?> type) {
         if (type.isAssignableFrom(String.class)) return STRING_PARSER;
         if (type.isAssignableFrom(Integer.class)) return INTEGER_PARSER;
@@ -91,6 +110,7 @@ public enum SettingParser {
         if (type.isAssignableFrom(PointFloat.class)) return POINT_FLOAT_PARSER;
         if (type.isAssignableFrom(KeyShortcut.class)) return KEY_SHORTCUT_PARSER;
         if (type.isAssignableFrom(Rectangle.class)) return RECTANGLE_PARSER;
+        if (type.isAssignableFrom(String[].class)) return STRING_ARRAY_PARSER;
         return NOOP_PARSER;
     }
 }

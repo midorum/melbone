@@ -1,5 +1,7 @@
 package midorum.melbone.model.settings.setting;
 
+import java.util.Set;
+
 public interface ApplicationSettings {
 
     /**
@@ -52,7 +54,13 @@ public interface ApplicationSettings {
 
     boolean closeOverlappingWindows();
 
+    boolean shotOverlappingWindows();
+
     int bringWindowForegroundTimeout();
 
     int bringWindowForegroundDelay();
+
+    String[] overlappingWindowsToSkip();
+
+    String[] overlappingWindowsToClose();
 }

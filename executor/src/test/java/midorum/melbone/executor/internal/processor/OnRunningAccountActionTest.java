@@ -1,5 +1,6 @@
 package midorum.melbone.executor.internal.processor;
 
+import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.exception.Win32ApiException;
 import midorum.melbone.model.exception.ControlledInterruptedException;
 import midorum.melbone.model.window.WindowConsumer;
@@ -66,7 +67,7 @@ class OnRunningAccountActionTest {
 
     private BaseAppWindow mockBaseAppWindow(final String characterName) {
         final BaseAppWindow mock = Mockito.mock(BaseAppWindow.class);
-        Mockito.when(mock.getCharacterName()).thenReturn(Optional.ofNullable(characterName));
+        Mockito.when(mock.getCharacterName()).thenReturn(Either.resultOf(() -> Optional.ofNullable(characterName)));
         return mock;
     }
 

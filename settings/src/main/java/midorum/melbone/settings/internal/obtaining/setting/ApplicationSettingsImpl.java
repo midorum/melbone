@@ -4,6 +4,8 @@ import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.settings.SettingKeys;
 import midorum.melbone.settings.internal.storage.KeyValueStorage;
 
+import java.util.Set;
+
 public class ApplicationSettingsImpl extends SettingValueExtractor implements ApplicationSettings {
 
     public ApplicationSettingsImpl(final KeyValueStorage keyValueStorage) {
@@ -58,6 +60,21 @@ public class ApplicationSettingsImpl extends SettingValueExtractor implements Ap
     @Override
     public boolean closeOverlappingWindows() {
         return (boolean) getValue(SettingKeys.Application.closeOverlappingWindows);
+    }
+
+    @Override
+    public boolean shotOverlappingWindows() {
+        return (boolean) getValue(SettingKeys.Application.shotOverlappingWindows);
+    }
+
+    @Override
+    public String[] overlappingWindowsToSkip() {
+        return (String[]) getValue(SettingKeys.Application.overlappingWindowsToSkip);
+    }
+
+    @Override
+    public String[] overlappingWindowsToClose() {
+        return (String[]) getValue(SettingKeys.Application.overlappingWindowsToClose);
     }
 
     @Override

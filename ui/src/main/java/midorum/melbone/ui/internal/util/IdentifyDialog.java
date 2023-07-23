@@ -148,7 +148,12 @@ public class IdentifyDialog extends JDialog {
         final JButton button = createButton("Bind", e -> getSelectedAccount().ifPresentOrElse(
                 account -> this.currentUnboundWindow.getWindow().ifPresentOrElse(
                         baseAppWindow -> {
-                            baseAppWindow.bindWithAccount(account);
+                            try {
+                                baseAppWindow.bindWithAccount(account);
+                            } catch (Win32ApiException ex) {
+                                context.logger().error("cannot bind window with account " + account, e);
+                                this.noticePane.showError("Cannot bind window with account");
+                            }
                             updateComboBoxModel();
                             repaintForm();
                         },
