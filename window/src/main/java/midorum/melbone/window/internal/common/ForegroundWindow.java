@@ -16,8 +16,11 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -30,6 +33,9 @@ public class ForegroundWindow {
     private final Settings settings;
     private final Mouse mouse;
     private final boolean closeOverlappingWindows;
+    private final boolean shotOverlappingWindows;
+    private final Set<String> overlappingWindowsToSkip;
+    private final Set<String> overlappingWindowsToClose;
     private final int bringWindowForegroundTimeout;
     private final int bringWindowForegroundDelay;
     private final Win32System win32System;
@@ -43,6 +49,9 @@ public class ForegroundWindow {
         this.stampValidator = stampValidator;
         this.mouse = new Mouse(settings.application(), window);
         this.closeOverlappingWindows = settings.application().closeOverlappingWindows();
+        this.shotOverlappingWindows = settings.application().shotOverlappingWindows();
+        this.overlappingWindowsToSkip = Set.of(settings.application().overlappingWindowsToSkip());
+        this.overlappingWindowsToClose = Set.of(settings.application().overlappingWindowsToClose());
         this.bringWindowForegroundTimeout = settings.application().bringWindowForegroundTimeout();
         this.bringWindowForegroundDelay = settings.application().bringWindowForegroundDelay();
         this.windowId = window.getSystemId();
@@ -105,61 +114,81 @@ public class ForegroundWindow {
         final Function<Rectangle, Boolean> rectangleChecker = window.getWindowRectangle()
                 .map(wr -> (Function<Rectangle, Boolean>) r -> areRectanglesOverlay(wr, r))
                 .getOrThrow();
+        final Predicate<IWindow> isNotSame = window.getProcessId()
+                .map(processId -> (Predicate<IWindow>) w -> w.getProcessId().map(pid -> !pid.equals(processId))
+                        .getOrHandleError(e -> {
+                            logger.warn("cannot get window attributes (" + getWindowInfo(w) + ") - skip", e);
+                            return false;
+                        })).getOrThrow();
         win32System.listAllWindows().stream()
-                .filter(found -> found.getProcessId() != window.getProcessId())
-                .filter(w -> {
-                    try {
-                        return w.hasStyles(IWinUser.WS_VISIBLE).getOrThrow()
-                                && w.hasExtendedStyles(IWinUser.WS_EX_TOPMOST).getOrThrow()
-                                && w.getWindowRectangle().map(rectangleChecker).getOrThrow();
-                    } catch (Win32ApiException e) {
-                        logger.warn("cannot get window attributes (" + w.getSystemId() + ") - skip", e);
-                        return false;
-                    }
-                })
-                .forEach(topmost -> {
-                    final String topmostId = topmost.getSystemId();
-                    logger.warn("Target window was brought to the foreground and has user input. But there is topmost window which may overlap it: marker={}, id={}, title={}, className={}, style={}, extendedStyle={}, windowRect={}",
-                            topmostMarker, topmostId,
-                            topmost.getText(), topmost.getClassName(),
-                            topmost.getStyle().map(WIN_32_LONG_FORMATTER),
-                            topmost.getExtendedStyle().map(WIN_32_LONG_FORMATTER),
-                            topmost.getWindowRectangle());
-                    if (closeOverlappingWindows) {
-                        logger.warn("setting \"closeOverlappingWindows\" is on - close topmost window {}", topmostId);
-                        topmost.close();
-                    } else {
-                        logger.warn("setting \"closeOverlappingWindows\" is off - topmost window {} won't be closed but can hinder the target one", topmostId);
-                    }
-                });
+                .filter(isNotSame)
+                .filter(isTopmost(rectangleChecker))
+                .forEach(processTopmost(topmostMarker));
     }
 
     private Optional<IWindow> findPossibleOverlay(final String marker) {
         final String overlayMarker = "overlay_" + marker;
         final Optional<IWindow> foregroundWindow = win32System.getForegroundWindow();
         foregroundWindow.ifPresentOrElse(window -> {
-            logger.warn("found overlay window: marker={}, title={}, className={}, style={}, extendedStyle={}, windowRect={}",
-                    overlayMarker,
-                    window.getText(), window.getClassName(),
-                    window.getStyle().map(WIN_32_LONG_FORMATTER),
-                    window.getExtendedStyle().map(WIN_32_LONG_FORMATTER),
-                    window.getWindowRectangle());
+            logger.warn("found overlay window: marker={}, {}", overlayMarker, getWindowExtendedInfo(window));
             stampValidator.takeAndSaveWholeScreenShot(overlayMarker);
         }, () -> win32System.listAllWindows().forEach(window -> {
             if (window.isVisible()) {
-                logger.debug("found non-foreground but visible window: marker={}, title={}, className={}, style={}, extendedStyle={}, windowRect={}",
-                        overlayMarker,
-                        window.getText(), window.getClassName(),
-                        window.getStyle().map(WIN_32_LONG_FORMATTER),
-                        window.getExtendedStyle().map(WIN_32_LONG_FORMATTER),
-                        window.getWindowRectangle());
+                logger.debug("found non-foreground but visible window: marker={}, {}", overlayMarker, getWindowExtendedInfo(window));
             }
         }));
         return foregroundWindow;
     }
 
+    private Function<Boolean, Boolean> and(final Boolean b) {
+        return b1 -> b && b1;
+    }
+
+    private Predicate<IWindow> isTopmost(final Function<Rectangle, Boolean> rectangleChecker) {
+        return w -> w.getProcess().map(IProcess::name).map(name -> name.map(s -> !overlappingWindowsToSkip.contains(s)).orElse(true))
+                .flatMap(result -> w.hasStyles(IWinUser.WS_VISIBLE).map(and(result)))
+                .flatMap(result -> w.hasExtendedStyles(IWinUser.WS_EX_TOPMOST).map(and(result)))
+                .flatMap(result -> w.getWindowRectangle().map(rectangleChecker).map(and(result)))
+                .getOrHandleError(e -> {
+                    logger.warn("cannot get window attributes (" + getWindowInfo(w) + ") - skip", e);
+                    return false;
+                });
+    }
+
+    private Consumer<IWindow> processTopmost(final String topmostMarker) {
+        return topmost -> {
+            final String topmostId = topmost.getSystemId();
+            logger.warn("Target window was brought to the foreground and has user input. But there is a topmost window which may overlap it: marker={}, id={}, {}",
+                    topmostMarker, topmostId, getWindowExtendedInfo(topmost));
+            if (shotOverlappingWindows) stampValidator.takeAndSaveWholeScreenShot(topmostMarker);
+            if (closeOverlappingWindows && topmost.getProcess().map(IProcess::name).map(name -> name.map(overlappingWindowsToClose::contains).orElse(false)).getOrHandleError(e -> {
+                logger.error("cannot get process info for window " + topmostId, e);
+                return false;
+            })) {
+                logger.warn("setting \"closeOverlappingWindows\" is on and process is in the blacklist - close the topmost window {}", topmostId);
+                topmost.close();
+            } else {
+                logger.warn("setting \"closeOverlappingWindows\" is off or process is not in the blacklist - the topmost window {} won't be closed but can hinder the target one", topmostId);
+            }
+        };
+    }
+
     private String getLogMarker() {
         return Long.toString(System.currentTimeMillis());
+    }
+
+    private String getWindowInfo(final IWindow window) {
+        return "pid=" + window.getProcessId()
+                + ", process=" + window.getProcess().map(IProcess::name)
+                + ", title=" + window.getText()
+                + ", class=" + window.getClassName();
+    }
+
+    private String getWindowExtendedInfo(final IWindow window) {
+        return getWindowInfo(window)
+                + ", style=" + window.getStyle().map(WIN_32_LONG_FORMATTER)
+                + ", extendedStyle=" + window.getExtendedStyle().map(WIN_32_LONG_FORMATTER)
+                + ", windowRect=" + window.getWindowRectangle();
     }
 
     private CannotGetUserInputException getCannotGetUserInputException(final String logMarker) {
@@ -330,13 +359,11 @@ public class ForegroundWindow {
                             .doOnEveryFailedIteration(i -> {
                                 logger.debug("[{}] {}: stamp(s) {} not found yet", windowId, new DurationFormatter(i.fromStart()).toStringWithoutZeroParts(), stampsString);
                                 if (failedIterationConsumer != null) failedIterationConsumer.accept(i);
-                                if (hotKey != null) keyboard.enterHotKey(hotKey);
-                                if (mouseClickPoint != null) {
-                                    try {
-                                        mouse.clickAtPoint(mouseClickPoint);
-                                    } catch (Win32ApiException e) {
-                                        throw new ControlledWin32ApiException(e);
-                                    }
+                                try {
+                                    if (hotKey != null) keyboard.enterHotKey(hotKey);
+                                    if (mouseClickPoint != null) mouse.clickAtPoint(mouseClickPoint);
+                                } catch (Win32ApiException e) {
+                                    throw new ControlledWin32ApiException(e);
                                 }
                             })
                             .waitFor(() -> {
@@ -353,8 +380,14 @@ public class ForegroundWindow {
                             });
                     if (!window.isForeground()) throw getCannotGetUserInputException(logMarker);
                     foundStamp.ifPresentOrElse(s -> {
-                                logger.debug("[{}] found stamp {}", windowId, stringifyStamp(s));
-                                if (encloseWithHotKey) keyboard.enterHotKey(hotKey);
+                                try {
+                                    logger.debug("[{}] found stamp {}", windowId, stringifyStamp(s));
+                                    if (encloseWithHotKey) {
+                                        keyboard.enterHotKey(hotKey);
+                                    }
+                                } catch (Win32ApiException e) {
+                                    throw new ControlledWin32ApiException(e);
+                                }
                             },
                             () -> {
                                 try {
@@ -388,13 +421,11 @@ public class ForegroundWindow {
                             .doOnEveryFailedIteration(i -> {
                                 logger.debug("[{}] {}: stamp(s) {} still present", windowId, new DurationFormatter(i.fromStart()).toStringWithoutZeroParts(), stampsString);
                                 if (failedIterationConsumer != null) failedIterationConsumer.accept(i);
-                                if (hotKey != null) keyboard.enterHotKey(hotKey);
-                                if (mouseClickPoint != null) {
-                                    try {
-                                        mouse.clickAtPoint(mouseClickPoint);
-                                    } catch (Win32ApiException e) {
-                                        throw new ControlledWin32ApiException(e);
-                                    }
+                                try {
+                                    if (hotKey != null) keyboard.enterHotKey(hotKey);
+                                    if (mouseClickPoint != null) mouse.clickAtPoint(mouseClickPoint);
+                                } catch (Win32ApiException e) {
+                                    throw new ControlledWin32ApiException(e);
                                 }
                             })
                             .waitForBoolean(() -> {

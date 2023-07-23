@@ -4,6 +4,7 @@ import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.IProcess;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Win32System;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import midorum.melbone.model.settings.account.AccountBinding;
 import midorum.melbone.model.settings.stamp.Stamps;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
@@ -52,13 +53,17 @@ public class BaseAppWindowFactory {
         return findUnboundWindow().map(window -> new BaseAppWindowImpl(window, commonWindowService, settings, accountBinding, stamps));
     }
 
-    public Optional<BaseAppWindow> findUnboundWindowAndBindWithAccount(final String characterName) {
-        final Optional<IWindow> unboundWindow = findUnboundWindow();
-        unboundWindow.ifPresentOrElse(w -> {
-            logger.info("found unbound base window ({}): bind with {}", w.getSystemId(), characterName);
-            accountBinding.bindResource(characterName, commonWindowService.getUID(w));
-        }, () -> logger.info("unbound base window not found"));
-        return unboundWindow.map(window -> new BaseAppWindowImpl(window, commonWindowService, settings, accountBinding, stamps));
+    public Optional<BaseAppWindow> findUnboundWindowAndBindWithAccount(final String characterName) throws Win32ApiException {
+        try {
+            final Optional<IWindow> unboundWindow = findUnboundWindow();
+            unboundWindow.ifPresentOrElse(w -> {
+                logger.info("found unbound base window ({}): bind with {}", w.getSystemId(), characterName);
+                accountBinding.bindResource(characterName, commonWindowService.getUID(w).getOrThrow(ControlledWin32ApiException::new));
+            }, () -> logger.info("unbound base window not found"));
+            return unboundWindow.map(window -> new BaseAppWindowImpl(window, commonWindowService, settings, accountBinding, stamps));
+        } catch (ControlledWin32ApiException e) {
+            throw (Win32ApiException) e.getCause();
+        }
     }
 
     public Either<List<IProcess>> listAllTargetProcesses() {
@@ -70,11 +75,20 @@ public class BaseAppWindowFactory {
         final String windowClassName = settings.targetBaseAppSettings().windowClassName();
         logger.info("searching base window with title - [{}] and class name - [{}]", windowTitle, windowClassName);
         return win32System.findAllWindows(windowTitle, windowClassName, false).stream()
-                .filter(w -> accountBinding.getBoundAccount(commonWindowService.getUID(w)).isEmpty())
-                .filter(window -> commonWindowService.checkIfWindowRendered(window).getOrHandleError(exception -> {
-                    logger.warn("cannot check window attributes (" + window.getSystemId() + ") - skip", exception);
+                .filter(window -> commonWindowService.getUID(window).map(uid -> accountBinding.getBoundAccount(uid).isEmpty()).getOrHandleError(e -> {
+                    logger.warn("cannot check window attributes (" + window.getSystemId() + ") - skip", e);
+                    return false;
+                }))
+                .filter(window -> commonWindowService.checkIfWindowRendered(window).getOrHandleError(e -> {
+                    logger.warn("cannot check window attributes (" + window.getSystemId() + ") - skip", e);
                     return false;
                 }))
                 .findFirst();
+    }
+
+    private static class ControlledWin32ApiException extends RuntimeException {
+        public ControlledWin32ApiException(final Win32ApiException cause) {
+            super(cause);
+        }
     }
 }

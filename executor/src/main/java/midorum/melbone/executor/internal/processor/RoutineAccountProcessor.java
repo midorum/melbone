@@ -8,6 +8,7 @@ import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.window.WindowFactory;
 import org.apache.logging.log4j.Logger;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 public class RoutineAccountProcessor implements Runnable {
@@ -52,6 +53,9 @@ public class RoutineAccountProcessor implements Runnable {
 
     private boolean thereIsStartedAccount() {
         return windowFactory.getAllBaseAppWindows().stream()
-                .anyMatch(w -> w.getCharacterName().isPresent());
+                .anyMatch(w -> w.getCharacterName().getOrHandleError(e -> {
+                    logger.error("got error while check window attributes - skip", e);
+                    return Optional.empty();
+                }).isPresent());
     }
 }

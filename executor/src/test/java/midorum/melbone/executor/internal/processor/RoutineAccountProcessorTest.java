@@ -1,5 +1,6 @@
 package midorum.melbone.executor.internal.processor;
 
+import com.midorum.win32api.facade.Either;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
 import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
@@ -95,7 +96,7 @@ class RoutineAccountProcessorTest {
 
     private BaseAppWindow getBaseAppWindow(final String characterName) {
         final BaseAppWindow mock = Mockito.mock(BaseAppWindow.class);
-        Mockito.when(mock.getCharacterName()).thenReturn(Optional.ofNullable(characterName));
+        Mockito.when(mock.getCharacterName()).thenReturn(Either.resultOf(() -> Optional.ofNullable(characterName)));
         return mock;
     }
 

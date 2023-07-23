@@ -1,5 +1,6 @@
 package midorum.melbone.ui.internal.main;
 
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.win32.IWinUser;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
 import midorum.melbone.ui.context.MockedContext;
@@ -42,7 +43,7 @@ class IdentifyDialogTest extends MockedContext {
 
     @Test
     @DisplayName("One unbound window")
-    void oneUnboundWindow() {
+    void oneUnboundWindow() throws Win32ApiException {
         final String acc1 = "acc1";
         final String acc2 = "acc2";
         final String acc3 = "acc3";
@@ -58,7 +59,7 @@ class IdentifyDialogTest extends MockedContext {
 
     @Test
     @DisplayName("Two unbound windows")
-    void twoUnboundWindows() {
+    void twoUnboundWindows() throws Win32ApiException {
         final String acc1 = "acc1";
         final String acc2 = "acc2";
         final String acc3 = "acc3";
@@ -148,7 +149,7 @@ class IdentifyDialogTest extends MockedContext {
             return this;
         }
 
-        public IdentifyDialogInteraction clickBindButton() {
+        public IdentifyDialogInteraction clickBindButton() throws Win32ApiException {
             this.currentOperation = "clickBindButton";
             getBindButton().doClick();
             verifyBindingWindowAndAccount();
@@ -290,7 +291,7 @@ class IdentifyDialogTest extends MockedContext {
             assertTrue(closeButton.isEnabled(), "\"Bind\" button should be enabled");
         }
 
-        private void verifyBindingWindowAndAccount() {
+        private void verifyBindingWindowAndAccount() throws Win32ApiException {
             verify(selectedWindow).bindWithAccount(selectedAccount);
             this.selectedWindow = null;
             this.selectedAccount = null;

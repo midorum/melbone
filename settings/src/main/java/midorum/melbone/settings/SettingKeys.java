@@ -11,6 +11,12 @@ import midorum.melbone.model.settings.key.SettingObtainWay;
 import midorum.melbone.settings.internal.defining.SettingDataImpl;
 import midorum.melbone.settings.internal.defining.SettingObtainWays;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -60,7 +66,16 @@ public interface SettingKeys {
                 false),
         closeOverlappingWindows(Boolean.class,
                 "Close topmost windows which can overlap target one. Caution: topmost windows are designed for important notices.",
-                false);
+                false),
+        shotOverlappingWindows(Boolean.class,
+                "Make shot for found topmost windows. Caution: this may produce many unnecessary shots and over-consume disk space.",
+                false),
+        overlappingWindowsToSkip(String[].class,
+                "Topmost window process names which will skip during checking",
+                new String[]{}),
+        overlappingWindowsToClose(String[].class,
+                "Topmost window process names which allowed to close",
+                new String[]{});
 
         private final SettingData settingData;
 

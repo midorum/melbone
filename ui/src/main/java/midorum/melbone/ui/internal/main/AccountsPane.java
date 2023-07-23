@@ -123,7 +123,14 @@ public class AccountsPane extends JPanel implements AccountsHolder, Updatable {
                     logger.info("accounts in use: {}", accountsInUse);
                     final Collection<String> commentaries = accountStorage.commentaries();
                     final List<BaseAppWindow> allBaseAppWindows = targetWindowOperations.getAllWindows();
-                    final List<String> boundAccounts = allBaseAppWindows.stream().map(BaseAppWindow::getCharacterName).filter(Optional::isPresent).map(Optional::get).toList();
+                    final List<String> boundAccounts = allBaseAppWindows.stream()
+                            .map(BaseAppWindow::getCharacterName)
+                            .map(either -> either.getOrHandleError(e -> {
+                                logger.error("cannot get window attributes", e);
+                                return Optional.empty();
+                            }))
+                            .filter(Optional::isPresent)
+                            .map(Optional::get).toList();
                     final int maxAccountsSimultaneously = applicationSettings.maxAccountsSimultaneously();
                     return new DataToUpdateForm(accountsInUse, commentaries, allBaseAppWindows, boundAccounts, maxAccountsSimultaneously);
                 },
@@ -175,7 +182,14 @@ public class AccountsPane extends JPanel implements AccountsHolder, Updatable {
     private void updateCheckBoxesAccessible() {
         dataLoader.loadGuiData(() -> {
                     final List<BaseAppWindow> allBaseAppWindows = targetWindowOperations.getAllWindows();
-                    final List<String> boundAccounts = allBaseAppWindows.stream().map(BaseAppWindow::getCharacterName).filter(Optional::isPresent).map(Optional::get).toList();
+                    final List<String> boundAccounts = allBaseAppWindows.stream()
+                            .map(BaseAppWindow::getCharacterName)
+                            .map(either -> either.getOrHandleError(e -> {
+                                logger.error("cannot get window attributes", e);
+                                return Optional.empty();
+                            }))
+                            .filter(Optional::isPresent)
+                            .map(Optional::get).toList();
                     final int maxAccountsSimultaneously = applicationSettings.maxAccountsSimultaneously();
                     return new DataToUpdateCheckBoxes(allBaseAppWindows, boundAccounts, maxAccountsSimultaneously);
                 },

@@ -5,6 +5,7 @@ import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.win32.MsLcid;
 import com.midorum.win32api.win32.Win32VirtualKey;
 import dma.flow.Waiting;
+import dma.function.EmptyPredicateThrowing;
 import dma.util.DurationFormatter;
 import midorum.melbone.model.dto.Account;
 import midorum.melbone.model.exception.CannotGetUserInputException;
@@ -45,7 +46,7 @@ public class LauncherWindowImpl implements LauncherWindow {
 
     @Override
     public void restoreAndDo(final WindowConsumer<RestoredLauncherWindow> consumer) throws InterruptedException, Win32ApiException {
-        if (!this.window.isExists()) {
+        if (!this.window.isExists().getOrThrow()) {
             log.warn("window not found - skip");
             return;
         }
@@ -57,10 +58,8 @@ public class LauncherWindowImpl implements LauncherWindow {
                     log.warn("launcher is broken - " + e.getMessage() + " - close:", e);
                     try {
                         tryCloseWindowAndCheckIfClosedNormally(foregroundWindow);
-                    } catch (Win32ApiException ex) {
-                        final CannotGetUserInputException exx = new CannotGetUserInputException(e.getMessage(), e);
-                        exx.addSuppressed(ex);
-                        throw exx;
+                    } catch (BrokenLauncherException ex) {
+                        e.addSuppressed(ex);
                     }
                     throw e;
                 }
@@ -68,7 +67,7 @@ public class LauncherWindowImpl implements LauncherWindow {
         } catch (BrokenLauncherException | CannotGetUserInputException e) {
             final String message = "launcher is broken - " + e.getMessage() + " - need retry";
             log.warn(message + ":", e);
-            if (this.window.isExists()) killProcess();
+            if (this.window.isExists().getOrThrow()) killProcess();
             throw new NeedRetryException(message, e);
         }
     }
@@ -176,13 +175,24 @@ public class LauncherWindowImpl implements LauncherWindow {
                 });
     }
 
-    private void tryCloseWindowAndCheckIfClosedNormally(final ForegroundWindow foregroundWindow) throws InterruptedException, Win32ApiException {
-        if (!windowIsVisibleAndHasNormalMetrics()) return;
+    private void tryCloseWindowAndCheckIfClosedNormally(final ForegroundWindow foregroundWindow) throws InterruptedException {
+        try {
+            if (!windowIsVisibleAndHasNormalMetrics()) return;
+        } catch (Win32ApiException e) {
+            throw new BrokenLauncherException("Cannot check launcher window attributes", e);
+        }
         final Waiting.EmptyConsumer closeWindowAction = () -> {
             try {
                 if (windowIsVisibleAndHasNormalMetrics()) closeWindow(foregroundWindow);
             } catch (CannotGetUserInputException | Win32ApiException e) {
                 throw new BrokenLauncherException("Cannot close launcher window", e);
+            }
+        };
+        final EmptyPredicateThrowing<InterruptedException> windowExistingChecker = () -> {
+            try {
+                return !this.window.isExists().getOrThrow();
+            } catch (Win32ApiException e) {
+                throw new BrokenLauncherException("Cannot check existing launcher window", e);
             }
         };
         final boolean windowClosed = new Waiting()
@@ -194,7 +204,7 @@ public class LauncherWindowImpl implements LauncherWindow {
                     log.debug("{}: launcher hasn't closed yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
                     closeWindowAction.accept();
                 })
-                .waitForBoolean(() -> !this.window.isExists());
+                .waitForBoolean(windowExistingChecker);
         log.info("launcher{}closed normally", windowClosed ? " " : " hasn't ");
     }
 

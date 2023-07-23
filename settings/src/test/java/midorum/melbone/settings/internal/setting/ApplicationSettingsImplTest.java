@@ -84,4 +84,72 @@ class ApplicationSettingsImplTest {
                 .test();
     }
 
+    @Test
+    void checkHealthBeforeLaunch() {
+        new SettingTester(settingsFactoryInternal, SettingKeys.Application.checkHealthBeforeLaunch)
+                .settingGetter(applicationSettings::checkHealthBeforeLaunch)
+                .normalValues(true, false)
+                .invalidValues()
+                .wrongTypeValues("string")
+                .extractFrom()
+                .parseFrom(new SettingTester.ParsePair("true", true), new SettingTester.ParsePair("false", false))
+                .test();
+    }
+
+    @Test
+    void closeOverlappingWindows() {
+        new SettingTester(settingsFactoryInternal, SettingKeys.Application.closeOverlappingWindows)
+                .settingGetter(applicationSettings::closeOverlappingWindows)
+                .normalValues(true, false)
+                .invalidValues()
+                .wrongTypeValues("string")
+                .extractFrom()
+                .parseFrom(new SettingTester.ParsePair("true", true), new SettingTester.ParsePair("false", false))
+                .test();
+    }
+
+    @Test
+    void shotOverlappingWindows() {
+        new SettingTester(settingsFactoryInternal, SettingKeys.Application.shotOverlappingWindows)
+                .settingGetter(applicationSettings::shotOverlappingWindows)
+                .normalValues(true, false)
+                .invalidValues()
+                .wrongTypeValues("string")
+                .extractFrom()
+                .parseFrom(new SettingTester.ParsePair("true", true), new SettingTester.ParsePair("false", false))
+                .test();
+    }
+
+    @Test
+    void overlappingWindowsToSkip() {
+        new SettingTester(settingsFactoryInternal, SettingKeys.Application.overlappingWindowsToSkip)
+                .settingGetter(applicationSettings::overlappingWindowsToSkip)
+                .normalValues(new String[]{}, new String[]{"name"})
+                .invalidValues(new int[]{1}, new long[]{1L}, new double[]{1.0})
+                .wrongTypeValues("string", 1, 1L, 1.0)
+                .extractFrom()
+                .parseFrom(new SettingTester.ParsePair("[\"name\"]", new String[]{"name"}),
+                        new SettingTester.ParsePair("[\"name1\",\"name2\", \"\",\" \"]", new String[]{"name1", "name2"}),
+                        new SettingTester.ParsePair("", new String[]{}),
+                        new SettingTester.ParsePair("[\"\"]", new String[]{}),
+                        new SettingTester.ParsePair("[]", new String[]{}))
+                .test();
+    }
+
+    @Test
+    void overlappingWindowsToClose() {
+        new SettingTester(settingsFactoryInternal, SettingKeys.Application.overlappingWindowsToClose)
+                .settingGetter(applicationSettings::overlappingWindowsToClose)
+                .normalValues(new String[]{}, new String[]{"name"})
+                .invalidValues(new int[]{1}, new long[]{1L}, new double[]{1.0})
+                .wrongTypeValues("string", 1, 1L, 1.0)
+                .extractFrom()
+                .parseFrom(new SettingTester.ParsePair("[\"name\"]", new String[]{"name"}),
+                        new SettingTester.ParsePair("[\"name1\",\"name2\", \"\",\" \"]", new String[]{"name1", "name2"}),
+                        new SettingTester.ParsePair("", new String[]{}),
+                        new SettingTester.ParsePair("[\"\"]", new String[]{}),
+                        new SettingTester.ParsePair("[]", new String[]{}))
+                .test();
+    }
+
 }

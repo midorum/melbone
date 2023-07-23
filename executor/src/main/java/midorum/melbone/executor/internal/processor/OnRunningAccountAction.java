@@ -4,6 +4,7 @@ import com.midorum.win32api.facade.exception.Win32ApiException;
 import dma.function.VoidActionThrowing;
 import midorum.melbone.executor.internal.StaticResources;
 import midorum.melbone.model.exception.ControlledInterruptedException;
+import midorum.melbone.model.window.baseapp.RestoredBaseAppWindow;
 import midorum.melbone.window.WindowFactory;
 import org.apache.logging.log4j.Logger;
 
@@ -20,9 +21,9 @@ public class OnRunningAccountAction implements VoidActionThrowing<InterruptedExc
     public void perform() {
         logger.info("on-running task started");
         windowFactory.getAllBaseAppWindows().forEach(baseAppWindow -> {
-            final String characterName = baseAppWindow.getCharacterName().orElse("unbound");
-            logger.info("processing account {}", characterName);
             try {
+                final String characterName = baseAppWindow.getCharacterName().getOrThrow().orElse("unbound");
+                logger.info("processing account {}", characterName);
                 baseAppWindow.doInGameWindow(inGameBaseAppWindow -> {
                     //TODO привязать к расписанию по логину
                     logger.info("check in login tracker for {}", characterName);
@@ -36,7 +37,14 @@ public class OnRunningAccountAction implements VoidActionThrowing<InterruptedExc
             } catch (InterruptedException e) {
                 throw new ControlledInterruptedException(e);
             } catch (Win32ApiException e) {
-                logger.error(e);
+                logger.error("got error while processing account - try close window", e);
+                try {
+                    baseAppWindow.restoreAndDo(RestoredBaseAppWindow::close);
+                } catch (InterruptedException ex) {
+                    throw new ControlledInterruptedException(e);
+                } catch (Win32ApiException ex) {
+                    logger.error("got error while closing window - skip", e);
+                }
             }
         });
         logger.info("on-running task done");

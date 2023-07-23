@@ -140,7 +140,7 @@ public class MockedContext {
         } catch (InterruptedException | Win32ApiException e) {
             throw new IllegalStateException(e);
         }
-        when(mock.getCharacterName()).thenReturn(boundCharacterNameSupplier.get());
+        when(mock.getCharacterName()).thenReturn(Either.resultOf(boundCharacterNameSupplier::get));
         return mock;
     }
 
@@ -341,7 +341,7 @@ public class MockedContext {
                             consumer -> consumer.accept(createRestoredBaseAppWindowMock()),
                             (accountToBind, baseAppWindow) -> {
                                 accountBinding.bindResource(accountToBind, baseAppWindow.toString());
-                                when(baseAppWindow.getCharacterName()).thenReturn(Optional.of(accountToBind));
+                                when(baseAppWindow.getCharacterName()).thenReturn(Either.resultOf(() -> Optional.of(accountToBind)));
                             },
                             Optional::empty))
                     .limit(count).toList());
@@ -465,17 +465,17 @@ public class MockedContext {
         }
 
         public List<BaseAppWindow> getUnboundWindows() {
-            return baseAppWindows.stream().filter(baseAppWindow -> baseAppWindow.getCharacterName().isEmpty()).toList();
+            return baseAppWindows.stream().filter(baseAppWindow -> baseAppWindow.getCharacterName().getOrHandleError(e -> Optional.empty()).isEmpty()).toList();
         }
 
         public Optional<BaseAppWindow> getFirstUnboundWindow() {
-            return baseAppWindows.stream().filter(baseAppWindow -> baseAppWindow.getCharacterName().isEmpty()).findFirst();
+            return baseAppWindows.stream().filter(baseAppWindow -> baseAppWindow.getCharacterName().getOrHandleError(e -> Optional.empty()).isEmpty()).findFirst();
         }
 
         public Optional<BaseAppWindow> getBoundWindowFor(final String accountId) {
             return baseAppWindows.stream()
                     .filter(baseAppWindow -> {
-                        final Optional<String> maybeCharacterName = baseAppWindow.getCharacterName();
+                        final Optional<String> maybeCharacterName = baseAppWindow.getCharacterName().getOrHandleError(e -> Optional.empty());
                         return maybeCharacterName.isPresent() && maybeCharacterName.get().equals(accountId);
                     })
                     .findFirst();
@@ -484,6 +484,7 @@ public class MockedContext {
         public List<String> getBoundAccounts() {
             return baseAppWindows.stream()
                     .map(BaseAppWindow::getCharacterName)
+                    .map(either -> either.getOrHandleError(e -> Optional.empty()))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .toList();
