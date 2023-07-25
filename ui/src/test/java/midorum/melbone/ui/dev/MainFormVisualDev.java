@@ -1,5 +1,6 @@
 package midorum.melbone.ui.dev;
 
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.win32.IWinUser;
 import midorum.melbone.model.dto.Account;
 import midorum.melbone.ui.context.MockedContext;
@@ -25,11 +26,11 @@ class MainFormVisualDev extends MockedContext {
         super(StandardDialogsProvider.getInstance());
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Win32ApiException {
         new MainFormVisualDev().show(IWantToSee.formWhenAccountsHaveCommentary);
     }
 
-    private void show(final IWantToSee wantToSee) {
+    private void show(final IWantToSee wantToSee) throws Win32ApiException {
         switch (wantToSee) {
             case formWhenNotAccountsInUse -> formWhenNotAccountsInUse();
             case formWhenNotWindowsAnymore -> formWhenNotWindowsAnymore();
@@ -72,7 +73,7 @@ class MainFormVisualDev extends MockedContext {
         new MainForm("formWhenNotUnboundWindows", context).display();
     }
 
-    private void formWhenExistsUnboundWindow() {
+    private void formWhenExistsUnboundWindow() throws Win32ApiException {
         final int accountsLimit = 3;
         final int accountsInUseCount = 20;
         final int unboundWindowsCount = 1;
@@ -100,7 +101,7 @@ class MainFormVisualDev extends MockedContext {
         new MainForm("formWhenExistsUnboundWindow", context).display();
     }
 
-    private void formWhenExperimentalIsOn() {
+    private void formWhenExperimentalIsOn() throws Win32ApiException {
         setExecutionMode("experimental");
         setLoggerLevel(Level.TRACE);
         final int accountsLimit = 1;
@@ -115,7 +116,7 @@ class MainFormVisualDev extends MockedContext {
         new MainForm("experimental mode", context).display();
     }
 
-    private void formWhenAccountsHaveCommentary() {
+    private void formWhenAccountsHaveCommentary() throws Win32ApiException {
         final int accountsLimit = 3;
         final String commentaryGroup1 = "group1";
         final String commentaryGroup2 = "group2";

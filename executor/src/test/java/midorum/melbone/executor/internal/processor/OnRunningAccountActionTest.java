@@ -1,5 +1,7 @@
 package midorum.melbone.executor.internal.processor;
 
+import com.midorum.win32api.facade.Either;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import midorum.melbone.model.exception.ControlledInterruptedException;
 import midorum.melbone.model.window.WindowConsumer;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
@@ -30,7 +32,7 @@ class OnRunningAccountActionTest {
     }
 
     @Test
-    void checkInterruptedExceptionHandling() throws InterruptedException {
+    void checkInterruptedExceptionHandling() throws InterruptedException, Win32ApiException {
         System.out.println("checkInterruptedExceptionHandling");
         final List<BaseAppWindow> baseAppWindows = mockBaseAppWindows(getBaseAppWindowsWithThrowing());
         final OnRunningAccountAction instance = new OnRunningAccountAction(windowFactory);
@@ -39,7 +41,7 @@ class OnRunningAccountActionTest {
     }
 
     @Test
-    void checkNormalProcessingAllWindows() throws InterruptedException {
+    void checkNormalProcessingAllWindows() throws InterruptedException, Win32ApiException {
         System.out.println("checkNormalProcessingAllWindows");
         final List<BaseAppWindow> baseAppWindows = mockBaseAppWindows(getBaseAppWindows());
         final OnRunningAccountAction instance = new OnRunningAccountAction(windowFactory);
@@ -48,12 +50,12 @@ class OnRunningAccountActionTest {
         verifyBaseAppMethodsCall(baseAppWindows);
     }
 
-    private List<BaseAppWindow> getBaseAppWindows() throws InterruptedException {
+    private List<BaseAppWindow> getBaseAppWindows() throws InterruptedException, Win32ApiException {
         return Arrays.asList(mockBaseAppWindowThatShouldProcessedNormally("test_account_1"),
                 mockBaseAppWindowThatShouldProcessedNormally("test_account_2"));
     }
 
-    private List<BaseAppWindow> getBaseAppWindowsWithThrowing() throws InterruptedException {
+    private List<BaseAppWindow> getBaseAppWindowsWithThrowing() throws InterruptedException, Win32ApiException {
         return Arrays.asList(mockBaseAppWindowThatShouldProcessedNormally("test_account_1"),
                 mockBaseAppWindowThrowing("test_account_2"));
     }
@@ -65,12 +67,12 @@ class OnRunningAccountActionTest {
 
     private BaseAppWindow mockBaseAppWindow(final String characterName) {
         final BaseAppWindow mock = Mockito.mock(BaseAppWindow.class);
-        Mockito.when(mock.getCharacterName()).thenReturn(Optional.ofNullable(characterName));
+        Mockito.when(mock.getCharacterName()).thenReturn(Either.resultOf(() -> Optional.ofNullable(characterName)));
         return mock;
     }
 
     @SuppressWarnings("unchecked")
-    private BaseAppWindow mockBaseAppWindowThatShouldProcessedNormally(final String characterName) throws InterruptedException {
+    private BaseAppWindow mockBaseAppWindowThatShouldProcessedNormally(final String characterName) throws InterruptedException, Win32ApiException {
         final BaseAppWindow mock = mockBaseAppWindow(characterName);
         Mockito.doAnswer(invocation -> {
             final Object[] arguments = invocation.getArguments();
@@ -86,7 +88,7 @@ class OnRunningAccountActionTest {
     }
 
     @SuppressWarnings("unchecked")
-    private BaseAppWindow mockBaseAppWindowThrowing(final String characterName) throws InterruptedException {
+    private BaseAppWindow mockBaseAppWindowThrowing(final String characterName) throws InterruptedException, Win32ApiException {
         final BaseAppWindow mock = mockBaseAppWindow(characterName);
         Mockito.doThrow(InterruptedException.class).when(mock).doInGameWindow(Mockito.any(WindowConsumer.class));
         return mock;
@@ -98,8 +100,8 @@ class OnRunningAccountActionTest {
             Mockito.verify(baseAppWindow, Mockito.times(1)).getCharacterName();
             try {
                 Mockito.verify(baseAppWindow, Mockito.times(1)).doInGameWindow(Mockito.any(WindowConsumer.class));
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            } catch (InterruptedException | Win32ApiException e) {
+                throw new IllegalStateException(e);
             }
         });
     }

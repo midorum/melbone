@@ -1,7 +1,9 @@
 package midorum.melbone.window.internal.baseapp;
 
+import com.midorum.win32api.facade.Either;
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Win32System;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import midorum.melbone.model.settings.account.AccountBinding;
 import midorum.melbone.model.settings.stamp.Stamps;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
@@ -49,6 +51,7 @@ class BaseAppWindowFactoryTest {
         when(settings.targetBaseAppSettings()).thenReturn(targetBaseAppSettings);
         when(targetBaseAppSettings.windowTitle()).thenReturn(BASE_APP_WINDOW_TITLE);
         when(targetBaseAppSettings.windowClassName()).thenReturn(BASE_APP_WINDOW_CLASSNAME);
+        when(commonWindowService.getUID(any(IWindow.class))).thenAnswer(invocationOnMock -> Either.resultOf(invocationOnMock.getArgument(0, IWindow.class)::toString));
     }
 
     @AfterEach
@@ -76,7 +79,7 @@ class BaseAppWindowFactoryTest {
     }
 
     @Test
-    void findUnboundWindowAndBindWithAccount() {
+    void findUnboundWindowAndBindWithAccount() throws Win32ApiException {
         System.out.println("findUnboundWindowAndBindWithAccount");
         final List<IWindow> baseAppWindows = getBaseAppWindowsWithUnbound();
         when(win32System.findAllWindows(BASE_APP_WINDOW_TITLE, BASE_APP_WINDOW_CLASSNAME, false)).thenReturn(baseAppWindows);
@@ -87,7 +90,7 @@ class BaseAppWindowFactoryTest {
     }
 
     @Test
-    void unboundWindowNotFound() {
+    void unboundWindowNotFound() throws Win32ApiException {
         System.out.println("unboundWindowNotFound");
         final List<IWindow> baseAppWindows = getBaseAppWindowsWithoutUnbound();
         when(win32System.findAllWindows(BASE_APP_WINDOW_TITLE, BASE_APP_WINDOW_CLASSNAME, false)).thenReturn(baseAppWindows);
@@ -120,8 +123,8 @@ class BaseAppWindowFactoryTest {
         when(accountBinding.getBoundAccount(resourceUid)).thenReturn(Optional.of(accountId));
         final IWindow mock = mock(IWindow.class);
         when(mock.getSystemId()).thenReturn(id);
-        when(commonWindowService.getUID(mock)).thenReturn(processId + "_" + PROCESS_CREATION_TIME);
-        when(commonWindowService.checkIfWindowRendered(mock)).thenReturn(true);
+        when(commonWindowService.getUID(mock)).thenReturn(Either.resultOf(() -> processId + "_" + PROCESS_CREATION_TIME));
+        when(commonWindowService.checkIfWindowRendered(mock)).thenReturn(getWindowRenderedState(true));
         return mock;
     }
 
@@ -130,8 +133,12 @@ class BaseAppWindowFactoryTest {
         when(accountBinding.getBoundAccount(resourceUid)).thenReturn(Optional.empty());
         final IWindow mock = mock(IWindow.class);
         when(mock.getSystemId()).thenReturn(id);
-        when(commonWindowService.getUID(mock)).thenReturn(resourceUid);
-        when(commonWindowService.checkIfWindowRendered(mock)).thenReturn(true);
+        when(commonWindowService.getUID(mock)).thenReturn(Either.resultOf(() -> resourceUid));
+        when(commonWindowService.checkIfWindowRendered(mock)).thenReturn(getWindowRenderedState(true));
         return mock;
+    }
+
+    private Either<Boolean> getWindowRenderedState(final boolean state) {
+        return Either.value(() -> state).whenReturnsTrue(true);
     }
 }

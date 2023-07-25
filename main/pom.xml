@@ -133,13 +133,24 @@
                 <version>${maven.surefire.version}</version>
             </plugin>
 
+            <!--
+            https://technotes.khitrenovich.com/properties-resolution-maven-implications-antrun-plugin/
+            All properties that are explicitly used in pom.xml are resolved before Maven lifecycle actually starts, even before the initialize phase.
+            It happens when so-called “effective pom” (full project definition, including all implicit data and configuration settings propagated from parent project) is generated.
+            BTW, you can see this in action by call mvn help:effective-pom on your project.
+
+            Modifications of project properties that happen during project lifecycle have no effect on the effective pom – it is just too late.
+            Examples of such modifications include groovy scripts (via gmaven-plugin) and properties loaded from external files via maven-properties-plugin.
+            So, why do we need them at all?
+            Since they can be used by other plugins in runtime, when they are read directly from properties collection during plugin invocation.
+            -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>properties-maven-plugin</artifactId>
                 <version>${mojo.maven.properties.version}</version>
                 <executions>
                     <execution>
-                        <phase>validate</phase>
+                        <phase>initialize</phase>
                         <goals>
                             <goal>read-project-properties</goal>
                         </goals>

@@ -4,6 +4,7 @@ import midorum.melbone.model.settings.key.SettingDataHolder;
 import midorum.melbone.settings.internal.management.SettingsFactoryInternal;
 import org.junit.jupiter.api.Assertions;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -98,7 +99,10 @@ class SettingTester {
             assertNotNull(result, "parser result cannot be null");
             assertTrue(setting.internal().checkValueType(result), () -> "failed testing parser result type: " + result + " (must be " + setting.internal().type() + " but is " + result.getClass() + " )");
             assertTrue(setting.internal().validator().test(result), () -> "failed validating parser result: " + result);
-            assertEquals(pair.value, result);
+            if (pair.value instanceof String[]) {
+                assertArrayEquals((String[]) pair.value, (String[]) result, () -> "failed testing array value " + Arrays.toString((String[]) result) + " (should be " + Arrays.toString((String[]) pair.value) + ")");
+            } else
+                assertEquals(pair.value, result, () -> "failed testing value " + result + " (should be " + pair.value + ")");
         }
     }
 

@@ -1,31 +1,40 @@
 package midorum.melbone.window.internal.baseapp;
 
-import com.midorum.win32api.facade.*;
+import com.midorum.win32api.facade.Either;
+import com.midorum.win32api.facade.IMouse;
+import com.midorum.win32api.facade.IProcess;
+import com.midorum.win32api.facade.IWindow;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
 import midorum.melbone.model.dto.KeyShortcut;
 import midorum.melbone.model.exception.CannotGetUserInputException;
-import midorum.melbone.model.settings.account.AccountBinding;
-import midorum.melbone.model.settings.stamp.Stamp;
-import midorum.melbone.settings.StampKeys;
 import midorum.melbone.model.exception.CriticalErrorException;
+import midorum.melbone.model.settings.account.AccountBinding;
+import midorum.melbone.model.settings.setting.ApplicationSettings;
+import midorum.melbone.model.settings.setting.Settings;
+import midorum.melbone.model.settings.setting.TargetBaseAppSettings;
+import midorum.melbone.model.settings.stamp.Stamp;
 import midorum.melbone.model.settings.stamp.Stamps;
 import midorum.melbone.model.settings.stamp.TargetBaseAppStamps;
 import midorum.melbone.model.window.baseapp.InGameBaseAppWindow;
 import midorum.melbone.model.window.baseapp.RestoredBaseAppWindow;
-import midorum.melbone.model.settings.setting.ApplicationSettings;
-import midorum.melbone.model.settings.setting.Settings;
-import midorum.melbone.model.settings.setting.TargetBaseAppSettings;
+import midorum.melbone.settings.StampKeys;
 import midorum.melbone.window.internal.common.CommonWindowService;
 import midorum.melbone.window.internal.common.ForegroundWindow;
 import midorum.melbone.window.internal.common.Mouse;
 import midorum.melbone.window.internal.util.ForegroundWindowMocked;
-import midorum.melbone.window.internal.util.MockitoUtil;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.mockito.invocation.InvocationOnMock;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -107,10 +116,9 @@ class BaseAppWindowImplTest {
     }
 
     @BeforeEach
-    @SuppressWarnings("unchecked")
-    public void beforeEach() throws InterruptedException, CannotGetUserInputException {
+    public void beforeEach() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         //system
-        when(commonWindowService.getUID(window)).thenReturn(RESOURCE_ID);
+        when(commonWindowService.getUID(window)).thenReturn(Either.resultOf(() -> RESOURCE_ID));
         //settings
         when(settings.application()).thenReturn(applicationSettings);
         when(settings.targetBaseAppSettings()).thenReturn(targetBaseAppSettings);
@@ -172,7 +180,7 @@ class BaseAppWindowImplTest {
         when(mouse.move(any(PointFloat.class))).thenReturn(mouse);
         when(mouse.move(anyFloat(), anyFloat())).thenReturn(mouse);
         when(mouse.leftClick()).thenReturn(mouse);
-        when(window.getProcess()).thenReturn(process);
+        when(window.getProcess()).thenReturn(Either.value(() -> process).whenReturnsTrue(true));
         //stamps
         when(stamps.targetBaseApp()).thenReturn(targetBaseAppStamps);
         when(targetBaseAppStamps.menuExitOption()).thenReturn(menuExitOptionStamp);
@@ -205,30 +213,30 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void getCharacterNameForBoundWindow() {
+    void getCharacterNameForBoundWindow() throws Win32ApiException {
         System.out.println("getCharacterNameForBoundWindow");
         //given
         accountBoundWithWindow();
         //when
-        final Optional<String> maybeCharacterName = getBaseAppWindowInstance().getCharacterName();
+        final Optional<String> maybeCharacterName = getBaseAppWindowInstance().getCharacterName().getOrThrow();
         //then
         assertTrue(maybeCharacterName.isPresent());
         assertEquals(ACCOUNT_NAME, maybeCharacterName.get());
     }
 
     @Test
-    void getCharacterNameForUnboundWindow() {
+    void getCharacterNameForUnboundWindow() throws Win32ApiException {
         System.out.println("getCharacterNameForUnboundWindow");
         //given
         accountNotBoundWithWindow();
         //when
-        final Optional<String> maybeCharacterName = getBaseAppWindowInstance().getCharacterName();
+        final Optional<String> maybeCharacterName = getBaseAppWindowInstance().getCharacterName().getOrThrow();
         //then
         assertTrue(maybeCharacterName.isEmpty());
     }
 
     @Test
-    void bindWithAccount() {
+    void bindWithAccount() throws Win32ApiException {
         System.out.println("bindWithAccount");
         //when
         getBaseAppWindowInstance().bindWithAccount(ACCOUNT_NAME);
@@ -237,14 +245,14 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void terminatingWindowProcess() throws InterruptedException, CannotGetUserInputException {
+    void terminatingWindowProcess() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("terminatingWindowProcess");
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // trying close normally
-                .thenReturn(true) // killing window process
-                .thenReturn(false); // window disappeared
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // trying close normally
+                .thenReturn(Either.resultOf(() -> true)) // killing window process
+                .thenReturn(Either.resultOf(() -> false)); // window disappeared
         windowIsCorrupted();
         getBaseAppWindowInstance().restoreAndDo(restoredBaseAppWindow -> {/*any operation*/});
         //then
@@ -253,14 +261,14 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void cannotTerminateWindowProcess() throws InterruptedException, CannotGetUserInputException {
+    void cannotTerminateWindowProcess() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("cannotTerminateWindowProcess");
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // trying close normally
-                .thenReturn(true) // killing window process
-                .thenReturn(true); // cannot terminate window process
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // trying close normally
+                .thenReturn(Either.resultOf(() -> true)) // killing window process
+                .thenReturn(Either.resultOf(() -> true)); // cannot terminate window process
         windowIsCorrupted();
         assertThrows(CriticalErrorException.class, () -> getBaseAppWindowInstance().restoreAndDo(restoredBaseAppWindow -> {/*any operation*/}));
         //then
@@ -269,14 +277,14 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void closeDisconnectedWindow() throws InterruptedException, CannotGetUserInputException {
+    void closeDisconnectedWindow() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("closeDisconnectedWindow");
         //given
         final Mouse mouse = getMouseMock();
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // confirm dialog
-                .thenReturn(false); // window closed
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // confirm dialog
+                .thenReturn(Either.resultOf(() -> false)); // window closed
         windowIsHealthy();
         baseWindowMocked().stateIs(found(disconnectedPopupStamp))
                 .returnsMouse(mouse);
@@ -289,16 +297,16 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void closeWindowViaFrame() throws InterruptedException, CannotGetUserInputException {
+    void closeWindowViaFrame() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("closeWindowViaFrame");
         final Mouse mouse = getMouseMock();
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // trying close normally
-                .thenReturn(true) // closing window frame
-                .thenReturn(true) // window hasn't closed yet
-                .thenReturn(false); // window closed
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // trying close normally
+                .thenReturn(Either.resultOf(() -> true)) // closing window frame
+                .thenReturn(Either.resultOf(() -> true)) // window hasn't closed yet
+                .thenReturn(Either.resultOf(() -> false)); // window closed
         windowIsHealthy();
         baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), notFound(menuExitOptionStamp))
                 .returnsMouse(mouse);
@@ -310,14 +318,14 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void closeWindowViaMenu() throws InterruptedException, CannotGetUserInputException {
+    void closeWindowViaMenu() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("closeWindowViaMenu");
         final Mouse mouse = getMouseMock();
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // waiting window disappearing
-                .thenReturn(false); // window closed
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // waiting window disappearing
+                .thenReturn(Either.resultOf(() -> false)); // window closed
         windowIsHealthy();
         baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), found(menuExitOptionStamp))
                 .returnsMouse(mouse);
@@ -329,17 +337,17 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void selectServer() throws InterruptedException, CannotGetUserInputException {
+    void selectServer() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("selectServer");
         final Mouse mouse = getMouseMock();
         //when
         windowIsExists();
         windowIsHealthy();
         baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp),
-                foundFrom(stampsToCheckServerPageRendering, optionsButtonBaseScaleStamp),
-                notFound(disconnectedPopupStamp),
-                foundFrom(stampsToCheckServerLineRendering, serverLineUnselectedStamp),
-                notFound(disconnectedPopupStamp))
+                        foundFrom(stampsToCheckServerPageRendering, optionsButtonBaseScaleStamp),
+                        notFound(disconnectedPopupStamp),
+                        foundFrom(stampsToCheckServerLineRendering, serverLineUnselectedStamp),
+                        notFound(disconnectedPopupStamp))
                 .returnsMouse(mouse);
         getBaseAppWindowInstance().restoreAndDo(RestoredBaseAppWindow::selectServer);
         //then
@@ -347,7 +355,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void chooseCharacter() throws InterruptedException, CannotGetUserInputException {
+    void chooseCharacter() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("chooseCharacter");
         final Mouse mouse = getMouseMock();
         //when
@@ -361,16 +369,16 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInGameWindowRenderedButFail() throws InterruptedException, CannotGetUserInputException {
+    void checkInGameWindowRenderedButFail() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInGameWindowRenderedButFail");
         final Mouse mouse = getMouseMock();
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // trying close normally
-                .thenReturn(true) // closing window frame
-                .thenReturn(true) // window hasn't closed yet
-                .thenReturn(false); // window closed
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // trying close normally
+                .thenReturn(Either.resultOf(() -> true)) // closing window frame
+                .thenReturn(Either.resultOf(() -> true)) // window hasn't closed yet
+                .thenReturn(Either.resultOf(() -> false)); // window closed
         windowIsHealthy();
         baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), notFound(accountInfoPopupCaptionStamp))
                 .returnsMouse(mouse);
@@ -382,7 +390,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInGameWindowRendered() throws InterruptedException, CannotGetUserInputException {
+    void checkInGameWindowRendered() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInGameWindowRendered");
         final Mouse mouse = getMouseMock();
         //when
@@ -397,16 +405,16 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void inGameWindowNotRenderedProperly() throws InterruptedException, CannotGetUserInputException {
+    void inGameWindowNotRenderedProperly() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("inGameWindowNotRenderedProperly");
         final Mouse mouse = getMouseMock();
         //when
         when(window.isExists())
-                .thenReturn(true) // restoring window
-                .thenReturn(true) // trying close normally
-                .thenReturn(true) // closing window frame
-                .thenReturn(true) // window hasn't closed yet
-                .thenReturn(false); // window closed
+                .thenReturn(Either.resultOf(() -> true)) // restoring window
+                .thenReturn(Either.resultOf(() -> true)) // trying close normally
+                .thenReturn(Either.resultOf(() -> true)) // closing window frame
+                .thenReturn(Either.resultOf(() -> true)) // window hasn't closed yet
+                .thenReturn(Either.resultOf(() -> false)); // window closed
         windowIsHealthy();
         baseWindowMocked().windowStatesAre(notFound(disconnectedPopupStamp), notFound(accountInfoPopupCaptionStamp))
                 .returnsMouse(mouse);
@@ -417,7 +425,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInLoginTracker() throws InterruptedException, CannotGetUserInputException {
+    void checkInLoginTracker() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInLoginTracker");
         final Mouse mouse = getMouseMock();
         //when
@@ -431,7 +439,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInZeroAction() throws InterruptedException, CannotGetUserInputException {
+    void checkInZeroAction() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInZeroAction");
         //when
         final int actionsCount = 0;
@@ -439,7 +447,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInOneAction() throws InterruptedException, CannotGetUserInputException {
+    void checkInOneAction() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInOneAction");
         //when
         final int actionsCount = 1;
@@ -447,7 +455,7 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInTwoActions() throws InterruptedException, CannotGetUserInputException {
+    void checkInTwoActions() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInTwoActions");
         //when
         final int actionsCount = 2;
@@ -455,14 +463,14 @@ class BaseAppWindowImplTest {
     }
 
     @Test
-    void checkInThreeActions() throws InterruptedException, CannotGetUserInputException {
+    void checkInThreeActions() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("checkInThreeActions");
         //when
         final int actionsCount = 3;
         checkInActionsTest(actionsCount);
     }
 
-    private void checkInActionsTest(final int actionsCount) throws InterruptedException, CannotGetUserInputException {
+    private void checkInActionsTest(final int actionsCount) throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         final Mouse mouse = getMouseMock();
         windowIsExists();
         windowIsHealthy();
@@ -497,13 +505,13 @@ class BaseAppWindowImplTest {
     }
 
     private void windowIsExists() {
-        when(window.isExists()).thenReturn(true);
+        when(window.isExists()).thenReturn(Either.resultOf(() -> true));
     }
 
     private void windowIsCorrupted() throws InterruptedException, CannotGetUserInputException {
         when(window.isVisible()).thenReturn(false);
         baseWindowMocked().stateIs(throwFor(disconnectedPopupStamp, new CannotGetUserInputException()))
-                        .throwsWhenAskedMouse(new CannotGetUserInputException());
+                .throwsWhenAskedMouse(new CannotGetUserInputException());
     }
 
     private void windowIsHealthy() {
@@ -573,17 +581,17 @@ class BaseAppWindowImplTest {
         when(applicationSettings.actionsCount()).thenReturn(count);
     }
 
-    private void verifyDisconnectedPopupConfirmed(final Mouse mouse) throws InterruptedException {
+    private void verifyDisconnectedPopupConfirmed(final Mouse mouse) throws InterruptedException, Win32ApiException {
         verify(mouse).clickAtPoint(disconnectedPopupCloseButtonPoint);
     }
 
-    private void verifyWindowCloseButtonClicked() throws InterruptedException {
+    private void verifyWindowCloseButtonClicked() throws InterruptedException, Win32ApiException {
         final InOrder inOrderMouse = inOrder(mouse);
         inOrderMouse.verify(mouse).move(windowCloseButtonPoint);
         inOrderMouse.verify(mouse, atLeastOnce()).leftClick();
     }
 
-    private void verifyMenuCloseItemClicked(final Mouse mouse) throws InterruptedException {
+    private void verifyMenuCloseItemClicked(final Mouse mouse) throws InterruptedException, Win32ApiException {
         verify(mouse).clickAtPoint(menuExitOptionPoint);
     }
 
@@ -595,31 +603,31 @@ class BaseAppWindowImplTest {
         verify(commonWindowService, never()).fixResult(CommonWindowService.Result.baseAppWindowDisappeared);
     }
 
-    private void verifyWasAttemptTerminateWindowProcess() {
+    private void verifyWasAttemptTerminateWindowProcess() throws Win32ApiException {
         verify(process).terminate();
     }
 
-    private void verifyDidNotAttemptsTerminateWindowProcess() {
+    private void verifyDidNotAttemptsTerminateWindowProcess() throws Win32ApiException {
         verify(process, never()).terminate();
     }
 
-    private void verifyServerWasSelectedAndConnected(final Mouse mouse) throws InterruptedException {
+    private void verifyServerWasSelectedAndConnected(final Mouse mouse) throws InterruptedException, Win32ApiException {
         final InOrder inOrderMouse = inOrder(mouse);
         inOrderMouse.verify(mouse).clickAtPoint(selectServerButtonPoint);
         inOrderMouse.verify(mouse).clickAtPoint(connectServerButtonPoint);
     }
 
-    private void verifyGameStarted(final Mouse mouse) throws InterruptedException {
+    private void verifyGameStarted(final Mouse mouse) throws InterruptedException, Win32ApiException {
         final InOrder inOrderMouse = inOrder(mouse);
         inOrderMouse.verify(mouse).clickAtPoint(selectCharacterButtonPoint);
         inOrderMouse.verify(mouse).clickAtPoint(startButtonPoint);
     }
 
-    private void verifyLoginTrackerWasCheckedIn(final Mouse mouse) throws InterruptedException {
+    private void verifyLoginTrackerWasCheckedIn(final Mouse mouse) throws InterruptedException, Win32ApiException {
         verify(mouse).clickAtPoint(trackLoginButtonPointer);
     }
 
-    private void verifyActionWasCheckedIn(final Mouse mouse, final int actionsCount) throws InterruptedException {
+    private void verifyActionWasCheckedIn(final Mouse mouse, final int actionsCount) throws InterruptedException, Win32ApiException {
         final InOrder inOrderMouse = inOrder(mouse);
         if (actionsCount <= 0) {
             inOrderMouse.verify(mouse, never()).clickAtPoint(ACTION_BUTTON_POINT_X, ACTION_BUTTON_POINT_Y);

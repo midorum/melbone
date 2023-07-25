@@ -1,5 +1,6 @@
 package midorum.melbone.ui.internal.util;
 
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.win32.IWinUser;
 import dma.validation.Validator;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
@@ -132,7 +133,11 @@ public class IdentifyDialog extends JDialog {
             } catch (NoSuchElementException ex) {
                 this.noticePane.showError("Unbound window not found");
             } catch (InterruptedException ex) {
+                context.logger().error(e);
                 this.noticePane.showError("caught unexpected interruption - try repeat");
+            } catch (Win32ApiException ex) {
+                context.logger().error(e);
+                this.noticePane.showError("caught unexpected exception - try repeat");
             }
         });
         button.setName("check window button");
@@ -143,7 +148,12 @@ public class IdentifyDialog extends JDialog {
         final JButton button = createButton("Bind", e -> getSelectedAccount().ifPresentOrElse(
                 account -> this.currentUnboundWindow.getWindow().ifPresentOrElse(
                         baseAppWindow -> {
-                            baseAppWindow.bindWithAccount(account);
+                            try {
+                                baseAppWindow.bindWithAccount(account);
+                            } catch (Win32ApiException ex) {
+                                context.logger().error("cannot bind window with account " + account, e);
+                                this.noticePane.showError("Cannot bind window with account");
+                            }
                             updateComboBoxModel();
                             repaintForm();
                         },

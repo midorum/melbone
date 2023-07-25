@@ -132,6 +132,10 @@ public class Context {
             public List<String> getBoundAccounts() {
                 return windowFactory.getAllBaseAppWindows().stream()
                         .map(BaseAppWindow::getCharacterName)
+                        .map(either -> either.getOrHandleError(e -> {
+                            logger.error("cannot get window attributes", e);
+                            return Optional.empty();
+                        }))
                         .filter(Optional::isPresent)
                         .map(Optional::get)
                         .toList();

@@ -1,9 +1,11 @@
 package midorum.melbone.window.internal.launcher;
 
 import com.midorum.win32api.facade.*;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.win32.MsLcid;
 import com.midorum.win32api.win32.Win32VirtualKey;
 import dma.flow.Waiting;
+import dma.function.EmptyPredicateThrowing;
 import dma.util.DurationFormatter;
 import midorum.melbone.model.dto.Account;
 import midorum.melbone.model.exception.CannotGetUserInputException;
@@ -43,8 +45,8 @@ public class LauncherWindowImpl implements LauncherWindow {
     }
 
     @Override
-    public void restoreAndDo(final WindowConsumer<RestoredLauncherWindow> consumer) throws InterruptedException {
-        if (!this.window.isExists()) {
+    public void restoreAndDo(final WindowConsumer<RestoredLauncherWindow> consumer) throws InterruptedException, Win32ApiException {
+        if (!this.window.isExists().getOrThrow()) {
             log.warn("window not found - skip");
             return;
         }
@@ -54,14 +56,18 @@ public class LauncherWindowImpl implements LauncherWindow {
                     consumer.accept(new RestoredLauncherWindowImpl(foregroundWindow, log));
                 } catch (BrokenLauncherException e) {
                     log.warn("launcher is broken - " + e.getMessage() + " - close:", e);
-                    tryCloseWindowAndCheckIfClosedNormally(foregroundWindow);
+                    try {
+                        tryCloseWindowAndCheckIfClosedNormally(foregroundWindow);
+                    } catch (BrokenLauncherException ex) {
+                        e.addSuppressed(ex);
+                    }
                     throw e;
                 }
             });
         } catch (BrokenLauncherException | CannotGetUserInputException e) {
             final String message = "launcher is broken - " + e.getMessage() + " - need retry";
             log.warn(message + ":", e);
-            if (this.window.isExists()) killProcess();
+            if (this.window.isExists().getOrThrow()) killProcess();
             throw new NeedRetryException(message, e);
         }
     }
@@ -97,7 +103,7 @@ public class LauncherWindowImpl implements LauncherWindow {
                 .orElseThrow(() -> getBrokenLauncherException("not ready to start", logMarker));
     }
 
-    private Stamp logOutAndWaitLoginForm(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
+    private Stamp logOutAndWaitLoginForm(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         log.info("try log out");
         final Mouse mouse = foregroundWindow.getMouse();
         mouse.clickAtPoint(settings.targetLauncher().accountDropListPoint());
@@ -118,11 +124,11 @@ public class LauncherWindowImpl implements LauncherWindow {
                 .orElseThrow(() -> getBrokenLauncherException("login form not rendered properly - abort", logMarker));
     }
 
-    private void enterLoginAndPasswordAndLoginOnErroneousForm(final ForegroundWindow foregroundWindow, final Account account) throws InterruptedException, CannotGetUserInputException {
+    private void enterLoginAndPasswordAndLoginOnErroneousForm(final ForegroundWindow foregroundWindow, final Account account) throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         enterLoginAndPasswordAndLogin(foregroundWindow, account);
     }
 
-    private void enterLoginAndPasswordAndLogin(final ForegroundWindow foregroundWindow, final Account account) throws InterruptedException, CannotGetUserInputException {
+    private void enterLoginAndPasswordAndLogin(final ForegroundWindow foregroundWindow, final Account account) throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         log.info("try log in for {}", account.login());
 
         final Mouse mouse = foregroundWindow.getMouse();
@@ -170,14 +176,23 @@ public class LauncherWindowImpl implements LauncherWindow {
     }
 
     private void tryCloseWindowAndCheckIfClosedNormally(final ForegroundWindow foregroundWindow) throws InterruptedException {
-        if (!windowIsVisibleAndHasNormalMetrics()) return;
+        try {
+            if (!windowIsVisibleAndHasNormalMetrics()) return;
+        } catch (Win32ApiException e) {
+            throw new BrokenLauncherException("Cannot check launcher window attributes", e);
+        }
         final Waiting.EmptyConsumer closeWindowAction = () -> {
-            if (windowIsVisibleAndHasNormalMetrics()) {
-                try {
-                    closeWindow(foregroundWindow);
-                } catch (CannotGetUserInputException e) {
-                    throw new BrokenLauncherException("Cannot close launcher window", e);
-                }
+            try {
+                if (windowIsVisibleAndHasNormalMetrics()) closeWindow(foregroundWindow);
+            } catch (CannotGetUserInputException | Win32ApiException e) {
+                throw new BrokenLauncherException("Cannot close launcher window", e);
+            }
+        };
+        final EmptyPredicateThrowing<InterruptedException> windowExistingChecker = () -> {
+            try {
+                return !this.window.isExists().getOrThrow();
+            } catch (Win32ApiException e) {
+                throw new BrokenLauncherException("Cannot check existing launcher window", e);
             }
         };
         final boolean windowClosed = new Waiting()
@@ -189,31 +204,34 @@ public class LauncherWindowImpl implements LauncherWindow {
                     log.debug("{}: launcher hasn't closed yet", new DurationFormatter(i.fromStart()).toStringWithoutZeroParts());
                     closeWindowAction.accept();
                 })
-                .waitForBoolean(() -> !this.window.isExists());
+                .waitForBoolean(windowExistingChecker);
         log.info("launcher{}closed normally", windowClosed ? " " : " hasn't ");
     }
 
-    private boolean windowIsVisibleAndHasNormalMetrics() {
+    private boolean windowIsVisibleAndHasNormalMetrics() throws Win32ApiException {
         if (!this.window.isVisible()) {
             log.warn("window is not visible");
             return false;
         }
-        final Rectangle windowRectangle = this.window.getWindowRectangle();
         final Rectangle windowDimensions = settings.targetLauncher().windowDimensions();
-        final boolean equals = windowRectangle.width() == windowDimensions.width() && windowRectangle.height() == windowDimensions.height();
-        if (!equals) log.warn("window dimensions are wrong: expected {} but are {}", windowDimensions, windowRectangle);
-        return equals;
+        return window.getWindowRectangle()
+                .map(r -> {
+                    final boolean e = r.width() == windowDimensions.width() && r.height() == windowDimensions.height();
+                    if (!e) log.warn("window dimensions are wrong: expected {} but are {}", windowDimensions, r);
+                    return e;
+                })
+                .getOrThrow();
     }
 
-    private void closeWindow(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException {
+    private void closeWindow(final ForegroundWindow foregroundWindow) throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         log.info("closing launcher window");
         foregroundWindow.getMouse().clickAtPoint(settings.targetLauncher().windowCloseButtonPoint());
         checkConfirmQuitDialogRenderedAndAcceptIt();
     }
 
-    private void killProcess() {
+    private void killProcess() throws Win32ApiException {
         log.info("terminating launcher window process");
-        this.window.getProcess().terminate();
+        this.window.getProcess().getOrThrow().terminate();
     }
 
     private void checkConfirmQuitDialogRenderedAndAcceptIt() throws InterruptedException {
@@ -250,24 +268,32 @@ public class LauncherWindowImpl implements LauncherWindow {
 
         @Override
         public void login(final Account account) throws InterruptedException, CannotGetUserInputException {
-            final Stamp foundStamp = waitLauncherRendering(foregroundWindow);
-            //log out if needed
-            if (foundStamp.key().equals(StampKeys.TargetLauncher.playButtonInactive)) {
-                log.info("play form is opened; play button is inactive");
-                logOutAndWaitLoginForm(foregroundWindow);
-            } else if (foundStamp.key().equals(StampKeys.TargetLauncher.playButtonActive)) {
-                log.info("play form is opened; play button is active");
-                logOutAndWaitLoginForm(foregroundWindow);
+            try {
+                final Stamp foundStamp = waitLauncherRendering(foregroundWindow);
+                //log out if needed
+                if (foundStamp.key().equals(StampKeys.TargetLauncher.playButtonInactive)) {
+                    log.info("play form is opened; play button is inactive");
+                    logOutAndWaitLoginForm(foregroundWindow);
+                } else if (foundStamp.key().equals(StampKeys.TargetLauncher.playButtonActive)) {
+                    log.info("play form is opened; play button is active");
+                    logOutAndWaitLoginForm(foregroundWindow);
+                }
+                log.info("login form has rendered");
+                enterLoginAndPasswordAndLogin(foregroundWindow, account);
+            } catch (Win32ApiException e) {
+                throw new CannotGetUserInputException(e.getMessage(), e);
             }
-            log.info("login form has rendered");
-            enterLoginAndPasswordAndLogin(foregroundWindow, account);
         }
 
         @Override
         public void startGameWhenGetReady() throws InterruptedException, CannotGetUserInputException {
-            waitStartButtonRendering(foregroundWindow);
-            log.info("starting game");
-            foregroundWindow.getMouse().clickAtPoint(settings.targetLauncher().startButtonPoint());
+            try {
+                waitStartButtonRendering(foregroundWindow);
+                log.info("starting game");
+                foregroundWindow.getMouse().clickAtPoint(settings.targetLauncher().startButtonPoint());
+            } catch (Win32ApiException e) {
+                throw new CannotGetUserInputException(e.getMessage(), e);
+            }
         }
     }
 
@@ -278,11 +304,13 @@ public class LauncherWindowImpl implements LauncherWindow {
             final Rectangle requiredDimensions = settings.targetLauncher().confirmQuitDialogDimensions();
             return commonWindowService.getWin32System()
                     .findAllWindows(settings.targetLauncher().confirmQuitDialogTitle(), null, true).stream()
-                    .filter(w -> {
-                        final Rectangle windowRectangle = w.getWindowRectangle();
-                        return requiredDimensions.width() == windowRectangle.width()
-                                && requiredDimensions.height() == windowRectangle.height();
-                    })
+                    .filter(w -> w.getWindowRectangle()
+                            .map(r -> requiredDimensions.width() == r.width()
+                                    && requiredDimensions.height() == r.height())
+                            .getOrHandleError(e -> {
+                                log.warn("cannot check window attributes (" + w.getSystemId() + ") - skip", e);
+                                return false;
+                            }))
                     .filter(w -> {
                         try {
                             return commonWindowService.bringForeground(w).andDo(foregroundWindow -> {
@@ -313,7 +341,11 @@ public class LauncherWindowImpl implements LauncherWindow {
             log.info("accepting confirm quit dialog");
             try {
                 commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
-                    foregroundWindow.getMouse().clickAtPoint(settings.targetLauncher().closeQuitConfirmPopupButtonPoint());
+                    try {
+                        foregroundWindow.getMouse().clickAtPoint(settings.targetLauncher().closeQuitConfirmPopupButtonPoint());
+                    } catch (Win32ApiException e) {
+                        throw new CannotGetUserInputException(e.getMessage(), e);
+                    }
                 });
             } catch (CannotGetUserInputException e) {
                 throw new BrokenLauncherException("Cannot get user input in dialog", e);

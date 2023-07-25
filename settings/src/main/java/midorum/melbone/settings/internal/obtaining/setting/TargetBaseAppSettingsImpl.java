@@ -149,12 +149,12 @@ public class TargetBaseAppSettingsImpl extends SettingValueExtractor implements 
 
     @Override
     public int windowAppearingDelay() {
-        return 10_000;
+        return 1_000;
     }
 
     @Override
     public int windowAppearingLatency() {
-        return 5_000;
+        return 1_000;
     }
 
     @Override
