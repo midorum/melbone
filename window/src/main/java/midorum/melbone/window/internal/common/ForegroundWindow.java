@@ -178,7 +178,8 @@ public class ForegroundWindow {
     }
 
     private String getWindowInfo(final IWindow window) {
-        return "pid=" + window.getProcessId()
+        return "id=" + window.getSystemId()
+                + ", pid=" + window.getProcessId()
                 + ", process=" + window.getProcess().map(IProcess::name)
                 + ", title=" + window.getText()
                 + ", class=" + window.getClassName();
