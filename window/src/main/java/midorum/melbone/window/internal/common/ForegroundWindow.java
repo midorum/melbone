@@ -82,6 +82,15 @@ public class ForegroundWindow {
     }
 
     private boolean bringWindowForeground(final String marker) throws InterruptedException, Win32ApiException {
+        BringForegroundResult result = bringWindowForegroundOrCloseOverlay(marker);
+        int i = 10;
+        while (i-- > 0 && result == BringForegroundResult.foundOverlay) {
+            result = bringWindowForegroundOrCloseOverlay(marker);
+        }
+        return result == BringForegroundResult.success;
+    }
+
+    private BringForegroundResult bringWindowForegroundOrCloseOverlay(final String marker) throws InterruptedException, Win32ApiException {
         try {
             final boolean windowIsForeground = new Waiting()
                     .timeout(bringWindowForegroundTimeout, TimeUnit.MILLISECONDS)
@@ -97,9 +106,11 @@ public class ForegroundWindow {
                 findPossibleTopmostAndCloseIfNecessary(marker);
             } else {
                 logger.warn("Can not bring window {} foreground. Maybe another window lays over and has user input.", windowId);
-                findPossibleOverlay(marker).ifPresent(IWindow::close);
+                final Optional<IWindow> possibleOverlay = findPossibleOverlay(marker);
+                possibleOverlay.ifPresent(IWindow::close);
+                if (possibleOverlay.isPresent()) return BringForegroundResult.foundOverlay;
             }
-            return windowIsForeground;
+            return windowIsForeground ? BringForegroundResult.success : BringForegroundResult.error;
         } catch (ControlledWin32ApiException e) {
             throw (Win32ApiException) e.getCause();
         }
@@ -158,8 +169,8 @@ public class ForegroundWindow {
     private Consumer<IWindow> processTopmost(final String topmostMarker) {
         return topmost -> {
             final String topmostId = topmost.getSystemId();
-            logger.warn("Target window was brought to the foreground and has user input. But there is a topmost window which may overlap it: marker={}, id={}, {}",
-                    topmostMarker, topmostId, getWindowExtendedInfo(topmost));
+            logger.warn("Target window was brought to the foreground and has user input. But there is a topmost window which may overlap it: marker={}, {}",
+                    topmostMarker, getWindowExtendedInfo(topmost));
             if (shotOverlappingWindows) stampValidator.takeAndSaveWholeScreenShot(topmostMarker);
             if (closeOverlappingWindows && topmost.getProcess().map(IProcess::name).map(name -> name.map(overlappingWindowsToClose::contains).orElse(false)).getOrHandleError(e -> {
                 logger.error("cannot get process info for window " + topmostId, e);
@@ -195,6 +206,10 @@ public class ForegroundWindow {
     private CannotGetUserInputException getCannotGetUserInputException(final String logMarker) {
         stampValidator.takeAndSaveWholeScreenShot(logMarker);
         return new CannotGetUserInputException("cannot get user input in target widow " + windowId + " (marker=" + logMarker + ")");
+    }
+
+    private enum BringForegroundResult {
+        success, foundOverlay, error;
     }
 
     public class StateWaiting {
