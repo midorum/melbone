@@ -10,6 +10,7 @@ import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.model.settings.stamp.Stamp;
 import midorum.melbone.settings.StampKeys;
+import midorum.melbone.window.internal.util.MockitoUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -125,7 +126,7 @@ class ForegroundWindowTest {
     }
 
     @Test
-    void waiting_cannotGetUserInput_foundOverlay() throws Win32ApiException {
+    void waiting_cannotGetUserInput_foundOverlayButCannotCloseIt() throws Win32ApiException {
         final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
         final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
         final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
@@ -381,6 +382,34 @@ class ForegroundWindowTest {
         assertEquals(Optional.of(stamp), result);
     }
 
+    @Test
+    void waiting_cannotGetUserInput_foundOverlayAndCloseIt() throws Win32ApiException, CannotGetUserInputException, InterruptedException {
+        final Rectangle stampRectangle = new Rectangle(0, 0, 3, 2);
+        final Rectangle windowRectangleInStamp = new Rectangle(0, 0, 300, 200);
+        final Rectangle windowRectangle = new Rectangle(0, 0, 300, 200);
+        final int[] stampWholeData = {};
+        final Stamp stamp = getStampMock(stampRectangle, windowRectangleInStamp, stampWholeData);
+        final IMouse nativeMouse = mock(IMouse.class);
+        final IKeyboard nativeKeyboard = mock(IKeyboard.class);
+        final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
+        final IWindow overlay = getOverlayWindowMock();
+
+        when(applicationSettings.bringWindowForegroundTimeout()).thenReturn(0);// to prevent waiting and get result straight away
+        when(applicationSettings.bringWindowForegroundDelay()).thenReturn(0);// to prevent waiting and get result straight away
+        windowHasUserInput(nativeWindow, new ResultHolder<>(List.of(false, true)));// emulate closing overlay
+        foundForegroundWindow(overlay, nativeWindow);// emulate closing overlay
+        when(stampValidator.validateStamp(stamp)).thenReturn(Optional.of(stamp));
+        final Optional<Stamp> result = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).waiting()
+                .withTimeout(100)
+                .withDelay(10)
+                .withMousePosition(new PointFloat(0.5f, 0.7f))
+                .logFailedStamps()
+                .forStamp(stamp);
+
+        assertEquals(Optional.of(stamp), result);
+        verify(stampValidator, atLeastOnce()).takeAndSaveWholeScreenShot(anyString());
+    }
+
     private Stamp getStampMock(final Rectangle stampRectangle, final Rectangle windowRectangleInStamp, final int[] stampWholeData) {
         final Stamp stamp = mock(Stamp.class);
         when(stamp.key()).thenReturn(StampKeys.TargetBaseApp.dailyTrackerPopupCaption);
@@ -441,12 +470,30 @@ class ForegroundWindowTest {
         when(nativeWindow.isForeground()).thenReturn(true);
     }
 
+    private void windowHasUserInput(final IWindow nativeWindow, final List<Boolean> results) throws Win32ApiException {
+        MockitoUtil.INSTANCE.mockReturnVararg(nativeWindow.bringForeground(), results);
+        MockitoUtil.INSTANCE.mockReturnVararg(nativeWindow.isForeground(), results);
+    }
+
+    private void windowHasUserInput(final IWindow nativeWindow, final ResultHolder<Boolean> resultHolder) throws Win32ApiException {
+        when(nativeWindow.isForeground()).thenReturn(resultHolder.startFrom());
+        when(nativeWindow.bringForeground()).thenAnswer(invocationOnMock -> {
+            final Boolean result = resultHolder.next();
+            when(nativeWindow.isForeground()).thenReturn(result);
+            return result;
+        });
+    }
+
     private void noAnyForegroundWindowFound() {
         when(win32System.getForegroundWindow()).thenReturn(Optional.empty());
     }
 
     private void foundForegroundWindow(final IWindow window) {
         when(win32System.getForegroundWindow()).thenReturn(Optional.of(window));
+    }
+
+    private void foundForegroundWindow(final IWindow window1, final IWindow window2) {
+        when(win32System.getForegroundWindow()).thenReturn(Optional.of(window1)).thenReturn(Optional.of(window2));
     }
 
     private BufferedImage createImage(final Rectangle rectangle) {
@@ -473,5 +520,28 @@ class ForegroundWindowTest {
                 null,
                 0,
                 image.getWidth());
+    }
+
+    private static class ResultHolder<T> {
+        private final List<T> results;
+        private volatile int index = 0;
+
+        private ResultHolder(final List<T> results) {
+            assert !results.isEmpty();
+            this.results = results;
+        }
+
+        private synchronized int nextIndex() {
+            if (index < results.size() - 1) return index++;
+            return index;
+        }
+
+        public T next() {
+            return results.get(nextIndex());
+        }
+
+        public T startFrom() {
+            return results.get(0);
+        }
     }
 }
