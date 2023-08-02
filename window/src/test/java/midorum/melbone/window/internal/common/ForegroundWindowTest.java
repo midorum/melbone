@@ -68,6 +68,8 @@ class ForegroundWindowTest {
         when(nativeWindow.getWindowMouse(speedFactor)).thenReturn(nativeMouse);
 
         windowHasUserInput(nativeWindow);
+        noAnyTopWindows();
+        noAnyAboveWindows(nativeWindow);
         final Mouse mouse = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).getMouse();
         assertNotNull(mouse);
         mouse.clickAtPoint(point);
@@ -99,6 +101,8 @@ class ForegroundWindowTest {
         when(nativeWindow.getKeyboard()).thenReturn(nativeKeyboard);
 
         windowHasUserInput(nativeWindow);
+        noAnyTopWindows();
+        noAnyAboveWindows(nativeWindow);
         final IKeyboard keyboard = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).getKeyboard();
         assertEquals(nativeKeyboard, keyboard);
     }
@@ -115,13 +119,14 @@ class ForegroundWindowTest {
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
 
         windowHasNotUserInput(nativeWindow);
+        noAnyTopWindows();
         noAnyForegroundWindowFound();
         assertThrows(CannotGetUserInputException.class, () -> new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).waiting()
                 .withTimeout(100)
                 .withDelay(10)
                 .forStamp(stamp));
 
-        verify(win32System).getForegroundWindow();
+        verify(win32System, atLeastOnce()).getForegroundWindow();
         verify(stampValidator).takeAndSaveWholeScreenShot(anyString());
     }
 
@@ -159,6 +164,8 @@ class ForegroundWindowTest {
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
 
         windowHasUserInput(nativeWindow);
+        noAnyTopWindows();
+        noAnyAboveWindows(nativeWindow);
         final Optional<Stamp> result = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).waiting()
                 .withTimeout(100)
                 .withDelay(10)
@@ -181,6 +188,8 @@ class ForegroundWindowTest {
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
 
         windowHasUserInput(nativeWindow);
+        noAnyTopWindows();
+        noAnyAboveWindows(nativeWindow);
         when(stampValidator.validateStamp(stamp)).thenReturn(Optional.empty());
         final Optional<Stamp> result = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).waiting()
                 .withTimeout(100)
@@ -206,6 +215,8 @@ class ForegroundWindowTest {
         final String logMarker = "test-marker";
 
         windowHasUserInput(nativeWindow);
+        noAnyTopWindows();
+        noAnyAboveWindows(nativeWindow);
         when(stampValidator.validateStamp(stamp)).thenReturn(Optional.empty());
         final Optional<Stamp> result = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).waiting()
                 .withTimeout(100)
@@ -232,6 +243,8 @@ class ForegroundWindowTest {
         final IWindow topmost = getTopmostWindowMock(topmostRectangle, TOPMOST_PROCESS_NAME);
 
         windowHasUserInput(nativeWindow);
+        noAnyTopWindows();
+        noAnyAboveWindows(nativeWindow);
         when(applicationSettings.closeOverlappingWindows()).thenReturn(false);
         when(win32System.listAllWindows()).thenReturn(List.of(nativeWindow, topmost));
         when(stampValidator.validateStamp(stamp)).thenReturn(Optional.of(stamp));
@@ -259,6 +272,8 @@ class ForegroundWindowTest {
         final IWindow topmost = getTopmostWindowMock(topmostRectangle, TOPMOST_PROCESS_NAME);
 
         windowHasUserInput(nativeWindow);
+        noAnyTopWindows();
+        noAnyAboveWindows(nativeWindow);
         when(applicationSettings.closeOverlappingWindows()).thenReturn(true);
         when(win32System.listAllWindows()).thenReturn(List.of(nativeWindow, topmost));
         when(stampValidator.validateStamp(stamp)).thenReturn(Optional.of(stamp));
@@ -286,6 +301,8 @@ class ForegroundWindowTest {
         final IWindow topmost = getTopmostWindowMock(topmostRectangle, TOPMOST_PROCESS_NAME);
 
         windowHasUserInput(nativeWindow);
+        noAnyTopWindows();
+        noAnyAboveWindows(nativeWindow);
         when(applicationSettings.closeOverlappingWindows()).thenReturn(true);
         when(win32System.listAllWindows()).thenReturn(List.of(nativeWindow, topmost));
         when(stampValidator.validateStamp(stamp)).thenReturn(Optional.of(stamp));
@@ -313,6 +330,8 @@ class ForegroundWindowTest {
         final IWindow topmost = getTopmostWindowMock(topmostRectangle, TOPMOST_PROCESS_NAME);
 
         windowHasUserInput(nativeWindow);
+        foundTopWindow(topmost);
+        noAnyAboveWindows(nativeWindow);
         when(applicationSettings.closeOverlappingWindows()).thenReturn(true);
         when(applicationSettings.overlappingWindowsToClose()).thenReturn(new String[]{TOPMOST_PROCESS_NAME});
         when(win32System.listAllWindows()).thenReturn(List.of(nativeWindow, topmost));
@@ -342,6 +361,8 @@ class ForegroundWindowTest {
         final IWindow topmostToClose = getTopmostWindowMock(topmostRectangle, TOPMOST_PROCESS_NAME);
 
         windowHasUserInput(nativeWindow);
+        foundTopWindow(topmostToClose);
+        noAnyAboveWindows(nativeWindow);
         when(applicationSettings.closeOverlappingWindows()).thenReturn(true);
         when(applicationSettings.overlappingWindowsToSkip()).thenReturn(new String[]{SKIPPED_TOPMOST_PROCESS_NAME});
         when(applicationSettings.overlappingWindowsToClose()).thenReturn(new String[]{TOPMOST_PROCESS_NAME});
@@ -370,6 +391,8 @@ class ForegroundWindowTest {
         final IWindow nativeWindow = getWindowMock(windowRectangle, nativeMouse, nativeKeyboard);
 
         windowHasUserInput(nativeWindow);
+        noAnyTopWindows();
+        noAnyAboveWindows(nativeWindow);
         when(applicationSettings.closeOverlappingWindows()).thenReturn(true);
         when(win32System.listAllWindows()).thenReturn(List.of(nativeWindow));
         when(stampValidator.validateStamp(stamp)).thenReturn(Optional.of(stamp));
@@ -398,6 +421,8 @@ class ForegroundWindowTest {
         when(applicationSettings.bringWindowForegroundDelay()).thenReturn(0);// to prevent waiting and get result straight away
         windowHasUserInput(nativeWindow, new ResultHolder<>(List.of(false, true)));// emulate closing overlay
         foundForegroundWindow(overlay, nativeWindow);// emulate closing overlay
+        noAnyTopWindows();
+        noAnyAboveWindows(nativeWindow);
         when(stampValidator.validateStamp(stamp)).thenReturn(Optional.of(stamp));
         final Optional<Stamp> result = new ForegroundWindow(nativeWindow, settings, win32System, stampValidator).waiting()
                 .withTimeout(100)
@@ -494,6 +519,18 @@ class ForegroundWindowTest {
 
     private void foundForegroundWindow(final IWindow window1, final IWindow window2) {
         when(win32System.getForegroundWindow()).thenReturn(Optional.of(window1)).thenReturn(Optional.of(window2));
+    }
+
+    private void noAnyTopWindows() {
+        when(win32System.getTopWindow()).thenReturn(Either.resultOf(Optional::empty));
+    }
+
+    private void foundTopWindow(final IWindow topmost) {
+        when(win32System.getTopWindow()).thenReturn(Either.resultOf(() -> Optional.of(topmost)));
+    }
+
+    private void noAnyAboveWindows(final IWindow nativeWindow) {
+        when(nativeWindow.getAboveOnZOrderWindow()).thenReturn(Either.resultOf(Optional::empty));
     }
 
     private BufferedImage createImage(final Rectangle rectangle) {
