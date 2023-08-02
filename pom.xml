@@ -20,7 +20,7 @@
     </modules>
 
     <properties>
-        <revision>2.1.0-rc.0.4.2-error_handling.0.1.0</revision>
+        <revision>2.1.0-rc.0.5.0</revision>
         <app.build.properties.filename>app-build.properties</app.build.properties.filename>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>16</maven.compiler.source>
