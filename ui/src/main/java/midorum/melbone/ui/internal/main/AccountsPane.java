@@ -120,7 +120,7 @@ public class AccountsPane extends JPanel implements AccountsHolder, Updatable {
     private void renderForm() {
         dataLoader.loadGuiData(() -> {
                     final Collection<Account> accountsInUse = accountStorage.accountsInUse().stream().map(accountStorage::get).toList();
-                    logger.info("accounts in use: {}", accountsInUse);
+                    logger.debug("accounts in use: {}", accountsInUse);
                     final Collection<String> commentaries = accountStorage.commentaries();
                     final List<BaseAppWindow> allBaseAppWindows = targetWindowOperations.getAllWindows();
                     final List<String> boundAccounts = allBaseAppWindows.stream()

@@ -16,12 +16,11 @@ import midorum.melbone.window.internal.util.StaticResources;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -106,8 +105,8 @@ public class ForegroundWindow {
                     });
             if (windowIsOnForeground) {
                 logger.trace("window {} has brought to the foreground - check for possible topmost windows", windowId);
-                findPossibleTopmostAndCloseIfNecessary(marker);
-                findPossibleAboveWindowsAndCloseIfNecessary(marker); // FIXME: 8/2/23 maybe it is redundant
+//                findPossibleTopmostAndCloseIfNecessary(marker);
+                findPossibleAboveWindowsAndCloseIfNecessary(marker);
             } else {
                 logger.warn("Can not bring window {} to the foreground. Maybe another window lays over and has user input.", windowId);
                 final Optional<IWindow> possibleOverlay = findPossibleOverlay(marker);
@@ -124,64 +123,30 @@ public class ForegroundWindow {
         return r1.left() <= r2.right() && r2.left() <= r1.right() && r1.top() <= r2.bottom() && r2.top() <= r1.bottom();
     }
 
-    // FIXME: 8/2/23 too expensive operation
-    @Deprecated
-    private void findPossibleTopmostAndCloseIfNecessary_deprecated(final String marker) throws Win32ApiException {
-        final String topmostMarker = "topmost_" + marker;
-        final Function<Rectangle, Boolean> rectangleChecker = window.getWindowRectangle()
-                .map(wr -> (Function<Rectangle, Boolean>) r -> areRectanglesOverlay(wr, r))
-                .getOrThrow();
-//        final Predicate<IWindow> isNotSame = window.getProcessId()
-//                .map(processId -> (Predicate<IWindow>) w -> w.getProcessId().map(pid -> !pid.equals(processId))
-//                        .getOrHandleError(e -> {
-//                            logWin32ApiException(w, e, "skip");
-//                            return false;
-//                        })).getOrThrow();
-        final Predicate<IWindow> isNotSame = w -> !windowId.equals(w.getSystemId());
-        win32System.listAllWindows().stream()
-                .filter(isNotSame)
-                .filter(isTopmost(rectangleChecker))
-                .forEach(processTopmost(topmostMarker));
-    }
-
-    private void findPossibleTopmostAndCloseIfNecessary(final String marker) throws Win32ApiException {
-        final String topmostMarker = "topmost_" + marker;
-        final Predicate<IWindow> isNotSame = w -> !windowId.equals(w.getSystemId());
-        final Function<Rectangle, Boolean> rectangleChecker = window.getWindowRectangle()
-                .map(wr -> (Function<Rectangle, Boolean>) r -> areRectanglesOverlay(wr, r))
-                .getOrThrow();
-        win32System.getTopWindow().getOrHandleError(e -> {
-            logger.trace("got exception while check topmost window", e);
-            return Optional.empty();
-        }).filter(isNotSame).filter(isTopmost(rectangleChecker)).ifPresent(window -> {
-            if (window.getProcess().map(IProcess::name).map(name -> name.map(s -> !overlappingWindowsToSkip.contains(s)).orElse(true))
-                    .getOrHandleError(e -> {
-                        logWin32ApiException(window, e, "topmost", "skip");
-                        return false;
-                    })) {
-                logger.warn("found topmost window: marker={}, {}", topmostMarker, getWindowExtendedInfo(window));
-                if (shotOverlappingWindows) stampValidator.takeAndSaveWholeScreenShot(topmostMarker);
-                closeOverlappingWindow(window, "topmost");
-            }
-        });
-    }
-
-    private void findPossibleAboveWindowsAndCloseIfNecessary(final String marker) {
+    private void findPossibleAboveWindowsAndCloseIfNecessary(final String marker) throws Win32ApiException {
         final String aboveMarker = "above_" + marker;
-        window.getAboveOnZOrderWindow().getOrHandleError(e -> {
-            logger.trace("got exception while check above window", e);
-            return Optional.empty();
-        }).ifPresent(window -> {
-            if (window.getProcess().map(IProcess::name).map(name -> name.map(s -> !overlappingWindowsToSkip.contains(s)).orElse(true))
-                    .getOrHandleError(e -> {
-                        logWin32ApiException(window, e, "above", "skip");
-                        return false;
-                    })) {
-                logger.warn("found above window: marker={}, {}", aboveMarker, getWindowExtendedInfo(window));
-                if (shotOverlappingWindows) stampValidator.takeAndSaveWholeScreenShot(aboveMarker);
-                closeOverlappingWindow(window, "above");
-            }
-        });
+        final Function<Rectangle, Boolean> rectangleChecker = window.getWindowRectangle()
+                .map(wr -> (Function<Rectangle, Boolean>) r -> areRectanglesOverlay(wr, r))
+                .getOrThrow();
+        win32System.desktopWindowsEnumerator()
+                .filter(w -> w.hasAndHasNotStyles(IWinUser.WS_VISIBLE, IWinUser.WS_MINIMIZE)
+                        .flatMap(result -> w.getWindowRectangle().map(rectangleChecker).map(and(result)))
+                        .getOrThrow())
+                .aboveThan(window)
+                .build().enumerate().getOrHandleError(e -> {
+                    logger.error("got exception while enumerating desktop windows", e);
+                    return List.of();
+                }).forEach(w -> {
+                    if (w.getProcess().map(IProcess::name).map(name -> name.map(s -> !overlappingWindowsToSkip.contains(s)).orElse(true))
+                            .getOrHandleError(e -> {
+                                logWin32ApiException(w, e, "above", "skip");
+                                return false;
+                            })) {
+                        logger.warn("found above window: marker={}, {}", aboveMarker, getWindowExtendedInfo(w));
+                        if (shotOverlappingWindows) stampValidator.takeAndSaveWholeScreenShot(aboveMarker);
+                        closeOverlappingWindowIfNecessary(w, "above");
+                    }
+                });
     }
 
     private Optional<IWindow> findPossibleOverlay(final String marker) {
@@ -202,27 +167,7 @@ public class ForegroundWindow {
         return b1 -> b && b1;
     }
 
-    private Predicate<IWindow> isTopmost(final Function<Rectangle, Boolean> rectangleChecker) {
-        return w -> w.getProcess().map(IProcess::name).map(name -> name.map(s -> !overlappingWindowsToSkip.contains(s)).orElse(true))
-                .flatMap(result -> w.hasStyles(IWinUser.WS_VISIBLE).map(and(result)))
-                .flatMap(result -> w.hasExtendedStyles(IWinUser.WS_EX_TOPMOST).map(and(result)))
-                .flatMap(result -> w.getWindowRectangle().map(rectangleChecker).map(and(result)))
-                .getOrHandleError(e -> {
-                    logWin32ApiException(w, e, "topmost", "skip");
-                    return false;
-                });
-    }
-
-    private Consumer<IWindow> processTopmost(final String topmostMarker) {
-        return topmost -> {
-            logger.warn("Target window was brought to the foreground and has user input. But there is a topmost window which may overlap it: marker={}, {}",
-                    topmostMarker, getWindowExtendedInfo(topmost));
-            if (shotOverlappingWindows) stampValidator.takeAndSaveWholeScreenShot(topmostMarker);
-            closeOverlappingWindow(topmost, "topmost");
-        };
-    }
-
-    private void closeOverlappingWindow(final IWindow window, final String checking) {
+    private void closeOverlappingWindowIfNecessary(final IWindow window, final String checking) {
         final String systemId = window.getSystemId();
         if (closeOverlappingWindows && window.getProcess().map(IProcess::name).map(name -> name.map(overlappingWindowsToClose::contains).orElse(false)).getOrHandleError(e -> {
             logWin32ApiException(window, e, checking, null);
@@ -267,7 +212,7 @@ public class ForegroundWindow {
     }
 
     private enum BringForegroundResult {
-        success, foundOverlay, error;
+        success, foundOverlay, error
     }
 
     public class StateWaiting {
