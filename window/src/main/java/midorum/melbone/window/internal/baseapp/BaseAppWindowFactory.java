@@ -40,10 +40,10 @@ public class BaseAppWindowFactory {
     public List<BaseAppWindow> getAllWindows() {
         final String windowTitle = settings.targetBaseAppSettings().windowTitle();
         final String windowClassName = settings.targetBaseAppSettings().windowClassName();
-        logger.info("get all windows with title - [{}] and class name - [{}]", windowTitle, windowClassName);
+        logger.debug("get all windows with title - [{}] and class name - [{}]", windowTitle, windowClassName);
         return win32System.findAllWindows(windowTitle, windowClassName, false).stream()
                 .map(window -> {
-                    logger.info("found window {} ({})", window.getText(), window.getSystemId());
+                    logger.debug("found window {} ({})", window.getText(), window.getSystemId());
                     return new BaseAppWindowImpl(window, commonWindowService, settings, accountBinding, stamps);
                 })
                 .collect(Collectors.toList());
