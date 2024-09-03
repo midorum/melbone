@@ -544,7 +544,7 @@ class BaseAppWindowImplTest {
 
     private ForegroundWindow.StateWaiting foundFrom(final Set<Stamp> stampsToCheck, final Stamp stamp) throws InterruptedException, CannotGetUserInputException {
         final ForegroundWindow.StateWaiting stateWaiting = getStateWaitingMock();
-        when(stateWaiting.forAnyStamp(any())).thenAnswer(invocation -> {
+        when(stateWaiting.forAnyStamp(any(Stamp[].class))).thenAnswer(invocation -> {
             checkValidatorInvocation(invocation, stampsToCheck);
             return Optional.of(stamp);
         });
@@ -553,7 +553,7 @@ class BaseAppWindowImplTest {
 
     private ForegroundWindow.StateWaiting notFoundAnyFrom(final Set<Stamp> stampsToCheck) throws InterruptedException, CannotGetUserInputException {
         final ForegroundWindow.StateWaiting stateWaiting = getStateWaitingMock();
-        when(stateWaiting.forAnyStamp(any())).thenAnswer(invocation -> {
+        when(stateWaiting.forAnyStamp(any(Stamp[].class))).thenAnswer(invocation -> {
             checkValidatorInvocation(invocation, stampsToCheck);
             return Optional.empty();
         });
