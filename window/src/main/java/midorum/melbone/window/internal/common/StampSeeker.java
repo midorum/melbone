@@ -106,7 +106,7 @@ public class StampSeeker {
                         }
                     }
                     ///System.out.println("found stamp: " + stamp.key() + " x=" + col + " y=" + row);
-                    resultList.add(new Result(stamp, col, row, System.nanoTime()-start));
+                    resultList.add(new Result(stamp, col, row, deviation, System.nanoTime()-start));
                 }
             }
         }
@@ -133,10 +133,10 @@ public class StampSeeker {
         return Math.abs(((a >> 16) & 0xFF) - ((b >> 16) & 0xFF)) <= deviation;
     }
 
-    public record Result(Stamp stamp, int x, int y, long time) {
+    public record Result(Stamp stamp, int x, int y, int deviation, long time) {
 
-        public Result(final Stamp stamp, final int x, final int y) {
-            this(stamp, x, y, 0);
+        public Result(final Stamp stamp, final int x, final int y, int deviation) {
+            this(stamp, x, y, deviation, 0);
         }
 
         @Override
@@ -158,6 +158,7 @@ public class StampSeeker {
                     "stamp=" + stamp.key() +
                     ", x=" + x +
                     ", y=" + y +
+                    ", deviation=" + deviation +
                     ", time=" + new DurationFormatter(Duration.ofNanos(time)).toStringWithoutZeroParts() +
                     '}';
         }

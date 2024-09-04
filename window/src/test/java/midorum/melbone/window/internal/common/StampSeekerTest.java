@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 
 class StampSeekerTest {
 
+    private static final int DEVIATION = 1;
     private final Settings settings = mock(Settings.class);
     private final ApplicationSettings applicationSettings = mock(ApplicationSettings.class);
 
@@ -72,7 +73,7 @@ class StampSeekerTest {
     }
 
     private void basicTest(final String mode, final Function<StampSeeker, List<StampSeeker.Result>> action, final TestData testData) {
-        when(applicationSettings.stampDeviation()).thenReturn(1);
+        when(applicationSettings.stampDeviation()).thenReturn(DEVIATION);
         final StampSeeker stampSeeker = new StampSeeker(testData.screenImage, testData.stampsToSeek, settings);
         final TimeMeasurer2.MeasurementResult<List<StampSeeker.Result>> measurementResult = TimeMeasurer2.execute(testData.name + "(" + mode + ")", () -> action.apply(stampSeeker));
         final List<StampSeeker.Result> resultList = measurementResult.result().orElseThrow();
@@ -82,7 +83,7 @@ class StampSeekerTest {
     }
 
     private void basicBenchmark(final String mode, final Function<StampSeeker, List<StampSeeker.Result>> action, final TestData testData) {
-        when(applicationSettings.stampDeviation()).thenReturn(1);
+        when(applicationSettings.stampDeviation()).thenReturn(DEVIATION);
         final StampSeeker stampSeeker = new StampSeeker(testData.screenImage, testData.stampsToSeek, settings);
         System.out.println("Warmup...");
         for (int i = 0; i < 10; i++) {
@@ -189,7 +190,8 @@ class StampSeekerTest {
                 2, 2,
                 2, 3});
         final Stamp[] stampsToSeek = {stamp};
-        final List<StampSeeker.Result> shouldBeResult = List.of(new StampSeeker.Result(stamp, 2, 2), new StampSeeker.Result(stamp, 3, 5));
+        final List<StampSeeker.Result> shouldBeResult = List.of(new StampSeeker.Result(stamp, 2, 2, DEVIATION), 
+                new StampSeeker.Result(stamp, 3, 5, DEVIATION));
         return new TestData("test1", screenImage, stampsToSeek, shouldBeResult);
     }
 
@@ -197,7 +199,7 @@ class StampSeekerTest {
         final BufferedImage screenImage = generateImage(new Rectangle(0, 0, 1000, 1000));
         final Stamp stamp = createStampAsSubImage(StampKeys.TargetLauncher.errorExclamationSign, screenImage, 490, 490, 100, 100);
         final Stamp[] stampsToSeek = {stamp};
-        final List<StampSeeker.Result> shouldBeResult = List.of(new StampSeeker.Result(stamp, 490, 490));
+        final List<StampSeeker.Result> shouldBeResult = List.of(new StampSeeker.Result(stamp, 490, 490, DEVIATION));
         return new TestData("test2", screenImage, stampsToSeek, shouldBeResult);
     }
 
@@ -217,10 +219,10 @@ class StampSeekerTest {
                 generateImage(new Rectangle(0, 0, 75, 21), new TextLabel("error", 0, 10, Color.DARK_GRAY)));
         final Stamp[] stampsToSeek = {stamp1, stamp2, stamp3, stamp4};
         final List<StampSeeker.Result> shouldBeResult = List.of(
-                new StampSeeker.Result(stamp1, 245, 168),
-                new StampSeeker.Result(stamp1, 320, 88),
-                new StampSeeker.Result(stamp2, 34, 2),
-                new StampSeeker.Result(stamp3, 800, 713));
+                new StampSeeker.Result(stamp1, 245, 168, DEVIATION),
+                new StampSeeker.Result(stamp1, 320, 88, DEVIATION),
+                new StampSeeker.Result(stamp2, 34, 2, DEVIATION),
+                new StampSeeker.Result(stamp3, 800, 713, DEVIATION));
         return new TestData("test3", screenImage, stampsToSeek, shouldBeResult);
     }
 
