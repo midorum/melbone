@@ -162,7 +162,7 @@ class ExecutorImplTest {
         final int wait = initialDelay + taskPeriod;
         final Account[] testAccounts = getTestAccounts();
         final RunnableCounter task = getBrokenAccountProcessor();
-        final Consumer errorHandlerMock = Mockito.mock(Consumer.class);
+        @SuppressWarnings("rawtypes") final Consumer errorHandlerMock = Mockito.mock(Consumer.class);
         final IExecutor executor = getExecutorForTest(
                 InternalScheduledExecutor.INSTANCE,
                 task,
@@ -183,7 +183,7 @@ class ExecutorImplTest {
         final int wait = initialDelay + taskPeriod;
         final Account[] testAccounts = getTestAccounts();
         final RunnableCounter task = getNeedRetryAccountProcessor();
-        final Consumer errorHandlerMock = Mockito.mock(Consumer.class);
+        @SuppressWarnings("rawtypes") final Consumer errorHandlerMock = Mockito.mock(Consumer.class);
         final IExecutor executor = getExecutorForTest(
                 InternalScheduledExecutor.INSTANCE,
                 task,
@@ -247,9 +247,7 @@ class ExecutorImplTest {
     }
 
     private RunnableCounter getNormalAccountProcessor() {
-        return new RunnableCounter(() -> {
-            System.out.println("processing accounts: isInterrupted=" + Thread.currentThread().isInterrupted());
-        });
+        return new RunnableCounter(() -> System.out.println("processing accounts: isInterrupted=" + Thread.currentThread().isInterrupted()));
     }
 
     private RunnableCounter getBrokenAccountProcessor() {

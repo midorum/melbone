@@ -4,6 +4,7 @@ import midorum.melbone.model.settings.key.SettingDataHolder;
 import midorum.melbone.settings.internal.management.SettingsFactoryInternal;
 import org.junit.jupiter.api.Assertions;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -19,6 +20,7 @@ class SettingTester {
     private Object[] invalidValues;
     private Supplier<Object> settingGetter;
     private Object[] valuesToExtract;
+    private ParsePair[] valuesToParse;
 
     public SettingTester(final SettingsFactoryInternal settingsFactory, final SettingDataHolder setting) {
         this.settingsFactory = settingsFactory;
@@ -50,6 +52,11 @@ class SettingTester {
         return this;
     }
 
+    public SettingTester parseFrom(final ParsePair... valuesToParse) {
+        this.valuesToParse = valuesToParse;
+        return this;
+    }
+
     public void test() {
         Objects.requireNonNull(setting, "setting cannot be null");
         Objects.requireNonNull(normalValues, "normalValues cannot be null");
@@ -57,6 +64,7 @@ class SettingTester {
         Objects.requireNonNull(invalidValues, "invalidValues cannot be null");
         Objects.requireNonNull(settingGetter, "settingGetter cannot be null");
         Objects.requireNonNull(valuesToExtract, "valuesToExtract cannot be null");
+        Objects.requireNonNull(valuesToParse, "valuesToParse cannot be null");
 
         System.out.println("testing setting: " + setting);
 
@@ -83,6 +91,21 @@ class SettingTester {
             assertTrue(setting.internal().checkValueType(result), () -> "failed testing extractor result type: " + result + " (must be " + setting.internal().type() + " but is " + result.getClass() + " )");
             assertTrue(setting.internal().validator().test(result), () -> "failed validating extractor result: " + result);
         }
+
+        final Function<String, Object> parser = setting.internal().parser();
+        assertNotNull(parser);
+        for (ParsePair pair : valuesToParse) {
+            final Object result = parser.apply(pair.data);
+            assertNotNull(result, "parser result cannot be null");
+            assertTrue(setting.internal().checkValueType(result), () -> "failed testing parser result type: " + result + " (must be " + setting.internal().type() + " but is " + result.getClass() + " )");
+            assertTrue(setting.internal().validator().test(result), () -> "failed validating parser result: " + result);
+            if (pair.value instanceof String[]) {
+                assertArrayEquals((String[]) pair.value, (String[]) result, () -> "failed testing array value " + Arrays.toString((String[]) result) + " (should be " + Arrays.toString((String[]) pair.value) + ")");
+            } else
+                assertEquals(pair.value, result, () -> "failed testing value " + result + " (should be " + pair.value + ")");
+        }
     }
 
+    public record ParsePair(String data, Object value) {
+    }
 }

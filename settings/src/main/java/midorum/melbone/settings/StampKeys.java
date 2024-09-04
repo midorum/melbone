@@ -17,13 +17,14 @@ public interface StampKeys {
         return Stream.of(TargetLauncher.values(), TargetBaseApp.values())
                 .flatMap(Stream::of)
                 .filter(e -> e.internal().isEnabled())
+                .map(StampKey.class::cast)
                 .toArray(StampKey[]::new);
     }
 
     enum TargetLauncher implements StampKey {
         clientIsAlreadyRunning("\"The client is already running\" window"),
         quitConfirmPopup("Quit confirm popup"),
-        initializationErrorDialog("initialization error dialog"),
+        networkErrorDialog("network error dialog"),
         loginButtonNoErrorActive("Login button; No error; Active"),
         loginButtonNoErrorInactive("Login button; No error; Inactive"),
         loginButtonWithErrorActive("Login button; With error; Active"),

@@ -46,13 +46,13 @@ class NoticePaneTest extends MockedContext {
         assertTrue(textIsNullOrBlank(noticeLabel), "Cleared notice label should be blank");
     }
 
-    private boolean textIsNullOrBlank(final Optional<Component> noticeLabel) {
+    private boolean textIsNullOrBlank(final Optional<Component> noticeLabel) {//// FIXME: 22.06.2023 should be  non optional  argument
         final String labelText = getLabelText(noticeLabel);
         return labelText == null || labelText.isBlank();
     }
 
-    private String getLabelText(final Optional<Component> noticeLabel) {
-        return ((JLabel) noticeLabel.get()).getText();
+    private String getLabelText(final Optional<Component> noticeLabel) {//// FIXME: 22.06.2023 should be  non optional  argument
+        return ((JLabel) noticeLabel.get()).getText();//// FIXME: 22.06.2023 possible NPE
     }
 
 }

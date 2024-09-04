@@ -9,6 +9,7 @@ import org.h2.mvstore.MVMap;
 import org.h2.mvstore.MVStore;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -42,13 +43,19 @@ public class H2KeyValueStorage implements VersionableKeyValueStorage {
     @Override
     public <K> Set<K> getKeySet(final StorageKey map) {
         final MVMap<K, ?> mvMap = store.openMap(map.name());
-        return mvMap.keySet();
+        return Set.copyOf(mvMap.keySet());
     }
 
     @Override
     public <K> boolean containsKey(final StorageKey map, final K key) {
         final MVMap<K, ?> mvMap = store.openMap(map.name());
         return mvMap.containsKey(key);
+    }
+
+    @Override
+    public <V> Collection<V> getValues(final StorageKey map) {
+        final MVMap<?, V> mvMap = this.store.openMap(map.name());
+        return List.copyOf(mvMap.values());
     }
 
     @Override
@@ -65,12 +72,6 @@ public class H2KeyValueStorage implements VersionableKeyValueStorage {
         final V oldValue = mvMap.put(key, value);
         traceMap(map, mvMap, "after write");
         return oldValue;
-    }
-
-    @Override
-    public <V> Collection<V> getValues(final StorageKey map) {
-        final MVMap<?, V> mvMap = this.store.openMap(map.name());
-        return mvMap.values();
     }
 
     @Override

@@ -6,10 +6,10 @@ import com.midorum.win32api.win32.Win32VirtualKey;
 
 import java.io.Serial;
 import java.io.Serializable;
-import java.util.Arrays;
 import java.util.Locale;
 import java.util.Objects;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class KeyShortcut implements Serializable {
 
     @Serial

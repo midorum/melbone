@@ -19,6 +19,7 @@ import java.awt.*;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class SettingsPane extends JPanel {
 
@@ -185,8 +186,13 @@ public class SettingsPane extends JPanel {
     }
 
     private String stringifyValue(Object value) {
-        if (value instanceof int[]) {
-            return Arrays.toString((int[]) value);
+        if (value instanceof final int[] ints) {
+            return Arrays.toString(ints);
+        }
+        if (value instanceof final String[] strings) {
+            return Arrays.stream(strings)
+                    .map(s -> "\"" + s + "\"")
+                    .collect(Collectors.joining(",", "[", "]"));
         }
         if (value instanceof final Optional<?> o) {
             return o.isPresent() ? Objects.toString(o.get()) : "[empty]";

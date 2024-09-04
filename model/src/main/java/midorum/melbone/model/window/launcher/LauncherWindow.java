@@ -1,8 +1,9 @@
 package midorum.melbone.model.window.launcher;
 
-import dma.function.ConsumerThrowing;
+import com.midorum.win32api.facade.exception.Win32ApiException;
+import midorum.melbone.model.window.WindowConsumer;
 
 public interface LauncherWindow {
 
-    void restoreAndDo(ConsumerThrowing<RestoredLauncherWindow, InterruptedException> consumer) throws InterruptedException;
+    void restoreAndDo(WindowConsumer<RestoredLauncherWindow> consumer) throws InterruptedException, Win32ApiException;
 }

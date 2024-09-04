@@ -27,6 +27,7 @@ class AccountsPaneTest extends MockedContext {
                 .verifyTotalAccountsInStorageIs(0)
                 .clickAddButton()
                 .verifyAddAccountPaneIsVisible()
+                .verifyAddAccountPaneIsEmpty()
                 .clickSaveNewAccountButton()
                 .verifyTotalAccountsInStorageIs(0)
                 .clickBackButton()
@@ -39,14 +40,17 @@ class AccountsPaneTest extends MockedContext {
         final String acc1Name = "acc1";
         final String acc1Login = acc1Name + "_login";
         final String acc1Password = acc1Name + "_password";
+        final String acc1Commentary = acc1Name + "_commentary";
         final String acc1LoginEdited = acc1Login + "_edited";
         final String acc1PasswordEdited = acc1Password + "_edited";
+        final String acc1CommentaryEdited = acc1Commentary + "_edited";
         setLoggerLevel(Level.TRACE);
         final AccountsPaneInteraction interaction = new AccountsPaneInteraction();
         interaction.scenario("Switch to creating new account")
                 .verifyEditAccountPaneIsVisible()
                 .clickAddButton()
-                .verifyAddAccountPaneIsVisible();
+                .verifyAddAccountPaneIsVisible()
+                .verifyAddAccountPaneIsEmpty();
         interaction.scenario("Enter new account data and save it")
                 .enterNewAccountName(acc1Name)
                 .clickSaveNewAccountButton()
@@ -55,9 +59,11 @@ class AccountsPaneTest extends MockedContext {
                 .clickSaveNewAccountButton()
                 .verifyTotalAccountsInStorageIs(0)
                 .enterNewAccountPassword(acc1Password)
+                .verifyTotalAccountsInStorageIs(0)
+                .enterNewAccountCommentary(acc1Commentary)
                 .clickSaveNewAccountButton()
                 .verifyTotalAccountsInStorageIs(1)
-                .verifyAccountStorageContains(createAccount(acc1Name, acc1Login, acc1Password))
+                .verifyAccountStorageContains(createAccount(acc1Name, acc1Login, acc1Password, acc1Commentary))
                 .verifyTotalAccountsInUseIs(1)
                 .verifyInUseStorageContains(acc1Name)
                 .verifyEditAccountPaneIsVisible();
@@ -65,12 +71,13 @@ class AccountsPaneTest extends MockedContext {
                 .verifyEditAccountPaneIsVisible()
                 .clickAddButton()
                 .verifyAddAccountPaneIsVisible()
+                .verifyAddAccountPaneIsEmpty()
                 .enterNewAccountName(acc1Name)
                 .enterNewAccountLogin("another_login")
                 .enterNewAccountPassword("another_password")
                 .clickSaveNewAccountButton()
                 .verifyTotalAccountsInStorageIs(1)
-                .verifyAccountStorageContains(createAccount(acc1Name, acc1Login, acc1Password))
+                .verifyAccountStorageContains(createAccount(acc1Name, acc1Login, acc1Password, acc1Commentary))
                 .verifyTotalAccountsInUseIs(1)
                 .verifyInUseStorageContains(acc1Name)
                 .verifyAddAccountPaneIsVisible()
@@ -82,12 +89,15 @@ class AccountsPaneTest extends MockedContext {
                 .verifyAccountNameTextFieldIsNotBeEditable()
                 .verifyAccountLoginInTextFieldIs(acc1Login)
                 .verifyAccountPasswordInTextFieldIs(acc1Password)
+                .verifyAccountCommentaryInTextFieldIs(acc1Commentary)
                 .verifyInUseCheckBoxIsSelected();
         interaction.scenario("Change account data and save it")
                 .editAccountLoginTo(acc1LoginEdited)
                 .verifyAccountLoginInTextFieldIs(acc1LoginEdited)
                 .editAccountPasswordTo(acc1PasswordEdited)
                 .verifyAccountPasswordInTextFieldIs(acc1PasswordEdited)
+                .editAccountCommentaryTo(acc1CommentaryEdited)
+                .verifyAccountCommentaryInTextFieldIs(acc1CommentaryEdited)
                 .unselectInUseCheckBox()
                 .clickSaveAccountButton()
                 .verifyTotalAccountsInStorageIs(1)
@@ -98,6 +108,7 @@ class AccountsPaneTest extends MockedContext {
                 .verifyAccountNameTextFieldIsNotBeEditable()
                 .verifyAccountLoginInTextFieldIs(acc1LoginEdited)
                 .verifyAccountPasswordInTextFieldIs(acc1PasswordEdited)
+                .verifyAccountCommentaryInTextFieldIs(acc1CommentaryEdited)
                 .verifyInUseCheckBoxIsNotSelected();
         interaction.scenario("Deleting account with decline")
                 .verifyEditAccountPaneIsVisible()
@@ -107,7 +118,8 @@ class AccountsPaneTest extends MockedContext {
                 .verifyTotalAccountsInUseIs(0)
                 .verifyAccountNameInTextFieldIs(acc1Name)
                 .verifyAccountLoginInTextFieldIs(acc1LoginEdited)
-                .verifyAccountPasswordInTextFieldIs(acc1PasswordEdited);
+                .verifyAccountPasswordInTextFieldIs(acc1PasswordEdited)
+                .verifyAccountCommentaryInTextFieldIs(acc1CommentaryEdited);
         interaction.scenario("Deleting account with confirm")
                 .verifyEditAccountPaneIsVisible()
                 .selectAccountInComboBox(acc1Name)
@@ -116,7 +128,9 @@ class AccountsPaneTest extends MockedContext {
                 .verifyTotalAccountsInUseIs(0)
                 .verifyAccountNameTextFieldIsEmpty()
                 .verifyAccountLoginTextFieldIsEmpty()
-                .verifyAccountPasswordTextFieldIsEmpty();
+                .verifyAccountPasswordTextFieldIsEmpty()
+                .verifyAccountCommentaryTextFieldIsEmpty()
+                .printStateBriefly();
     }
 
     @Test
@@ -128,15 +142,21 @@ class AccountsPaneTest extends MockedContext {
         final String acc2Name = "acc2";
         final String acc2Login = acc2Name + "_login";
         final String acc2Password = acc2Name + "_password";
+        final String acc2Commentary = acc2Name + "_commentary";
+        final String acc3Name = "acc3";
+        final String acc3Login = acc3Name + "_login";
+        final String acc3Password = acc3Name + "_password";
         setLoggerLevel(Level.TRACE);
         final AccountsPaneInteraction interaction = new AccountsPaneInteraction();
         interaction.scenario("Enter new account data and save it")
                 .verifyEditAccountPaneIsVisible()
                 .clickAddButton()
                 .verifyAddAccountPaneIsVisible()
+                .verifyAddAccountPaneIsEmpty()
                 .enterNewAccountName(acc1Name)
                 .enterNewAccountLogin(acc1Login)
                 .enterNewAccountPassword(acc1Password)
+                .verifyAddAccountCommentaryTextFieldIsEmpty()
                 .clickSaveNewAccountButton()
                 .verifyTotalAccountsInStorageIs(1)
                 .verifyAccountStorageContains(createAccount(acc1Name, acc1Login, acc1Password))
@@ -147,14 +167,30 @@ class AccountsPaneTest extends MockedContext {
                 .verifyEditAccountPaneIsVisible()
                 .clickAddButton()
                 .verifyAddAccountPaneIsVisible()
+                .verifyAddAccountPaneIsEmpty()
                 .enterNewAccountName(acc2Name)
                 .enterNewAccountLogin(acc2Login)
                 .enterNewAccountPassword(acc2Password)
+                .enterNewAccountCommentary(acc2Commentary)
                 .clickSaveNewAccountButton()
                 .verifyTotalAccountsInStorageIs(2)
-                .verifyAccountStorageContains(createAccount(acc2Name, acc2Login, acc2Password))
+                .verifyAccountStorageContains(createAccount(acc2Name, acc2Login, acc2Password, acc2Commentary))
                 .verifyTotalAccountsInUseIs(2)
                 .verifyInUseStorageContains(acc2Name)
+                .verifyEditAccountPaneIsVisible();
+        interaction.scenario("Enter third account data and save it")
+                .verifyEditAccountPaneIsVisible()
+                .clickAddButton()
+                .verifyAddAccountPaneIsVisible()
+                .verifyAddAccountPaneIsEmpty()
+                .enterNewAccountName(acc3Name)
+                .enterNewAccountLogin(acc3Login)
+                .enterNewAccountPassword(acc3Password)
+                .clickSaveNewAccountButton()
+                .verifyTotalAccountsInStorageIs(3)
+                .verifyAccountStorageContains(createAccount(acc3Name, acc3Login, acc3Password))
+                .verifyTotalAccountsInUseIs(3)
+                .verifyInUseStorageContains(acc3Name)
                 .verifyEditAccountPaneIsVisible();
         interaction.scenario("Select first account on edit form and validate it")
                 .selectAccountInComboBox(acc1Name)
@@ -162,6 +198,7 @@ class AccountsPaneTest extends MockedContext {
                 .verifyAccountNameTextFieldIsNotBeEditable()
                 .verifyAccountLoginInTextFieldIs(acc1Login)
                 .verifyAccountPasswordInTextFieldIs(acc1Password)
+                .verifyAccountCommentaryTextFieldIsEmpty()
                 .verifyInUseCheckBoxIsSelected();
         interaction.scenario("Select second account on edit form and validate it")
                 .selectAccountInComboBox(acc2Name)
@@ -169,13 +206,23 @@ class AccountsPaneTest extends MockedContext {
                 .verifyAccountNameTextFieldIsNotBeEditable()
                 .verifyAccountLoginInTextFieldIs(acc2Login)
                 .verifyAccountPasswordInTextFieldIs(acc2Password)
+                .verifyAccountCommentaryInTextFieldIs(acc2Commentary)
+                .verifyInUseCheckBoxIsSelected();
+        interaction.scenario("Select third account on edit form and validate it")
+                .selectAccountInComboBox(acc3Name)
+                .verifyAccountNameInTextFieldIs(acc3Name)
+                .verifyAccountNameTextFieldIsNotBeEditable()
+                .verifyAccountLoginInTextFieldIs(acc3Login)
+                .verifyAccountPasswordInTextFieldIs(acc3Password)
+                .verifyAccountCommentaryTextFieldIsEmpty()
                 .verifyInUseCheckBoxIsSelected();
         interaction.scenario("Select first account on edit form and delete it")
                 .selectAccountInComboBox(acc1Name)
                 .clickDeleteAccountButtonWithConfirm()
-                .verifyTotalAccountsInStorageIs(1)
-                .verifyAccountStorageContains(createAccount(acc2Name, acc2Login, acc2Password))
-                .verifyTotalAccountsInUseIs(1)
+                .verifyTotalAccountsInStorageIs(2)
+                .verifyAccountStorageContains(createAccount(acc2Name, acc2Login, acc2Password, acc2Commentary))
+                .verifyAccountStorageContains(createAccount(acc3Name, acc3Login, acc3Password))
+                .verifyTotalAccountsInUseIs(2)
                 .verifyInUseStorageContains(acc2Name);
     }
 
@@ -185,6 +232,7 @@ class AccountsPaneTest extends MockedContext {
         private String enteredAccountName;
         private String enteredAccountLogin;
         private String enteredAccountPassword;
+        private String enteredAccountCommentary;
 
         private AccountsPaneInteraction() {
             interaction = new Interaction();
@@ -213,10 +261,12 @@ class AccountsPaneTest extends MockedContext {
                             enteredAccountName: %s
                             \tenteredAccountLogin: %s
                             \tenteredAccountPassword: %s
+                            \tenteredAccountCommentary: %s
                             """,
                     enteredAccountName,
                     enteredAccountLogin,
-                    enteredAccountPassword);
+                    enteredAccountPassword,
+                    enteredAccountCommentary);
         }
 
         /* obtaining components */
@@ -248,6 +298,14 @@ class AccountsPaneTest extends MockedContext {
 
         private JTextField getAddPasswordTextField() {
             return SwingTestUtil.INSTANCE.getChildNamedOrThrow(accountsPane, "add account password field", JTextField.class);
+        }
+
+        private JTextField getEditCommentaryTextField() {
+            return SwingTestUtil.INSTANCE.getChildNamedOrThrow(accountsPane, "edit account commentary field", JTextField.class);
+        }
+
+        private JTextField getAddCommentaryTextField() {
+            return SwingTestUtil.INSTANCE.getChildNamedOrThrow(accountsPane, "add account commentary field", JTextField.class);
         }
 
         private JCheckBox getInUseCheckBox() {
@@ -334,6 +392,12 @@ class AccountsPaneTest extends MockedContext {
             return this;
         }
 
+        public AccountsPaneInteraction enterNewAccountCommentary(final String commentary) {
+            getAddCommentaryTextField().setText(commentary);
+            enteredAccountCommentary = commentary;
+            return this;
+        }
+
         public AccountsPaneInteraction editAccountLoginTo(final String accountLogin) {
             getEditLoginTextField().setText(accountLogin);
             return this;
@@ -341,6 +405,11 @@ class AccountsPaneTest extends MockedContext {
 
         public AccountsPaneInteraction editAccountPasswordTo(final String accountPassword) {
             getEditPasswordTextField().setText(accountPassword);
+            return this;
+        }
+
+        public AccountsPaneInteraction editAccountCommentaryTo(final String commentary) {
+            getEditCommentaryTextField().setText(commentary);
             return this;
         }
 
@@ -398,6 +467,11 @@ class AccountsPaneTest extends MockedContext {
             return this;
         }
 
+        public AccountsPaneInteraction verifyAccountCommentaryInTextFieldIs(final String commentary) {
+            assertEquals(commentary, getEditCommentaryTextField().getText());
+            return this;
+        }
+
         public AccountsPaneInteraction verifyInUseCheckBoxIsSelected() {
             assertTrue(getInUseCheckBox().isSelected());
             return this;
@@ -414,7 +488,7 @@ class AccountsPaneTest extends MockedContext {
         }
 
         public AccountsPaneInteraction verifyAccountStorageContains(final Account account) {
-            Assertions.assertTrue(accountStorage.accounts().contains(account));
+            Assertions.assertTrue(accountStorage.accounts().contains(account), "Account storage should contain account \"" + account + "\" but it hasn't");
             return this;
         }
 
@@ -424,17 +498,58 @@ class AccountsPaneTest extends MockedContext {
         }
 
         public AccountsPaneInteraction verifyAccountNameTextFieldIsEmpty() {
-            assertFalse(Validator.checkNotNull(getNameTextField().getText()).andCheckNot(String::isBlank).isValid());
+            final String value = getNameTextField().getText();
+            assertFalse(Validator.checkNotNull(value).andCheckNot(String::isBlank).isValid(), "Account edit name text field should be empty but it has value \"" + value + "\"");
             return this;
         }
 
         public AccountsPaneInteraction verifyAccountLoginTextFieldIsEmpty() {
-            assertFalse(Validator.checkNotNull(getEditLoginTextField().getText()).andCheckNot(String::isBlank).isValid());
+            final String value = getEditLoginTextField().getText();
+            assertFalse(Validator.checkNotNull(value).andCheckNot(String::isBlank).isValid(), "Account edit login text field should be empty but it has value \"" + value + "\"");
             return this;
         }
 
         public AccountsPaneInteraction verifyAccountPasswordTextFieldIsEmpty() {
-            assertFalse(Validator.checkNotNull(getEditPasswordTextField().getText()).andCheckNot(String::isBlank).isValid());
+            final String value = getEditPasswordTextField().getText();
+            assertFalse(Validator.checkNotNull(value).andCheckNot(String::isBlank).isValid(), "Account edit password text field should be empty but it has value \"" + value + "\"");
+            return this;
+        }
+
+        public AccountsPaneInteraction verifyAccountCommentaryTextFieldIsEmpty() {
+            final String value = getEditCommentaryTextField().getText();
+            assertFalse(Validator.checkNotNull(value).andCheckNot(String::isBlank).isValid(), "Account edit commentary text field should be empty but it has value \"" + value + "\"");
+            return this;
+        }
+
+        private AccountsPaneInteraction verifyAddAccountNameTextFieldIsEmpty() {
+            final String value = getAddNameTextField().getText();
+            assertFalse(Validator.checkNotNull(value).andCheckNot(String::isBlank).isValid(), "Account add name text field should be empty but it has value \"" + value + "\"");
+            return this;
+        }
+
+        private AccountsPaneInteraction verifyAddAccountLoginTextFieldIsEmpty() {
+            final String value = getAddLoginTextField().getText();
+            assertFalse(Validator.checkNotNull(value).andCheckNot(String::isBlank).isValid(), "Account add login text field should be empty but it has value \"" + value + "\"");
+            return this;
+        }
+
+        private AccountsPaneInteraction verifyAddAccountPasswordTextFieldIsEmpty() {
+            final String value = getAddPasswordTextField().getText();
+            assertFalse(Validator.checkNotNull(value).andCheckNot(String::isBlank).isValid(), "Account add password text field should be empty but it has value \"" + value + "\"");
+            return this;
+        }
+
+        public AccountsPaneInteraction verifyAddAccountCommentaryTextFieldIsEmpty() {
+            final String value = getAddCommentaryTextField().getText();
+            assertFalse(Validator.checkNotNull(value).andCheckNot(String::isBlank).isValid(), "Account add commentary text field should be empty but it has value \"" + value + "\"");
+            return this;
+        }
+
+        public AccountsPaneInteraction verifyAddAccountPaneIsEmpty() {
+            verifyAddAccountNameTextFieldIsEmpty();
+            verifyAddAccountLoginTextFieldIsEmpty();
+            verifyAddAccountPasswordTextFieldIsEmpty();
+            verifyAddAccountCommentaryTextFieldIsEmpty();
             return this;
         }
     }

@@ -11,7 +11,6 @@ import midorum.melbone.settings.internal.storage.KeyValueStorage;
 import midorum.melbone.settings.managment.SettingPropertyNaming;
 import midorum.melbone.settings.managment.StampBuilder;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.Optional;
 
@@ -25,11 +24,6 @@ class TargetLauncherStampsImplTest {
     private final TargetLauncherStamps targetLauncherStamps = settingsFactoryInternal.settingsProvider().stamps().targetLauncher();
     private final KeyValueStorage internalStorage = settingsFactoryInternal.getKeyValueStorage();
     private final SettingStorage settingStorage = settingsFactoryInternal.settingStorage();
-
-    @BeforeEach
-    void beforeEach() {
-        //internalStorage.removeMap(StorageKey.targetLauncherStamp);
-    }
 
     @AfterEach
     void afterEach() {
@@ -69,14 +63,14 @@ class TargetLauncherStampsImplTest {
     }
 
     @Test
-    void initializationErrorDialog() {
+    void networkErrorDialog() {
         //storing stamp
-        settingStorage.write(StampKeys.TargetLauncher.initializationErrorDialog,
-                createStamp(StampKeys.TargetLauncher.initializationErrorDialog));
+        settingStorage.write(StampKeys.TargetLauncher.networkErrorDialog,
+                createStamp(StampKeys.TargetLauncher.networkErrorDialog));
         //reading stamp
-        final Stamp stamp = targetLauncherStamps.initializationErrorDialog();
+        final Stamp stamp = targetLauncherStamps.networkErrorDialog();
         assertNotNull(stamp);
-        assertEquals(StampKeys.TargetLauncher.initializationErrorDialog, stamp.key());
+        assertEquals(StampKeys.TargetLauncher.networkErrorDialog, stamp.key());
     }
 
     @Test

@@ -1,10 +1,11 @@
 package midorum.melbone.window.internal.launcher;
 
 import com.midorum.win32api.facade.*;
-import com.midorum.win32api.struct.PointInt;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import dma.flow.Waiting;
 import dma.util.Delay;
 import dma.util.DurationFormatter;
+import midorum.melbone.model.exception.CannotGetUserInputException;
 import midorum.melbone.model.exception.ControlledInterruptedException;
 import midorum.melbone.model.exception.CriticalErrorException;
 import midorum.melbone.model.exception.NeedRetryException;
@@ -47,43 +48,64 @@ public class LauncherWindowFactory {
         this.stamps = stamps;
     }
 
-    public Optional<LauncherWindow> findWindowOrTryStartLauncher() throws InterruptedException {
+    public Optional<LauncherWindow> findWindowOrTryStartLauncher() throws InterruptedException, Win32ApiException {
         logger.info("find or start launcher");
-        final Optional<LauncherWindow> maybeExistLauncherWindow = searchExistLauncherWindow();
+        final String marker = Long.toString(System.currentTimeMillis());
+        final Optional<LauncherWindow> maybeExistLauncherWindow = searchExistLauncherWindow(marker);
         if (maybeExistLauncherWindow.isPresent()) return maybeExistLauncherWindow;
-        detectLauncherInitializationError(); //TODO check network accessibility before start launcher to prevent this error
+        //TODO check network accessibility before start launcher
         final Optional<LauncherWindow> maybeNewLauncherWindow = tryStartNewLauncherWindow();
         if (maybeNewLauncherWindow.isPresent()) return maybeNewLauncherWindow;
-        detectLauncherInitializationError(); //TODO check network accessibility before start launcher to prevent this error
-        detectPossibleOverlay();
-        logger.warn("can not start launcher or find launcher window");
+        logger.info("launcher not started properly");
+        if (detectNetworkErrorAlert(marker)) return Optional.empty();
+        if (detectPossibleUac()) {
+            commonWindowService.takeAndSaveWholeScreenShot("UAC window found", marker);
+            throw new CriticalErrorException("UAC window found. Can not confirm UAC request programmatically.");
+        }
+        commonWindowService.takeAndSaveWholeScreenShot("can not start launcher or find launcher window", marker);
         return Optional.empty();
     }
 
-    private Optional<LauncherWindow> searchExistLauncherWindow() throws InterruptedException {
+    private Optional<LauncherWindow> searchExistLauncherWindow(final String marker) throws InterruptedException, Win32ApiException {
+        logger.info("look for exist launcher window");
         final Optional<LauncherWindow> maybeExistLauncherWindow = findWindow();
         if (maybeExistLauncherWindow.isPresent()) return maybeExistLauncherWindow;
-        final List<IProcess> processes = win32System.listProcessesWithName(settings.targetLauncher().processName());
-        if (processes.isEmpty()) return Optional.empty();
+        logger.info("exist launcher window not found");
+        detectNetworkErrorAlert(marker);
+        detectBrokenLauncherProcess();
+        return Optional.empty();
+    }
+
+    private void detectBrokenLauncherProcess() throws InterruptedException, Win32ApiException {
+        final List<IProcess> processes = win32System.listProcessesWithName(settings.targetLauncher().processName()).getOrThrow();
+        if (processes.isEmpty()) return;
         final Delay delay = new Delay(settings.application().speedFactor());
-        processes.forEach(process -> {
-            final String processInfo = processInfo(process);
-            logger.warn("found broken launcher process: {}", processInfo);
-            if (System.currentTimeMillis() - process.getCreationTime() > settings.targetLauncher().brokenProcessTimeout()) {
-                logger.warn("try terminate broken launcher process: {}", processInfo);
-                process.terminate();
-            }
-        });
+        try {
+            processes.forEach(process -> {
+                final String processInfo;
+                try {
+                    processInfo = processInfo(process).getOrThrow();
+                    logger.warn("found broken launcher process: {}", processInfo);
+                    if (System.currentTimeMillis() - process.getCreationTime().getOrThrow() > settings.targetLauncher().brokenProcessTimeout()) {
+                        logger.warn("try terminate broken launcher process: {}", processInfo);
+                        process.terminate();
+                    }
+                } catch (Win32ApiException e) {
+                    throw new ControlledWin32ApiException(e);
+                }
+            });
+        } catch (ControlledWin32ApiException e) {
+            throw (Win32ApiException) e.getCause();
+        }
         delay.sleep(10, TimeUnit.SECONDS);
-        final List<IProcess> processesAfter = win32System.listProcessesWithName(settings.targetLauncher().processName());
-        if (processesAfter.isEmpty()) return Optional.empty();
+        final List<IProcess> processesAfter = win32System.listProcessesWithName(settings.targetLauncher().processName()).getOrThrow();
+        if (processesAfter.isEmpty()) return;
         throw new NeedRetryException("Found broken launcher process and it isn't closed - need retry");
     }
 
-    private String processInfo(final IProcess process) {
-        final long creationTime = process.getCreationTime();
-        return process.pid() + " - [" + process.name().orElse("no name")
-                + "] created at " + dateTimeFormatter.format(LocalDateTime.ofInstant(Instant.ofEpochMilli(creationTime), ZoneId.systemDefault()));
+    private Either<String> processInfo(final IProcess process) {
+        return process.getCreationTime().map(creationTime -> process.pid() + " - [" + process.name().orElse("no name")
+                + "] created at " + dateTimeFormatter.format(LocalDateTime.ofInstant(Instant.ofEpochMilli(creationTime), ZoneId.systemDefault())));
     }
 
     private Optional<LauncherWindow> tryStartNewLauncherWindow() throws InterruptedException {
@@ -96,19 +118,22 @@ public class LauncherWindowFactory {
                 .timeout(windowAppearingTimeout, TimeUnit.MILLISECONDS)
                 .startFrom(() -> {
                     logger.info("try start launcher");
-                    //startLauncherProcess();
                     clickDesktopIcon();
                 })
                 .latency(windowAppearingLatency, TimeUnit.MILLISECONDS)
                 .doOnEveryFailedIteration(i -> {
                     final String lastsFromStart = new DurationFormatter(i.fromStart()).toStringWithoutZeroParts();
                     if (i.fromLastCheckEnds().toMillis() > windowAppearingDelay) {
-                        final List<IProcess> processes = win32System.listProcessesWithName(processName);
-                        if (processes.isEmpty()) {
-                            logger.warn("{}: launcher window and process not found yet - try start again", lastsFromStart);
-                            clickDesktopIcon();
-                        } else {
-                            logger.info("{}: launcher window not found yet but process has started", lastsFromStart);
+                        try {
+                            final List<IProcess> processes = win32System.listProcessesWithName(processName).getOrThrow();
+                            if (processes.isEmpty()) {
+                                logger.warn("{}: launcher window and process not found yet - try start again", lastsFromStart);
+                                clickDesktopIcon();
+                            } else {
+                                logger.info("{}: launcher window not found yet but process has started", lastsFromStart);
+                            }
+                        } catch (Win32ApiException e) {
+                            logger.error("cannot get process with name " + processName + " - skip", e);
                         }
                     } else {
                         logger.debug("{}: launcher window not found yet", lastsFromStart);
@@ -119,116 +144,129 @@ public class LauncherWindowFactory {
 
     private void clickDesktopIcon() throws InterruptedException {
         win32System.minimizeAllWindows();
-        clickLauncherDesktopIcon();
+        try {
+            clickLauncherDesktopIcon();
+        } catch (Win32ApiException e) {
+            throw new CriticalErrorException("Cannot click on desktop", e);
+        }
     }
 
     public Optional<LauncherWindow> findWindow() {
-        logger.info("searching launcher");
         //TODO need regexp based search
+        final Rectangle requiredDimensions = settings.targetLauncher().windowDimensions();
         final List<IWindow> allWindows = win32System.findAllWindows(settings.targetLauncher().windowTitle(), null, true);
         return allWindows.stream()
-                .filter(window -> {
-                    final Rectangle requiredDimensions = settings.targetLauncher().windowDimensions();
-                    final Rectangle windowRectangle = window.getWindowRectangle();
-                    return requiredDimensions.width() == windowRectangle.width()
-                            && requiredDimensions.height() == windowRectangle.height();
-                })
+                .filter(window -> window.getWindowRectangle()
+                        .map(r -> requiredDimensions.width() == r.width()
+                                && requiredDimensions.height() == r.height())
+                        .getOrHandleError(e -> {
+                            logger.warn("cannot check window attributes (" + window.getSystemId() + ") - skip", e);
+                            return false;
+                        }))
                 .peek(window -> logger.info("found launcher window {}", window.getSystemId()))
                 .map(window -> new LauncherWindowImpl(window, commonWindowService, settings, stamps))
                 .map(LauncherWindow.class::cast)
                 .findFirst();
     }
 
-    // unsafe operation because of possible anti-cheat detection
-    private void startLauncherProcess() {
-//        try {
-//            ProcessBuilder processBuilder = new ProcessBuilder()
-//                    .command(Settings.TargetLauncher.path())
-//                    .directory(new File(Settings.TargetLauncher.workingDirectory()));
-//            Process process = processBuilder.start();
-//            long pid = process.pid();
-//            logger.info("process {} started with pid:{}", process.info().toString(), pid);
-//        } catch (IOException ex) {
-//            throw new CriticalErrorException(ex);
-//        }
-    }
-
-    private void clickLauncherDesktopIcon() throws InterruptedException {
+    private void clickLauncherDesktopIcon() throws InterruptedException, Win32ApiException {
         win32System.getScreenMouse(settings.application().speedFactor())
                 .move(settings.targetLauncher().desktopShortcutLocationPoint())
                 .leftClick()
                 .leftClick();
     }
 
-    private void detectLauncherInitializationError() {
-        if (detectAndCloseInitializationErrorDialog())
-            logger.warn("launcher started with error and closed");
-    }
-
-    private boolean detectAndCloseInitializationErrorDialog() {
-        final Optional<InitializationErrorDialog> maybeInitializationErrorDialog = findInitializationErrorDialog();
-        maybeInitializationErrorDialog.ifPresent(initializationErrorDialog -> {
-            logger.warn("initialization error dialog found: close it");
+    private boolean detectNetworkErrorAlert(final String marker) {
+        logger.info("look for network error alert");
+        final Optional<NetworkErrorAlertWindow> networkErrorAlertWindow = findNetworkErrorAlertWindow();
+        networkErrorAlertWindow.ifPresentOrElse(alert -> {
+            logger.warn("found network error alert: close it");
             try {
-                initializationErrorDialog.clickConfirmButton();
+                if (!closeNetworkErrorAlert())
+                    commonWindowService.takeAndSaveWholeScreenShot("cannot close network error alert", marker);
             } catch (InterruptedException e) {
                 throw new ControlledInterruptedException(e);
             }
-        });
-        return maybeInitializationErrorDialog.isPresent();
+        }, () -> logger.info("network error alert not found"));
+        return networkErrorAlertWindow.isPresent();
     }
 
-    private Optional<InitializationErrorDialog> findInitializationErrorDialog() {
-        logger.info("searching launcher initialization error dialog");
-        final List<IWindow> allWindows = win32System.findAllWindows(settings.targetLauncher().initializationErrorDialogTitle(), null, true);
+    private boolean closeNetworkErrorAlert() throws InterruptedException {
+        return new Waiting()
+                .timeout(settings.targetLauncher().networkErrorDialogTimeout(), TimeUnit.MILLISECONDS)
+                .withDelay(settings.targetLauncher().networkErrorDialogDelay(), TimeUnit.MILLISECONDS)
+                .waitForBoolean(() -> {
+                    final Optional<NetworkErrorAlertWindow> maybeNetworkErrorDialog = findNetworkErrorAlertWindow();
+                    maybeNetworkErrorDialog.ifPresent(networkErrorAlertWindow -> {
+                        try {
+                            networkErrorAlertWindow.clickConfirmButton();
+                        } catch (InterruptedException e) {
+                            throw new ControlledInterruptedException(e);
+                        } catch (CannotGetUserInputException e) {
+                            logger.error("cannot close network error alert because cannot get user input on it - skip:", e);
+                        }
+                    });
+                    return maybeNetworkErrorDialog.isEmpty();
+                });
+    }
+
+    private Optional<NetworkErrorAlertWindow> findNetworkErrorAlertWindow() {
+        final Rectangle requiredDimensions = settings.targetLauncher().networkErrorDialogDimensions();
+        final List<IWindow> allWindows = win32System.findAllWindows(settings.targetLauncher().networkErrorDialogTitle(), null, true);
         return allWindows.stream()
-                .filter(w -> {
-                    final Rectangle requiredDimensions = settings.targetLauncher().initializationErrorDialogDimensions();
-                    final Rectangle windowRect = w.getWindowRectangle();
-                    return requiredDimensions.width() == windowRect.width()
-                            && requiredDimensions.height() == windowRect.height();
-                })
+                .filter(w -> w.getWindowRectangle()
+                        .map(r -> requiredDimensions.width() == r.width()
+                                && requiredDimensions.height() == r.height())
+                        .getOrHandleError(e -> {
+                            logger.warn("cannot check window attributes (" + w.getSystemId() + ") - skip", e);
+                            return false;
+                        }))
                 //FIXME проблема с получением снимков для topmost-окон: неправильные координаты снимка, соответственно валидация не проходит
                 //TODO после исправления включить
 //                    .filter(w -> {
 //                        try {
-//                            final boolean present = StampValidator.INSTANCE.validateStampWholeData(w, Stamps.TargetLauncher.initializationErrorDialog()).isPresent();
-//                            logger.debug("validating stamp {}", present);
-//                            return present;
+//                            return StampValidator.INSTANCE.validateStampWholeData(w, Stamps.TargetLauncher.networkErrorDialog()).isPresent();
 //                        } catch (InterruptedException e) {
 //                            throw new ControlledInterruptedException(e.getMessage(), e);
 //                        }
 //                    })
-                .map((IWindow window) -> new InitializationErrorDialog(window, settings))
+                .map((IWindow window) -> new NetworkErrorAlertWindow(window, settings))
                 .findFirst();
     }
 
-    private void detectPossibleOverlay() {
-        if (uacWindowFactory.findUacOverlayWindow().isPresent())
-            throw new CriticalErrorException("UAC window found. Can not confirm UAC request programmatically.");
-        commonWindowService.logPossibleOverlay();
+    private boolean detectPossibleUac() {
+        return uacWindowFactory.findUacOverlayWindow().isPresent();
     }
 
-    public static class InitializationErrorDialog {
+    public class NetworkErrorAlertWindow {
 
         private final IWindow window;
         private final Settings settings;
         private final Log log;
 
-
-        public InitializationErrorDialog(final IWindow window, final Settings settings) {
+        public NetworkErrorAlertWindow(final IWindow window, final Settings settings) {
             this.window = window;
             this.settings = settings;
             this.log = new Log(StaticResources.LOGGER, window.getSystemId());
         }
 
-        public void clickConfirmButton() throws InterruptedException {
-            log.info("close initialization error dialog");
-            getMouse().move(settings.targetLauncher().closeInitializationErrorDialogButtonPoint()).leftClick();
+        public void clickConfirmButton() throws InterruptedException, CannotGetUserInputException {
+            log.debug("close network error alert");
+            commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
+                try {
+                    foregroundWindow.getMouse().clickAtPoint(settings.targetLauncher().closeNetworkErrorDialogButtonPoint());
+                } catch (Win32ApiException e) {
+                    throw new CannotGetUserInputException(e.getMessage(), e);
+                }
+            });
         }
 
-        private IMouse getMouse() {
-            return window.getWindowMouse(settings.application().speedFactor());
+    }
+
+    private static class ControlledWin32ApiException extends RuntimeException {
+
+        public ControlledWin32ApiException(final Win32ApiException exception) {
+            super(exception);
         }
     }
 

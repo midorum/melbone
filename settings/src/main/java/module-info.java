@@ -1,5 +1,4 @@
 module midorum.melbone.settings {
-    requires java.desktop; //FIXME get rid
     requires com.midorum.win32api;
     requires midorum.melbone.model;
     requires dma.util;

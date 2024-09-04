@@ -1,9 +1,10 @@
 package midorum.melbone.window.internal.appcountcontrol;
 
-import com.midorum.win32api.facade.IMouse;
 import com.midorum.win32api.facade.IWindow;
-import midorum.melbone.model.window.appcountcontrol.ApplicationsCountControlWindow;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import midorum.melbone.model.settings.setting.Settings;
+import midorum.melbone.model.window.appcountcontrol.ApplicationsCountControlWindow;
+import midorum.melbone.model.exception.CannotGetUserInputException;
 import midorum.melbone.window.internal.common.CommonWindowService;
 import midorum.melbone.window.internal.util.Log;
 import midorum.melbone.window.internal.util.StaticResources;
@@ -25,15 +26,19 @@ public class ApplicationsCountControlWindowImpl implements ApplicationsCountCont
     @Override
     public void clickConfirmButton() throws InterruptedException {
         log.info("confirm dialog");
-        if (commonWindowService.bringWindowForeground(window)) {
-            getMouse().move(settings.targetCountControl().confirmButtonPoint()).leftClick();
-            log.info("dialog confirmed");
-        } else {
-            log.warn("cannot bring window foreground");
+        try {
+            commonWindowService.bringForeground(window).andDo(foregroundWindow -> {
+                try {
+                    foregroundWindow.getMouse().clickAtPoint(settings.targetCountControl().confirmButtonPoint());
+                    log.info("dialog confirmed");
+                } catch (Win32ApiException e) {
+                    throw new CannotGetUserInputException(e.getMessage(), e);
+                }
+            });
+        } catch (CannotGetUserInputException e) {
+            final String marker = Long.toString(System.currentTimeMillis());
+            log.error("Cannot get user input in target window (marker=" + marker + "): ", e);
+            commonWindowService.takeAndSaveWholeScreenShot("cannot get user input in app count control window", marker);
         }
-    }
-
-    private IMouse getMouse() {
-        return window.getWindowMouse(settings.application().speedFactor());
     }
 }

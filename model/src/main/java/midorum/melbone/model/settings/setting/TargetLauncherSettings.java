@@ -10,25 +10,19 @@ public interface TargetLauncherSettings {
 
     Rectangle windowDimensions();
 
-    String confirmQuitDialogTitle();
-
-    Rectangle confirmQuitDialogDimensions();
-
     PointInt desktopShortcutLocationPoint();
 
-    String initializationErrorDialogTitle();
+    String networkErrorDialogTitle();
 
-    Rectangle initializationErrorDialogDimensions();
+    Rectangle networkErrorDialogDimensions();
 
-    PointFloat closeInitializationErrorDialogButtonPoint();
+    PointFloat closeNetworkErrorDialogButtonPoint();
 
-    int attemptToFindStartButton();
+    int searchStartButtonTimeout();
 
     int searchStartButtonDelay();
 
     PointFloat windowCloseButtonPoint();
-
-    PointFloat closeQuitConfirmPopupButtonPoint();
 
     PointFloat accountDropListPoint();
 
@@ -42,9 +36,11 @@ public interface TargetLauncherSettings {
 
     PointFloat startButtonPoint();
 
-    int attemptsToWindowRendering();
+    int windowRenderingTimeout();
 
     int windowRenderingDelay();
+
+    int closingWindowTimeout();
 
     int closingWindowDelay();
 
@@ -58,4 +54,21 @@ public interface TargetLauncherSettings {
 
     long brokenProcessTimeout();
 
+    int loginTimeout();
+
+    int checkLoginDelay();
+
+    String confirmQuitDialogTitle();
+
+    Rectangle confirmQuitDialogDimensions();
+
+    int confirmQuitDialogRenderingTimeout();
+
+    int confirmQuitDialogRenderingDelay();
+
+    PointFloat closeQuitConfirmPopupButtonPoint();
+
+    int networkErrorDialogTimeout();
+
+    int networkErrorDialogDelay();
 }

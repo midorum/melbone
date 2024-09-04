@@ -2,27 +2,26 @@ package midorum.melbone.ui.internal.settings;
 
 import com.midorum.win32api.facade.IWindow;
 import com.midorum.win32api.facade.Rectangle;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.win32.IWinUser;
 import dma.validation.Validator;
+import midorum.melbone.model.settings.key.SettingsManagerAction;
+import midorum.melbone.model.settings.key.StampKey;
+import midorum.melbone.model.settings.stamp.Stamp;
+import midorum.melbone.settings.StampKeys;
+import midorum.melbone.settings.managment.StampBuilder;
 import midorum.melbone.ui.internal.Context;
 import midorum.melbone.ui.internal.common.NoticePane;
 import midorum.melbone.ui.internal.model.FrameStateOperations;
-import midorum.melbone.model.settings.stamp.Stamp;
-import midorum.melbone.model.settings.key.SettingsManagerAction;
-import midorum.melbone.model.settings.key.StampKey;
-import midorum.melbone.settings.StampKeys;
-import midorum.melbone.settings.managment.StampBuilder;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 public class StampsPane extends JPanel {
 
-    public static final Pattern PATTERN_RECTANGLE = Pattern.compile("^\\((?<x>\\d+),(?<y>\\d+)\\)\\((?<w>\\d+),(?<h>\\d+)\\)$");
     private final Context context;
     private final FrameStateOperations ownerFrame;
     private final JComboBox<StampKey> comboBox;
@@ -199,17 +198,33 @@ public class StampsPane extends JPanel {
                 mouseEvent -> {
                     context.targetWindowOperations().getWindowByPoint(mouseEvent.point()).ifPresentOrElse(windowPoint -> {
                         final IWindow window = windowPoint.window();
-                        window.bringForeground();
-                        window.moveWindow(0, 0); //FIXME убрать, когда научимся брать метрики без позиционирования окна
-                        context.standardDialogsProvider().captureRectangle(maybeRectangle -> maybeRectangle.ifPresentOrElse(rectangle -> {
-                            final Stamp stamp = captureStamp(key, window, rectangle);
-                            displayStampInfo(stamp);
-                            noticePane.showInfo("Captured");
-                            //FIXME need preview before save
-                            saveStampToStorage(key, stamp);
-                            noticePane.showSuccess("Stamp saved successfully");
-                            ownerFrame.restore();
-                        }, () -> noticePane.showError("No rectangle was captured")));
+                        try {
+                            window.bringForeground();
+                            window.moveWindow(0, 0); //FIXME убрать, когда научимся брать метрики без позиционирования окна
+                            context.standardDialogsProvider().captureRectangle(maybeRectangle -> maybeRectangle.ifPresentOrElse(capturedRectangle -> {
+                                try {
+                                    window.getWindowRectangle()
+                                            .flatMap(wr -> window.getClientRectangle()
+                                                    .flatMap(cr -> window.getClientToScreenRectangle()
+                                                            .map(csr -> new WindowRectangles(wr, cr, csr))))
+                                            .map(windowRectangles -> captureStamp(key, windowRectangles, capturedRectangle))
+                                            .consumeOrThrow(stamp -> {
+                                                displayStampInfo(stamp);
+                                                noticePane.showInfo("Captured");
+                                                //FIXME need preview before save
+                                                saveStampToStorage(key, stamp);
+                                                noticePane.showSuccess("Stamp saved successfully");
+                                                ownerFrame.restore();
+                                            });
+                                } catch (Win32ApiException e) {
+                                    context.logger().error("cannot get window attributes (" + window.getSystemId() + ")", e);
+                                    noticePane.showError("Cannot get window attributes");
+                                }
+                            }, () -> noticePane.showError("No rectangle was captured")));
+                        } catch (Win32ApiException e) {
+                            context.logger().error("cannot adjust target window (" + window.getSystemId() + ")", e);
+                            noticePane.showError("Cannot adjust target window");
+                        }
                     }, () -> noticePane.showError("No foreground window was found"));
                     return true;
                 },
@@ -219,7 +234,7 @@ public class StampsPane extends JPanel {
                 });
     }
 
-    private Stamp captureStamp(StampKey key, IWindow window, Rectangle rectangle) {
+    private Stamp captureStamp(StampKey key, WindowRectangles windowRectangles, Rectangle rectangle) {
         final BufferedImage image = takeRectangleShot(rectangle);
         final int[] wholeData = image.getRGB(
                 image.getMinX(), image.getMinY(),
@@ -237,9 +252,9 @@ public class StampsPane extends JPanel {
                 .wholeData(wholeData)
                 .firstLine(firstLine)
                 .location(rectangle)
-                .windowRect(window.getWindowRectangle())
-                .windowClientRect(window.getClientRectangle())
-                .windowClientToScreenRect(window.getClientToScreenRectangle())
+                .windowRect(windowRectangles.windowRectangle)
+                .windowClientRect(windowRectangles.clientRectangle)
+                .windowClientToScreenRect(windowRectangles.clientToScreenRectangle)
                 .build();
     }
 
@@ -301,5 +316,10 @@ public class StampsPane extends JPanel {
             return super.getListCellRendererComponent(list, formattedString, index, isSelected, cellHasFocus);
         }
 
+    }
+
+    private record WindowRectangles(Rectangle windowRectangle,
+                                    Rectangle clientRectangle,
+                                    Rectangle clientToScreenRectangle) {
     }
 }

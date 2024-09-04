@@ -6,10 +6,7 @@ package midorum.melbone.model.persistence;
 public enum StorageKey {
     accounts,
     inUse,
-    @Deprecated
-    registryAccount,
-    @Deprecated
-    registryResource,
+    accountCommentaries,
     registryAccount2,
     registryResource2,
     application,

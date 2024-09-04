@@ -1,5 +1,7 @@
 package midorum.melbone.model.settings.setting;
 
+import java.util.Set;
+
 public interface ApplicationSettings {
 
     /**
@@ -31,6 +33,13 @@ public interface ApplicationSettings {
     float speedFactor();
 
     /**
+     * Minimal delay between mouse positioning and click in milliseconds. Use when target window does not accept mouse clicks.
+     *
+     * @return delay
+     */
+    long mouseClickDelay();
+
+    /**
      * Max duration the routine delay lasts in minutes
      *
      * @return value in minutes
@@ -42,4 +51,16 @@ public interface ApplicationSettings {
     int actionsCount();
 
     boolean checkHealthBeforeLaunch();
+
+    boolean closeOverlappingWindows();
+
+    boolean shotOverlappingWindows();
+
+    int bringWindowForegroundTimeout();
+
+    int bringWindowForegroundDelay();
+
+    String[] overlappingWindowsToSkip();
+
+    String[] overlappingWindowsToClose();
 }

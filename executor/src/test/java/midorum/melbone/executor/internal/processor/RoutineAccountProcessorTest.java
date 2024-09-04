@@ -1,5 +1,6 @@
 package midorum.melbone.executor.internal.processor;
 
+import com.midorum.win32api.facade.Either;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
 import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
@@ -39,7 +40,7 @@ class RoutineAccountProcessorTest {
     }
 
     @Test
-    void runLaunchAccountActionOnce_inAnyCase() throws InterruptedException {
+    void runLaunchAccountActionOnce_inAnyCase() {
         System.out.println("runLaunchAccountActionOnce_inAnyCase");
         final VerificationMode countOfRunAction = Mockito.only();
         final RoutineAccountProcessor instance = new RoutineAccountProcessor(launchAccountActionMock, onRunningAccountActionMock, windowFactory, settingsMock);
@@ -48,7 +49,7 @@ class RoutineAccountProcessorTest {
     }
 
     @Test
-    void runOnRunningAccountActionOnce_whenExistsBoundWindow() throws InterruptedException {
+    void runOnRunningAccountActionOnce_whenExistsBoundWindow() {
         System.out.println("runOnRunningAccountActionOnce_whenExistsBoundWindow");
         final List<BaseAppWindow> testBaseWindows = getNonEmptyTestBaseWindows();
         final VerificationMode countOfRunAction = Mockito.only();
@@ -59,7 +60,7 @@ class RoutineAccountProcessorTest {
     }
 
     @Test
-    void neverRunOnRunningAccountAction_whenNotFoundBoundWindows() throws InterruptedException {
+    void neverRunOnRunningAccountAction_whenNotFoundBoundWindows() {
         System.out.println("neverRunOnRunningAccountAction_whenNotFoundBoundWindows");
         final List<BaseAppWindow> testBaseWindows = getNotBoundTestBaseWindows();
         final VerificationMode countOfRunAction = Mockito.never();
@@ -70,7 +71,7 @@ class RoutineAccountProcessorTest {
     }
 
     @Test
-    void neverRunOnRunningAccountAction_whenNotFoundWindows() throws InterruptedException {
+    void neverRunOnRunningAccountAction_whenNotFoundWindows() {
         System.out.println("neverRunOnRunningAccountAction_whenNotFoundWindows");
         final List<BaseAppWindow> testBaseWindows = getEmptyTestBaseWindows();
         final VerificationMode countOfRunAction = Mockito.never();
@@ -95,7 +96,7 @@ class RoutineAccountProcessorTest {
 
     private BaseAppWindow getBaseAppWindow(final String characterName) {
         final BaseAppWindow mock = Mockito.mock(BaseAppWindow.class);
-        Mockito.when(mock.getCharacterName()).thenReturn(Optional.ofNullable(characterName));
+        Mockito.when(mock.getCharacterName()).thenReturn(Either.resultOf(() -> Optional.ofNullable(characterName)));
         return mock;
     }
 

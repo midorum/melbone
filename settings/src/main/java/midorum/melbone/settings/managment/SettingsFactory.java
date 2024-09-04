@@ -8,6 +8,7 @@ import midorum.melbone.model.settings.PropertiesProvider;
 import midorum.melbone.model.settings.SettingsProvider;
 import midorum.melbone.settings.internal.management.SettingsFactoryInternal;
 
+@SuppressWarnings("ClassCanBeRecord")
 public class SettingsFactory implements AutoCloseable {
 
     private final SettingsFactoryInternal settingsFactoryInternal;

@@ -1,5 +1,6 @@
 package midorum.melbone.ui.context;
 
+import dma.validation.Validator;
 import midorum.melbone.model.dto.Account;
 import midorum.melbone.model.persistence.AccountStorage;
 import org.apache.logging.log4j.LogManager;
@@ -7,14 +8,15 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 public class MockedAccountStorage implements AccountStorage {
 
     private final Logger logger = LogManager.getLogger();
 
     private final Map<String, Account> accounts = new ConcurrentHashMap<>();
-    private final Set<String> accountsInUse = new ConcurrentSkipListSet<>();
+    private final Set<String> accountsInUse = new CopyOnWriteArraySet<>();
+    private final Map<String, Set<String>> accountsCommentaries = new ConcurrentHashMap<>();
 
     @Override
     public Collection<Account> accounts() {
@@ -41,6 +43,7 @@ public class MockedAccountStorage implements AccountStorage {
     public void store(final Account account) {
         logger.trace("store account: \"{}\" (login: \"{}\", password: \"{}\")", account, account.login(), account.password());
         accounts.put(account.name(), account);
+        updateCommentaryIndex(account.name());
     }
 
     @Override
@@ -53,6 +56,7 @@ public class MockedAccountStorage implements AccountStorage {
     @Override
     public Optional<Account> remove(final String accountId) {
         final Optional<Account> result = Optional.ofNullable(accounts.remove(accountId));
+        updateCommentaryIndex(accountId);
         logger.trace("remove account \"{}\": {}", accountId, result);
         return result;
     }
@@ -81,5 +85,40 @@ public class MockedAccountStorage implements AccountStorage {
     public Optional<String> removeFromUsed(final String accountId) {
         logger.trace("remove account \"{}\" from used", accountId);
         return accountsInUse.remove(accountId) ? Optional.ofNullable(accountId) : Optional.empty();
+    }
+
+    @Override
+    public Collection<String> commentaries() {
+        final List<String> result = List.copyOf(accountsCommentaries.keySet());
+        logger.trace("get all commentaries: {}", result);
+        return result;
+    }
+
+    private void updateCommentaryIndex(final String accountId) {
+        clearCommentaryTokens(accountId);
+        Validator.checkNotNull(accounts.get(accountId))
+                .thanDo(account ->
+                        getAccountCommentaryTokens(account).forEach(token -> storeCommentaryToken(token, account.name())))
+                .elseDoNothing();
+    }
+
+    private List<String> getAccountCommentaryTokens(final Account account) {
+        final Optional<String> maybeCommentary = account.commentary();
+        if (maybeCommentary.isEmpty()) return List.of();
+        return Arrays.stream(maybeCommentary.get().split(";")).map(String::trim).toList();
+    }
+
+    private void clearCommentaryTokens(final String accountId) {
+        final Set<String> tokensSet = accountsCommentaries.keySet();
+        for (String token : tokensSet) {
+            final Set<String> accounts = accountsCommentaries.get(token);
+            if (accounts.remove(accountId) && accounts.isEmpty()) accountsCommentaries.remove(token);
+        }
+    }
+
+    private void storeCommentaryToken(final String token, final String accountId) {
+        final Set<String> accountsSet = Validator.checkNotNull(accountsCommentaries.get(token)).orDefault(new HashSet<>());
+        accountsSet.add(accountId);
+        accountsCommentaries.put(token, accountsSet);
     }
 }
