@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+@SuppressWarnings("ClassCanBeRecord")
 class CaptureWindow {
 
     public static final float OPACITY_DEFAULT = 0.55f;

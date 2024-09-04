@@ -15,6 +15,11 @@ public record Log(Logger logger, Supplier<String> markerSupplier) {
         logger.error("(" + markerSupplier.get() + ") " + message, params);
     }
 
+    public void error(final String message, Throwable t) {
+        if (!logger.isErrorEnabled()) return;
+        logger.error("(" + markerSupplier.get() + ") " + message, t);
+    }
+
     public void warn(final String message, Object... params) {
         if (!logger.isWarnEnabled()) return;
         logger.warn("(" + markerSupplier.get() + ") " + message, params);
@@ -28,6 +33,11 @@ public record Log(Logger logger, Supplier<String> markerSupplier) {
     public void debug(final String message, Object... params) {
         if (!logger.isDebugEnabled()) return;
         logger.debug("(" + markerSupplier.get() + ") " + message, params);
+    }
+
+    public void debug(final String message, org.apache.logging.log4j.util.Supplier<?>... paramSuppliers) {
+        if (!logger.isDebugEnabled()) return;
+        logger.debug("(" + markerSupplier.get() + ") " + message, paramSuppliers);
     }
 
 }

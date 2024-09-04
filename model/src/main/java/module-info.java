@@ -1,5 +1,4 @@
 module midorum.melbone.model {
-    requires java.desktop; //FIXME get rid
     requires dma.util;
     requires com.midorum.win32api;
 
@@ -7,6 +6,7 @@ module midorum.melbone.model {
     exports midorum.melbone.model.persistence;
     exports midorum.melbone.model.processing;
     exports midorum.melbone.model.exception;
+    exports midorum.melbone.model.window;
     exports midorum.melbone.model.window.appcountcontrol;
     exports midorum.melbone.model.window.baseapp;
     exports midorum.melbone.model.window.launcher;

@@ -1,12 +1,15 @@
 package midorum.melbone.window.internal.appcountcontrol;
 
-import com.midorum.win32api.facade.IMouse;
 import com.midorum.win32api.facade.IWindow;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.struct.PointFloat;
+import midorum.melbone.model.exception.CannotGetUserInputException;
 import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.model.settings.setting.TargetCountControlSettings;
 import midorum.melbone.window.internal.common.CommonWindowService;
+import midorum.melbone.window.internal.common.Mouse;
+import midorum.melbone.window.internal.util.ForegroundWindowMocked;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +32,7 @@ class ApplicationsCountControlWindowImplTest {
     }
 
     @BeforeEach
-    public void beforeEach() throws InterruptedException {
+    public void beforeEach() throws InterruptedException, CannotGetUserInputException {
         // target window
         when(settings.application()).thenReturn(applicationSettings);
         when(settings.targetCountControl()).thenReturn(targetCountControlSettings);
@@ -43,32 +46,29 @@ class ApplicationsCountControlWindowImplTest {
     }
 
     @Test
-    void clickConfirmButton() throws InterruptedException {
+    void clickConfirmButton() throws InterruptedException, CannotGetUserInputException, Win32ApiException {
         System.out.println("clickConfirmButton");
         final IWindow window = mock(IWindow.class);
-        final IMouse mouse = mock(IMouse.class);
-        when(window.getWindowMouse(SPEED_FACTOR)).thenReturn(mouse);
-        when(mouse.move(any(PointFloat.class))).thenReturn(mouse);
-        when(commonWindowService.bringWindowForeground(window)).thenReturn(true);
+        final Mouse mouse = mock(Mouse.class);
+        appCountControlWindowMocked(window).returnsMouse(mouse);
         final ApplicationsCountControlWindowImpl instance = new ApplicationsCountControlWindowImpl(window, commonWindowService, settings);
         instance.clickConfirmButton();
-        verify(commonWindowService).bringWindowForeground(window);
-        verify(mouse).move(CONFIRM_BUTTON_POINT);
-        verify(mouse, atLeastOnce()).leftClick();
+        verify(mouse).clickAtPoint(CONFIRM_BUTTON_POINT);
     }
 
     @Test
-    void cannotBringWindowForeground() throws InterruptedException {
+    void cannotBringWindowForeground() throws InterruptedException, CannotGetUserInputException {
         System.out.println("cannotBringWindowForeground");
         final IWindow window = mock(IWindow.class);
-        final IMouse mouse = mock(IMouse.class);
-        when(window.getWindowMouse(SPEED_FACTOR)).thenReturn(mouse);
-        when(mouse.move(any(PointFloat.class))).thenReturn(mouse);
-        when(commonWindowService.bringWindowForeground(window)).thenReturn(false);
+        appCountControlWindowMocked(window).throwsWhenAskedMouse(new CannotGetUserInputException());
         final ApplicationsCountControlWindowImpl instance = new ApplicationsCountControlWindowImpl(window, commonWindowService, settings);
         instance.clickConfirmButton();
-        verify(commonWindowService).bringWindowForeground(window);
-        verify(mouse, never()).move(CONFIRM_BUTTON_POINT);
-        verify(mouse, never()).leftClick();
+        verify(commonWindowService).takeAndSaveWholeScreenShot(anyString(), anyString());
+    }
+
+    private ForegroundWindowMocked appCountControlWindowMocked(final IWindow window) throws CannotGetUserInputException, InterruptedException {
+        return new ForegroundWindowMocked.Builder()
+                .withCommonWindowService(commonWindowService)
+                .getForegroundWindowFor(window);
     }
 }

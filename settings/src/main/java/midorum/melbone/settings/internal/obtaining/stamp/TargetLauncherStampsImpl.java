@@ -57,8 +57,8 @@ public class TargetLauncherStampsImpl extends StampValueExtractor implements Tar
     }
 
     @Override
-    public Stamp initializationErrorDialog() {
-        return getStamp(StampKeys.TargetLauncher.initializationErrorDialog);
+    public Stamp networkErrorDialog() {
+        return getStamp(StampKeys.TargetLauncher.networkErrorDialog);
     }
 
     @Override

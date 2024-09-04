@@ -11,7 +11,6 @@ import midorum.melbone.settings.internal.storage.KeyValueStorage;
 import midorum.melbone.settings.managment.SettingPropertyNaming;
 import midorum.melbone.settings.managment.StampBuilder;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -30,11 +29,6 @@ class TargetBaseAppStampsImplTest {
     private final TargetBaseAppStamps targetBaseAppStamps = settingsFactoryInternal.settingsProvider().stamps().targetBaseApp();
     private final KeyValueStorage internalStorage = settingsFactoryInternal.getKeyValueStorage();
     private final SettingStorage settingStorage = settingsFactoryInternal.settingStorage();
-
-    @BeforeEach
-    void beforeEach() {
-        //internalStorage.removeMap(StorageKey.targetBaseAppStamp);
-    }
 
     @AfterEach
     void afterEach() {
@@ -66,14 +60,6 @@ class TargetBaseAppStampsImplTest {
             final Stamp deserializedStamp = (Stamp) in.readObject();
             System.out.println("deserializedStamp: " + deserializedStamp);
         }
-    }
-
-    @Disabled
-    @Test
-    void storingDeprecatedStamp() {
-        //storing deprecated stamp
-        ////keyValueStorageManager.write(StampKeys.TargetBaseApp.manaIndicator,
-        //        createStamp(StampKeys.TargetBaseApp.manaIndicator));
     }
 
     @Test

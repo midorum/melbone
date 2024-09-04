@@ -5,5 +5,5 @@ public enum ActionType {
     waitForStamp,
     leftClickStamp,
     findStamp,
-    pressKey;
+    pressKey
 }

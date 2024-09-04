@@ -3,7 +3,6 @@ package midorum.melbone.settings;
 import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
-import com.midorum.win32api.struct.PointLong;
 import midorum.melbone.model.dto.KeyShortcut;
 import midorum.melbone.model.persistence.StorageKey;
 import midorum.melbone.model.settings.key.SettingData;
@@ -12,6 +11,12 @@ import midorum.melbone.model.settings.key.SettingObtainWay;
 import midorum.melbone.settings.internal.defining.SettingDataImpl;
 import midorum.melbone.settings.internal.defining.SettingObtainWays;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -23,15 +28,11 @@ public interface SettingKeys {
         return Stream.of(Application.values(), TargetLauncher.values(), TargetCountControl.values(), TargetBaseApp.values(), Uac.values())
                 .flatMap(Stream::of)
                 .filter(e -> e.internal().isEnabled())
+                .map(SettingKey.class::cast)
                 .toArray(SettingKey[]::new);
     }
 
     enum Application implements SettingKey {
-        @Deprecated
-        actionPeriod(Integer.class,//FIXME >>> delete
-                "0 - for disable, >0 - checking delay in minutes",
-                35,
-                INTEGER_POSITIVE_PREDICATE.predicate()),
         actionsCount(Integer.class,
                 "0 - for disable, 1-5 - count of actions in base window",
                 1,
@@ -44,27 +45,17 @@ public interface SettingKeys {
                 "overall speed: <1 - faster, >1 - slowly, 0 - for disable",
                 1F,
                 FLOAT_POSITIVE_PREDICATE.predicate()),
+        mouseClickDelay(Long.class,
+                "delay between mouse positioning and click - use when target window does not accept mouse clicks: 0 - for disable, >0 - delay in milliseconds",
+                0L,
+                LONG_POSITIVE_PREDICATE.predicate()),
         taskPerformingDelay(Integer.class,
                 "delay before starting execution user's order in seconds",
                 0,
                 INTEGER_POSITIVE_PREDICATE.predicate()),
-        @Deprecated
-        stopAnimationDelay(Integer.class,//FIXME >>> delete
-                "waiting to stop starting animation in seconds",
-                30,
-                INTEGER_POSITIVE_PREDICATE.predicate()),
-        @Deprecated
-        adjustWindows(Boolean.class,//FIXME >>> delete
-                "when true - try adjust base window if it has wrong dimensions",
-                false),
         stampDeviation(Integer.class,
                 "stamp pixels components comparing deviation; 0 - exact congruence, >0 - deviation for each color component",
                 0,
-                INTEGER_POSITIVE_PREDICATE.predicate()),
-        @Deprecated
-        scheduledTaskPeriod(Integer.class,//FIXME >>> delete
-                "0 - for disable, >0 - scheduled tasks delay in minutes",
-                5,
                 INTEGER_POSITIVE_PREDICATE.predicate()),
         randomRoutineDelayMax(Long.class,
                 "0 - for disable, >0 - maximal random delay on every routine iteration in minutes",
@@ -72,7 +63,19 @@ public interface SettingKeys {
                 LONG_POSITIVE_PREDICATE.predicate()),
         checkHealthBeforeLaunch(Boolean.class,
                 "Check existing base windows health before launch new one. Use when have often disconnect problems. Disable to speed up launch.",
-                false);
+                false),
+        closeOverlappingWindows(Boolean.class,
+                "Close topmost windows which can overlap target one. Caution: topmost windows are designed for important notices.",
+                false),
+        shotOverlappingWindows(Boolean.class,
+                "Make shot for found topmost windows. Caution: this may produce many unnecessary shots and over-consume disk space.",
+                false),
+        overlappingWindowsToSkip(String[].class,
+                "Topmost window process names which will skip during checking",
+                new String[]{}),
+        overlappingWindowsToClose(String[].class,
+                "Topmost window process names which allowed to close",
+                new String[]{});
 
         private final SettingData settingData;
 
@@ -127,22 +130,17 @@ public interface SettingKeys {
                 "confirm quit dialog dimensions",
                 WINDOW_DIMENSIONS_PREDICATE.predicate(),
                 SettingObtainWays.touchWindowAndGetDimensions),
-        initializationErrorDialogTitle(String.class,
-                "initialization error dialog title",
+        networkErrorDialogTitle(String.class,
+                "network error dialog title",
                 SettingObtainWays.touchWindowAndGetTitle),
-        initializationErrorDialogDimensions(Rectangle.class,
-                "initialization error dialog dimensions",
+        networkErrorDialogDimensions(Rectangle.class,
+                "network error dialog dimensions",
                 WINDOW_DIMENSIONS_PREDICATE.predicate(),
                 SettingObtainWays.touchWindowAndGetDimensions),
         windowCloseButtonPoint(PointFloat.class,
                 "window close button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
                 SettingObtainWays.touchWindowAndGetRelativePoint),
-        @Deprecated
-        desktopShortcutLocationAbsolutePoint(PointLong.class,//FIXME >>> delete
-                "desktop icon location",
-                POINT_LONG_POSITIVE_PREDICATE.predicate(),
-                SettingObtainWays.touchScreenElementAndGetPoint),
         desktopShortcutLocationPoint(PointInt.class,
                 "desktop icon location",
                 POINT_INTEGER_POSITIVE_PREDICATE.predicate(),
@@ -151,8 +149,8 @@ public interface SettingKeys {
                 "close quit confirm popup button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
                 SettingObtainWays.touchWindowAndGetRelativePoint),
-        closeInitializationErrorDialogButtonPoint(PointFloat.class,
-                "close initialization error dialog button location; in range 0..1",
+        closeNetworkErrorDialogButtonPoint(PointFloat.class,
+                "close network error dialog button location; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
                 SettingObtainWays.touchWindowAndGetRelativePoint),
         startButtonPoint(PointFloat.class,
@@ -226,7 +224,7 @@ public interface SettingKeys {
                 SettingObtainWays.touchWindowAndGetRelativePoint),
         windowTimeout(Long.class,
                 "window appearing timeout in seconds",
-                10L,
+                1L,
                 LONG_POSITIVE_PREDICATE.predicate());
 
         private final SettingData settingData;
@@ -376,11 +374,6 @@ public interface SettingKeys {
                 "Disconnected popup Close button for base scale; in range 0..1",
                 POINT_FLOAT_RELATIVE_PREDICATE.predicate(),
                 SettingObtainWays.touchWindowAndGetRelativePoint),
-        @Deprecated
-        beforeMinimizingDelay(Long.class,//FIXME >>> delete
-                "Delay before minimizing window frame: 0 - for disable, >0 - delay in milliseconds",
-                5000L,
-                LONG_POSITIVE_PREDICATE.predicate()),
         afterLaunchAccountDelay(Long.class,
                 "Delay before minimizing window frame after account has launched: 0 - for disable, >0 - delay in milliseconds",
                 5000L,

@@ -2,11 +2,11 @@ package midorum.melbone.ui.context;
 
 import com.midorum.win32api.facade.Rectangle;
 import com.midorum.win32api.facade.*;
+import com.midorum.win32api.facade.exception.Win32ApiException;
 import com.midorum.win32api.hook.GlobalMouseKeyHook;
 import com.midorum.win32api.hook.MouseHookHelper;
 import com.midorum.win32api.struct.PointFloat;
 import com.midorum.win32api.struct.PointInt;
-import com.midorum.win32api.util.RelativeCoordinates;
 import dma.function.ConsumerThrowing;
 import dma.function.VoidAction;
 import midorum.melbone.executor.ExecutorFactory;
@@ -21,6 +21,7 @@ import midorum.melbone.model.settings.key.StampKey;
 import midorum.melbone.model.settings.setting.ApplicationSettings;
 import midorum.melbone.model.settings.setting.Settings;
 import midorum.melbone.model.settings.stamp.Stamp;
+import midorum.melbone.model.window.WindowConsumer;
 import midorum.melbone.model.window.baseapp.BaseAppWindow;
 import midorum.melbone.model.window.baseapp.RestoredBaseAppWindow;
 import midorum.melbone.settings.managment.StampBuilder;
@@ -122,7 +123,7 @@ public class MockedContext {
 
     @SuppressWarnings("unchecked")
     public final <X extends Throwable> BaseAppWindow createBaseAppWindowMock(
-            final ConsumerThrowing<ConsumerThrowing<RestoredBaseAppWindow, InterruptedException>, X> restoreAndDoInvocationConsumer,
+            final ConsumerThrowing<WindowConsumer<RestoredBaseAppWindow>, X> restoreAndDoInvocationConsumer,
             final BiConsumer<String, BaseAppWindow> bindWithAccountInvocationConsumer,
             final Supplier<Optional<String>> boundCharacterNameSupplier
     ) {
@@ -131,15 +132,15 @@ public class MockedContext {
             doAnswer(invocation -> {
                 restoreAndDoInvocationConsumer.accept(invocation.getArgument(0));
                 return null;
-            }).when(mock).restoreAndDo(any(ConsumerThrowing.class));
+            }).when(mock).restoreAndDo(any(WindowConsumer.class));
             doAnswer(invocation -> {
                 bindWithAccountInvocationConsumer.accept(invocation.getArgument(0), mock);
                 return null;
             }).when(mock).bindWithAccount(anyString());
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } catch (InterruptedException | Win32ApiException e) {
+            throw new IllegalStateException(e);
         }
-        when(mock.getCharacterName()).thenReturn(boundCharacterNameSupplier.get());
+        when(mock.getCharacterName()).thenReturn(Either.resultOf(boundCharacterNameSupplier::get));
         return mock;
     }
 
@@ -149,10 +150,10 @@ public class MockedContext {
 
     public final IWindow createNativeWindowMock(final String windowTitle, final Rectangle rectangle) {
         final IWindow mock = mock(IWindow.class);
-        when(mock.getText()).thenReturn(Optional.ofNullable(windowTitle));
-        when(mock.getWindowRectangle()).thenReturn(rectangle);
-        when(mock.getClientRectangle()).thenReturn(rectangle);
-        when(mock.getClientToScreenRectangle()).thenReturn(rectangle);
+        when(mock.getText()).thenReturn(Either.resultOf(() -> Optional.ofNullable(windowTitle)));
+        when(mock.getWindowRectangle()).thenReturn(Either.resultOf(() -> rectangle));
+        when(mock.getClientRectangle()).thenReturn(Either.resultOf(() -> rectangle));
+        when(mock.getClientToScreenRectangle()).thenReturn(Either.resultOf(() -> rectangle));
         return mock;
     }
 
@@ -195,11 +196,38 @@ public class MockedContext {
                 .build();
     }
 
-    public Account createAccount(final String name, final String login, final String password) {
+    public Account createAccountWithCommentary(final String name) {
         return Account.builder()
                 .name(name)
                 .login(name + "_login")
                 .password(name + "_password")
+                .commentary(name + "_commentary")
+                .build();
+    }
+
+    public Account createAccountWithCommentary(final String name, final String commentary) {
+        return Account.builder()
+                .name(name)
+                .login(name + "_login")
+                .password(name + "_password")
+                .commentary(commentary)
+                .build();
+    }
+
+    public Account createAccount(final String name, final String login, final String password) {
+        return Account.builder()
+                .name(name)
+                .login(login)
+                .password(password)
+                .build();
+    }
+
+    public Account createAccount(final String name, final String login, final String password, final String commentary) {
+        return Account.builder()
+                .name(name)
+                .login(login)
+                .password(password)
+                .commentary(commentary)
                 .build();
     }
 
@@ -211,16 +239,16 @@ public class MockedContext {
         return createMouseEvent(eventCode, new PointInt(-1, -1));
     }
 
-    public Stamp createFakeStamp(final StampKey stampKey, final IWindow capturedNativeWindow, final Rectangle capturedRectangle) {
+    public Stamp createFakeStamp(final StampKey stampKey, final IWindow capturedNativeWindow, final Rectangle capturedRectangle) throws Win32ApiException {
         return new StampBuilder()
                 .key(stampKey)
                 .description(stampKey.internal().description())
                 .wholeData(new int[capturedRectangle.width() * capturedRectangle.height()])
                 .firstLine(new int[capturedRectangle.width()])
                 .location(capturedRectangle)
-                .windowRect(capturedNativeWindow.getWindowRectangle())
-                .windowClientRect(capturedNativeWindow.getClientRectangle())
-                .windowClientToScreenRect(capturedNativeWindow.getClientToScreenRectangle())
+                .windowRect(capturedNativeWindow.getWindowRectangle().getOrThrow())
+                .windowClientRect(capturedNativeWindow.getClientRectangle().getOrThrow())
+                .windowClientToScreenRect(capturedNativeWindow.getClientToScreenRectangle().getOrThrow())
                 .build();
     }
 
@@ -228,7 +256,7 @@ public class MockedContext {
         doReturn(true).when(propertiesProvider).isModeSet(mode);
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private void mockDataLoaderInvocation() {
         doAnswer(invocation -> {
             assertEquals(2, invocation.getArguments().length);
@@ -264,13 +292,22 @@ public class MockedContext {
             return this;
         }
 
-        public Interaction setAccountsInUse(final String... accountBinding) {
-            final Map<Boolean, List<String>> map = Arrays.stream(accountBinding).collect(Collectors.partitioningBy(accountStorage::isExists));
+        public Interaction setTotalAccounts(final Account... accounts) {
+            Arrays.stream(accounts).forEach(accountStorage::store);
+            return this;
+        }
+
+        public Interaction setAccountsInUse(final String... accounts) {
+            final Map<Boolean, List<String>> map = Arrays.stream(accounts).collect(Collectors.partitioningBy(accountStorage::isExists));
             if (!map.get(false).isEmpty()) {
-                throw new IllegalArgumentException("Accounts " + map.get(false) + " do not exist. Maybe you forgot to add them in total accountBinding list.");
+                throw new IllegalArgumentException("Accounts " + map.get(false) + " do not exist. Maybe you forgot to add them in total accounts list.");
             }
             map.get(true).forEach(accountStorage::addToUsed);
             return this;
+        }
+
+        public Interaction setAccountsInUse(final Account... accounts) {
+            return setAccountsInUse(Arrays.stream(accounts).map(Account::name).toArray(String[]::new));
         }
 
         public Interaction generateAccountsInUse(final int count) {
@@ -304,7 +341,7 @@ public class MockedContext {
                             consumer -> consumer.accept(createRestoredBaseAppWindowMock()),
                             (accountToBind, baseAppWindow) -> {
                                 accountBinding.bindResource(accountToBind, baseAppWindow.toString());
-                                when(baseAppWindow.getCharacterName()).thenReturn(Optional.of(accountToBind));
+                                when(baseAppWindow.getCharacterName()).thenReturn(Either.resultOf(() -> Optional.of(accountToBind)));
                             },
                             Optional::empty))
                     .limit(count).toList());
@@ -428,17 +465,17 @@ public class MockedContext {
         }
 
         public List<BaseAppWindow> getUnboundWindows() {
-            return baseAppWindows.stream().filter(baseAppWindow -> baseAppWindow.getCharacterName().isEmpty()).toList();
+            return baseAppWindows.stream().filter(baseAppWindow -> baseAppWindow.getCharacterName().getOrHandleError(e -> Optional.empty()).isEmpty()).toList();
         }
 
         public Optional<BaseAppWindow> getFirstUnboundWindow() {
-            return baseAppWindows.stream().filter(baseAppWindow -> baseAppWindow.getCharacterName().isEmpty()).findFirst();
+            return baseAppWindows.stream().filter(baseAppWindow -> baseAppWindow.getCharacterName().getOrHandleError(e -> Optional.empty()).isEmpty()).findFirst();
         }
 
         public Optional<BaseAppWindow> getBoundWindowFor(final String accountId) {
             return baseAppWindows.stream()
                     .filter(baseAppWindow -> {
-                        final Optional<String> maybeCharacterName = baseAppWindow.getCharacterName();
+                        final Optional<String> maybeCharacterName = baseAppWindow.getCharacterName().getOrHandleError(e -> Optional.empty());
                         return maybeCharacterName.isPresent() && maybeCharacterName.get().equals(accountId);
                     })
                     .findFirst();
@@ -447,6 +484,7 @@ public class MockedContext {
         public List<String> getBoundAccounts() {
             return baseAppWindows.stream()
                     .map(BaseAppWindow::getCharacterName)
+                    .map(either -> either.getOrHandleError(e -> Optional.empty()))
                     .filter(Optional::isPresent)
                     .map(Optional::get)
                     .toList();
@@ -672,17 +710,17 @@ public class MockedContext {
             return this.interactionInstance;
         }
 
-        public Interaction thenReturnAnyWindowPoint() {
+        public Interaction thenReturnAnyWindowPoint() throws Win32ApiException {
             final IWindow foundNativeWindow = createNativeWindowMock();
-            final Rectangle clientRectangle = foundNativeWindow.getClientRectangle();
-            final PointFloat somePointInFoundWindow = new PointFloat(clientRectangle.width() * 0.5f, clientRectangle.height() * 0.5f);
-            return thenReturn(new WindowPoint(foundNativeWindow, somePointInFoundWindow));
+            return thenReturn(foundNativeWindow.getClientRectangle()
+                    .map(r -> new PointFloat(r.width() * 0.5f, r.height() * 0.5f))
+                    .map(point -> new WindowPoint(foundNativeWindow, point)).getOrThrow());
         }
 
-        public Interaction thenReturnPointForWindow(final IWindow capturedWindow) {
-            final Rectangle clientRectangle = capturedWindow.getClientRectangle();
-            final PointFloat somePointInFoundWindow = new PointFloat(clientRectangle.width() * 0.5f, clientRectangle.height() * 0.5f);
-            return thenReturn(new WindowPoint(capturedWindow, somePointInFoundWindow));
+        public Interaction thenReturnPointForWindow(final IWindow capturedWindow) throws Win32ApiException {
+            return thenReturn(capturedWindow.getClientRectangle()
+                    .map(r -> new PointFloat(r.width() * 0.5f, r.height() * 0.5f))
+                    .map(point -> new WindowPoint(capturedWindow, point)).getOrThrow());
         }
 
     }
