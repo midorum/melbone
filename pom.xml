@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>midorum.melbone</groupId>
     <artifactId>melbone</artifactId>
-    <version>${revision}</version>
+    <version>0.1.0-SNAPSHOT</version>
     <name>melbone</name>
 
     <packaging>pom</packaging>
@@ -20,7 +20,7 @@
     </modules>
 
     <properties>
-        <revision>2.2.0</revision>
+        <revision>2.2.0++new_maven_modules_versioning.0</revision>
         <app.build.properties.filename>app-build.properties</app.build.properties.filename>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>16</maven.compiler.source>
